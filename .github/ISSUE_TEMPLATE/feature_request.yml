@@ -6,72 +6,72 @@ body:
   - type: markdown
     attributes:
       value: |
-        Ideias são bem-vindas. Descreva o problema antes da solução: isso ajuda
-        a avaliar alternativas e o impacto no hardware suportado.
+        Ideas are welcome. Describe the problem before the solution: it helps
+        to weigh alternatives and the impact on supported hardware.
 
   - type: textarea
     id: problem
     attributes:
-      label: Problema
-      description: Que dificuldade ou limitação você encontrou?
-      placeholder: Não consigo acompanhar a curva de fan e a temperatura no mesmo gráfico.
+      label: Problem
+      description: What difficulty or limitation did you run into?
+      placeholder: I can't follow the fan curve and the temperature on the same chart.
     validations:
       required: true
 
   - type: textarea
     id: proposal
     attributes:
-      label: Solução proposta
-      description: Como você imagina o comportamento?
+      label: Proposed solution
+      description: How do you picture the behavior?
     validations:
       required: true
 
   - type: textarea
     id: alternatives
     attributes:
-      label: Alternativas consideradas
-      description: Outros apps, contornos ou soluções que você já tentou.
+      label: Alternatives considered
+      description: Other apps, workarounds or solutions you have already tried.
     validations:
       required: false
 
   - type: dropdown
     id: area
     attributes:
-      label: Área
+      label: Area
       options:
-        - Monitoramento
+        - Monitoring
         - Fans
-        - Iluminação / efeitos
-        - Integração com o sistema
-        - Configuração / importação
+        - Lighting / effects
+        - System integration
+        - Configuration / import
         - Interface
-        - Documentação
-        - Outro
+        - Documentation
+        - Other
     validations:
       required: true
 
   - type: textarea
     id: hardware
     attributes:
-      label: Hardware envolvido (se aplicável)
-      description: Modelo da placa-mãe, hub, fans, memórias, GPU ou SSD.
+      label: Hardware involved (if applicable)
+      description: Motherboard, hub, fans, memory, GPU or SSD model.
     validations:
       required: false
 
   - type: textarea
     id: context
     attributes:
-      label: Contexto adicional
-      description: Capturas, links ou detalhes de implementação.
+      label: Additional context
+      description: Screenshots, links or implementation details.
     validations:
       required: false
 
   - type: checkboxes
     id: checks
     attributes:
-      label: Confirmações
+      label: Confirmations
       options:
-        - label: Procurei issues e a documentação antes de abrir esta sugestão.
+        - label: I searched the issues and the documentation before opening this request.
           required: true
-        - label: A sugestão não depende de redistribuir código, efeitos ou recursos proprietários.
+        - label: The request does not depend on redistributing proprietary code, effects or assets.
           required: true

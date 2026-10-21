@@ -91,7 +91,7 @@ package() {
     "$pkgdir/usr/lib/lumivent/lumivent-nvme-smart"
 
   # Regras e módulos. O pacote não mexe no bootloader: o
-  # acpi_enforce_resources=lax é documentado no README/instalação.
+  # acpi_enforce_resources=lax é documentado no README.
   install -Dm644 "$startdir/packaging/99-lumivent.rules" \
     "$pkgdir/usr/lib/udev/rules.d/99-lumivent.rules"
   install -Dm644 "$startdir/packaging/modprobe-lumivent.conf" \
@@ -112,14 +112,6 @@ package() {
     "$pkgdir/usr/share/doc/lumivent/README.md"
   install -Dm644 "$startdir/CHANGELOG.md" \
     "$pkgdir/usr/share/doc/lumivent/CHANGELOG.md"
-  install -Dm644 "$startdir/docs/instalacao.md" \
-    "$pkgdir/usr/share/doc/lumivent/instalacao.md"
-  install -Dm644 "$startdir/docs/configuracao.md" \
-    "$pkgdir/usr/share/doc/lumivent/configuracao.md"
-  install -Dm644 "$startdir/docs/solucao-de-problemas.md" \
-    "$pkgdir/usr/share/doc/lumivent/solucao-de-problemas.md"
-  install -Dm644 "$startdir/docs/hardware.md" \
-    "$pkgdir/usr/share/doc/lumivent/hardware.md"
 
   # Licenças: a do projeto e as dos arquivos de terceiros embutidos no bundle
   # (fonte Inter e o QuickJS da biblioteca nativa do flutter_js).

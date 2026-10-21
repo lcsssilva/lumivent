@@ -243,10 +243,7 @@ class HardwareDeviceDetector implements DeviceDetector {
         return info(
           DeviceStatus.blocked,
           detail: gpu.disabledReason,
-          hint:
-              'O app não envia efeitos sem confirmar o SSID 0x2429. '
-              'Leituras de identificação nesta versão do kernel estão em '
-              'docs/GPU-RX9060XT-protocolo.md.',
+          hint: 'O app não envia efeitos sem confirmar o SSID 0x2429.',
         );
       }
       final node = gpu.busPath?.split('/').last ?? '?';

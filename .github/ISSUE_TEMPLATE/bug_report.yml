@@ -6,31 +6,31 @@ body:
   - type: markdown
     attributes:
       value: |
-        Obrigado por reportar. Antes de continuar, confira a
-        [documentação](https://github.com/lcsssilva/lumivent/tree/main/docs) e
-        procure issues existentes.
+        Thanks for reporting. Before continuing, check the
+        [troubleshooting guide](https://github.com/lcsssilva/lumivent#troubleshooting)
+        and search the existing issues.
 
-        Não cole dados pessoais, chaves, dumps completos de memória ou arquivos
-        proprietários de terceiros.
+        Do not paste personal data, keys, full memory dumps or third-party
+        proprietary files.
 
   - type: textarea
     id: description
     attributes:
-      label: Descrição
-      description: O que aconteceu, em uma ou duas frases?
-      placeholder: Ao abrir a página de Iluminação, o app fecha sem mensagem.
+      label: Description
+      description: What happened, in one or two sentences?
+      placeholder: When I open the Lighting page, the app closes without a message.
     validations:
       required: true
 
   - type: textarea
     id: steps
     attributes:
-      label: Passos para reproduzir
-      description: Liste o caminho mínimo até o problema.
+      label: Steps to reproduce
+      description: List the shortest path to the problem.
       placeholder: |
-        1. Abra o Lumivent
-        2. Vá em Iluminação
-        3. Selecione o hub AL V2
+        1. Open Lumivent
+        2. Go to Iluminação (Lighting)
+        3. Select the AL V2 hub
         4. ...
     validations:
       required: true
@@ -38,22 +38,22 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Comportamento esperado
+      label: Expected behavior
     validations:
       required: true
 
   - type: textarea
     id: actual
     attributes:
-      label: Comportamento atual
+      label: Actual behavior
     validations:
       required: true
 
   - type: input
     id: version
     attributes:
-      label: Versão do Lumivent
-      description: Saída de `pacman -Q lumivent` ou a versão exibida no app.
+      label: Lumivent version
+      description: Output of `pacman -Q lumivent` or the version shown in the app.
       placeholder: lumivent 1.0.0-1
     validations:
       required: true
@@ -61,8 +61,8 @@ body:
   - type: input
     id: system
     attributes:
-      label: Sistema
-      description: Distribuição, versão e kernel.
+      label: System
+      description: Distribution, version and kernel.
       placeholder: CachyOS, kernel 6.16.7, x86_64
     validations:
       required: true
@@ -70,31 +70,32 @@ body:
   - type: dropdown
     id: install
     attributes:
-      label: Como instalou
+      label: How did you install it?
       options:
-        - Pacote .pkg.tar.zst do release
-        - makepkg a partir do código
-        - Bundle de desenvolvimento (flutter build)
-        - Outro
+        - .pkg.tar.zst package from a release
+        - makepkg from source
+        - Development bundle (flutter build)
+        - Other
     validations:
       required: true
 
   - type: textarea
     id: hardware
     attributes:
-      label: Hardware relevante
-      description: Placa-mãe, hub/fans, memórias, GPU e SSDs envolvidos.
-      placeholder: B650E AORUS, hub AL V2, 2x Fury Beast, RX 9060 XT
+      label: Relevant hardware
+      description: Motherboard, hub/fans, memory, GPU and SSDs involved.
+      placeholder: B650E AORUS, AL V2 hub, 2x Fury Beast, RX 9060 XT
     validations:
       required: false
 
   - type: textarea
     id: logs
     attributes:
-      label: Logs e diagnóstico
+      label: Logs and diagnostics
       description: |
-        Rode o app pelo terminal e cole a saída. Inclua também a tela
-        **Configurações → Permissões e sistema** (texto ou captura).
+        Run the app from a terminal and paste the output. Also include the
+        **Configurações → Permissões e sistema** (Settings → Permissions and
+        system) screen, as text or a screenshot.
       render: shell
     validations:
       required: false
@@ -102,10 +103,10 @@ body:
   - type: textarea
     id: config
     attributes:
-      label: Configuração (opcional)
+      label: Configuration (optional)
       description: |
-        Se o problema envolve fans ou iluminação, cole o `config.json`
-        relevante. Remova qualquer dado que não queira tornar público.
+        If the problem involves fans or lighting, paste the relevant part of
+        `config.json`. Remove anything you do not want to make public.
       render: json
     validations:
       required: false
@@ -113,11 +114,11 @@ body:
   - type: checkboxes
     id: checks
     attributes:
-      label: Confirmações
+      label: Confirmations
       options:
-        - label: Procurei issues e a documentação antes de abrir este report.
+        - label: I searched the issues and the documentation before opening this report.
           required: true
-        - label: Não incluí arquivos, efeitos ou binários proprietários de terceiros.
+        - label: I did not include third-party proprietary files, effects or binaries.
           required: true
-        - label: Removi dados pessoais e segredos do texto e dos logs.
+        - label: I removed personal data and secrets from the text and the logs.
           required: true

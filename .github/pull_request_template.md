@@ -1,35 +1,35 @@
-## Resumo
+## Summary
 
-Descreva a mudança e o problema que ela resolve.
+Describe the change and the problem it solves.
 
-## Tipo de mudança
+## Type of change
 
-- [ ] Correção de bug
-- [ ] Nova funcionalidade
-- [ ] Refatoração sem mudança de comportamento
-- [ ] Documentação
-- [ ] Empacotamento / CI
-- [ ] Mudança incompatível (explique abaixo)
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactoring with no behavior change
+- [ ] Documentation
+- [ ] Packaging / CI
+- [ ] Breaking change (explain below)
 
-## Como foi testado
+## How it was tested
 
-Descreva os testes automatizados e a verificação manual. Se envolve hardware,
-diga quais dispositivos e versões de kernel/driver foram usados.
+Describe the automated tests and the manual checks. If hardware is involved,
+list the devices and the kernel/driver versions used.
 
 ```sh
+dart format lib test tool
 flutter analyze
 flutter test
 ```
 
 ## Checklist
 
-- [ ] O código segue as camadas e as regras de [`docs/arquitetura.md`](docs/arquitetura.md).
-- [ ] `flutter analyze` e `flutter test` passam.
-- [ ] Mudanças de comportamento atualizam a documentação e o `CHANGELOG.md`.
-- [ ] Não incluí efeitos, fontes, binários ou outros recursos proprietários de terceiros.
-- [ ] Não incluí notas locais de engenharia reversa (`docs/re/`, protocolos) no pacote.
-- [ ] A versão foi atualizada com `scripts/bump-version.sh` quando o pacote muda.
+- [ ] `dart format`, `flutter analyze` and `flutter test` pass.
+- [ ] Behavior changes update the README and `CHANGELOG.md`.
+- [ ] I did not include third-party proprietary effects, fonts, binaries or other assets.
+- [ ] I did not include decompiled third-party code or local reverse-engineering notes.
+- [ ] The version was bumped with `scripts/bump-version.sh` when the package changes.
 
-## Contexto adicional
+## Additional context
 
-Issues relacionadas, capturas, medições ou decisões de projeto.
+Related issues, screenshots, measurements or design decisions.

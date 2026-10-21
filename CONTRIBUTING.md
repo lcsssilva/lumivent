@@ -1,34 +1,30 @@
-# Contribuindo com o Lumivent
+# Contributing to Lumivent
 
-Obrigado pelo interesse. Este guia cobre o ambiente, as regras do projeto e o
-que esperamos de um pull request.
+Thanks for your interest. This guide covers the environment and what we expect
+from a pull request. Please also read the
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
-Antes de começar, leia também:
+## Ways to contribute
 
-- [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) — convivência na comunidade;
-- [`docs/arquitetura.md`](docs/arquitetura.md) — decisões estruturais;
-- [`docs/desenvolvimento.md`](docs/desenvolvimento.md) — guia detalhado.
+- Report a bug with as much hardware context and logs as possible.
+- Try the app on a different motherboard, memory kit or GPU and tell us what
+  worked.
+- Fix documentation, translations or interface messages.
+- Implement or fix a driver, an effect or a test.
+- Improve accessibility, keyboard navigation and screen reader support.
 
-## Formas de contribuir
+Use the issue templates for bugs and feature requests. For vulnerabilities,
+**do not open a public issue**: follow [`SECURITY.md`](SECURITY.md).
 
-- Relatar um bug com o máximo de contexto de hardware e logs.
-- Testar o app em um modelo de placa, memória ou GPU diferente e contar o que
-  funcionou.
-- Corrigir documentação, traduções ou mensagens da interface.
-- Implementar ou corrigir um driver, efeito ou teste.
-- Melhorar acessibilidade, teclado e leitores de tela.
+## Environment
 
-Para bugs, use o template de issue. Para vulnerabilidades, **não abra issue
-pública**: siga [`SECURITY.md`](SECURITY.md).
+Requirements:
 
-## Ambiente
-
-Requisitos:
-
-- Linux (Arch Linux ou CachyOS para o pacote; outra distro para desenvolvimento);
-- Flutter 3.47+ e Dart 3.13+;
-- GTK 3, `hidapi`, `libcap`, `clang`, `cmake`, `ninja`, `pkgconf` e `gcc`;
-- hardware compatível para testar o caminho real (sem ele, use os testes).
+- Linux (Arch Linux or CachyOS for the package; any distro for development);
+- Flutter 3.47+ and Dart 3.13+;
+- GTK 3, `hidapi`, `libcap`, `clang`, `cmake`, `ninja`, `pkgconf` and `gcc`;
+- compatible hardware to exercise the real paths (without it, rely on the
+  tests).
 
 ```sh
 git clone https://github.com/lcsssilva/lumivent.git
@@ -38,12 +34,13 @@ flutter pub get
 flutter run -d linux
 ```
 
-Para instalar as regras udev e o helper sem gerar o pacote, veja
-[`docs/instalacao.md`](docs/instalacao.md) §7.
+To install the udev rules and the SMART helper without building the package,
+see [Manual installation](README.md#manual-installation-development-no-package)
+in the README.
 
-## Antes de abrir um PR
+## Before opening a pull request
 
-Rode, na raiz:
+From the repository root:
 
 ```sh
 dart format lib test tool
@@ -51,124 +48,72 @@ flutter analyze
 flutter test
 ```
 
-O CI repete `flutter analyze` e `flutter test` em cada push e pull request. Um PR
-com teste quebrado ou análise com avisos não é mesclado.
+CI runs the format check, `flutter analyze` and `flutter test` on every push and
+pull request. A pull request with failing tests or analyzer warnings is not
+merged.
 
-### Testes
+### Tests
 
-- Toda correção de comportamento deve vir com um teste que falha sem ela.
-- Todo driver novo deve ter testes de protocolo (bytes exatos), de guardas de
-  segurança e de ausência/permissão do dispositivo.
-- `test/architecture_test.dart` verifica as regras de dependência entre módulos.
-  Se ele falhar, ajuste os imports — não relaxe a regra.
-- Testes de widget usam os textos em português da interface (`find.text`).
-- Para hardware real, as ferramentas de `tool/` pedem o app fechado.
+- Every behavior fix comes with a test that fails without it.
+- A new driver needs tests for the exact bytes it sends, for its safety checks
+  and for missing devices and permissions — using a fake transport, never real
+  hardware.
+- Widget tests match the Portuguese interface text (`find.text`).
+- Tests must not depend on the network, real `/dev` nodes or global state shared
+  between tests.
+- The bench tools in `tool/` drive real hardware and require the app to be
+  closed.
 
-## Estilo de código
+## Code style
 
-- Código, comentários, nomes de classes, variáveis e testes em **inglês**.
-- Textos da interface e mensagens ao usuário em **português**.
-- Documentação em `docs/` em **português**.
-- Siga o formato do `dart format` e os lints de `analysis_options.yaml`.
-- Prefira tipos explícitos nas fronteiras entre módulos e isolates.
-- Não adicione dependência nova sem justificar no PR (tamanho, licença,
-  manutenção e compatibilidade com Linux desktop).
+- Code, comments, identifiers and test names in **English**.
+- Interface text and user-facing messages in **Portuguese**.
+- Documentation (the root `.md` files) in **English**.
+- Follow `dart format` and the lints in `analysis_options.yaml`.
+- Prefer explicit types at public boundaries.
+- Hardware errors must not crash the app: log them, return `false` and show the
+  reason in the interface.
+- Do not add a new dependency without justifying it in the pull request (size,
+  license, maintenance and Linux desktop support).
 
-## Arquitetura em uma página
+## What not to submit
 
-O projeto é um **monólito modular feature-first** com camadas DDD dentro de cada
-módulo. As regras completas estão em [`docs/arquitetura.md`](docs/arquitetura.md),
-mas o essencial:
+- decompiled source code of third-party programs;
+- third-party proprietary assets, fonts or effects;
+- captures or dumps that contain personal data;
+- commands that can persist settings to, or permanently change, a device's
+  firmware without an explicit safety check and a test.
 
-1. `core/` não conhece `app/` nem `features/`.
-2. `features/` não conhecem `app/`.
-3. Um módulo importa outro **somente** por `features/<m>/<m>.dart`.
-4. `domain/` é Dart puro: sem Flutter, Riverpod, `dart:io`, `dart:ffi`,
-   `dart:ui` ou isolates.
-5. `application/` não depende de `infrastructure/` nem de `presentation/`.
-6. `presentation/` não depende de `infrastructure/`.
+## Commits and pull requests
 
-Handles de hardware pertencem ao isolate da engine. A UI nunca abre `/dev`,
-hidraw, SMBus ou sysfs diretamente.
-
-## Adicionando um módulo
-
-O módulo `fans` é o exemplo mais completo. O roteiro:
-
-1. Crie `lib/features/<nome>/` com `domain/`, `application/`,
-   `infrastructure/`, `presentation/`.
-2. Declare as portas no `domain/` e os providers que lançam
-   `UnimplementedError` no `application/`.
-3. Implemente as portas no `infrastructure/`.
-4. Crie `<nome>_module.dart` para ligar portas e implementações, e
-   `<nome>.dart` como API pública.
-5. Se o módulo precisar de tempo real, crie um `EngineModule` e os
-   `EngineCommand`/`EngineEvent` próprios.
-6. Registre o módulo em `lib/app/bootstrap.dart` e, se necessário, em
-   `lib/app/engine_modules.dart`.
-7. Adicione testes e atualize `docs/arquitetura.md`.
-
-## Adicionando um driver
-
-Checklist mínimo:
-
-- Constantes de protocolo em `protocol.dart`, com referência ao documento de
-  engenharia reversa.
-- Nenhum comando destrutivo, de persistência ou de sincronização sem guarda
-  explícita e teste.
-- Identidade do dispositivo lida **antes** de qualquer escrita.
-- Timeouts, erros de permissão e dispositivo ausente tratados sem derrubar a
-  engine.
-- `bool` de retorno significa “o dispositivo aceitou a escrita”; falhas não
-  lançam exceção para o chamador.
-- Testes com fake de transporte, incluindo os bytes enviados.
-- Documentação em [`docs/hardware.md`](docs/hardware.md) e, se houver protocolo
-  novo, uma nota em `docs/`.
-
-Não envie para o repositório:
-
-- código-fonte descompilado de programas de terceiros (`docs/re/`);
-- recursos, fontes ou efeitos proprietários de terceiros;
-- arquivos de captura ou dumps que contenham dados pessoais.
-
-## Adicionando um efeito nativo
-
-- O efeito vive em `lib/features/lighting/domain/native_effects.dart`.
-- Parâmetros seguem os tipos dos efeitos HTML (`number`, `color`, `boolean`,
-  `combobox`, `hue`) para a UI gerar os controles.
-- A cor é calculada por LED, em função do tempo e da posição no canvas.
-- Se o firmware tiver um modo equivalente, avalie adicionar o mapeamento em
-  `hardware_equivalents.dart` e documente a diferença de fase/velocidade.
-- Inclua teste determinístico com tempos fixos.
-
-## Commits e pull requests
-
-Usamos mensagens no padrão [Conventional Commits](https://www.conventionalcommits.org/pt-br/):
+Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```text
-feat(fans): adiciona resposta suave por grupo
-fix(lighting): corrige fase do breathing no resume
-docs(release): documenta checksums do pacote
-test(devices): cobre guarda do comando 0x18 da GPU
+feat(fans): add smooth response per group
+fix(lighting): fix breathing phase after resume
+docs(readme): document package checksums
+test(devices): cover the GPU subsystem ID check
 ```
 
-Um PR deve:
+A pull request should:
 
-- ter um objetivo claro e um título no mesmo padrão;
-- explicar **por que** a mudança existe e como foi testada;
-- listar o hardware usado no teste, quando aplicável;
-- atualizar documentação e `CHANGELOG.md` quando o comportamento muda;
-- não misturar refatoração ampla com correção funcional.
+- have a single clear goal and a title in the same format;
+- explain **why** the change exists and how it was tested;
+- list the hardware used for testing, when relevant;
+- update the README and `CHANGELOG.md` when behavior changes;
+- not mix broad refactoring with functional fixes.
 
-## Documentação
+## Documentation
 
-- `README.md` é a porta de entrada.
-- `docs/` é a referência; mantenha exemplos e caminhos fiéis ao código.
-- `docs/README.md` lista o que é atual e o que é histórico.
-- Ao mudar `config.json`, `PKGBUILD`, regras udev ou o fluxo de release,
-  atualize o documento correspondente no mesmo PR.
+- `README.md` is the user and developer reference; keep commands, paths and
+  key names copyable and faithful to the code.
+- When you change `config.json`, the `PKGBUILD`, the udev rules or the release
+  flow, update the README in the same pull request.
+- `test/docs_test.dart` fails if a relative link or anchor in a published
+  Markdown file does not resolve.
 
-## Licença das contribuições
+## License of contributions
 
-Ao enviar um PR, você concorda que sua contribuição é licenciada sob a MIT, a
-mesma do projeto. Não envie código incompatível com essa licença.
+By submitting a pull request, you agree that your contribution is licensed
+under the MIT license, the same as the project. Do not submit code under an
+incompatible license.

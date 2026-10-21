@@ -56,12 +56,9 @@ app.*.map.json
 /*.pkg.tar.*
 /*-sha256sums.txt
 
-# Notas locais de engenharia reversa e planejamento: não fazem parte da
-# documentação pública nem do pacote distribuído.
-/docs/re/
-/docs/plans/
-/docs/planning/
-# As notas avulsas da raiz de docs/ ficam em .git/info/exclude (local).
+# Local notes (reverse engineering, planning, internal references): never
+# published. Public documentation lives in the root .md files.
+/docs/
 
 # Configuração local do Claude Code
 /.claude/

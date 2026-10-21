@@ -13,7 +13,7 @@ const nvmeHelperHint =
     'Instale o pacote lumivent (helper em /usr/lib/lumivent).';
 
 /// Where the helper may be: `$LUMIVENT_NVME_SMART`, the package, or a manual install
-/// (for development, see docs/instalacao.md).
+/// (for development, see README.md).
 List<String> nvmeHelperCandidates([Map<String, String>? env]) {
   env ??= Platform.environment;
   return [

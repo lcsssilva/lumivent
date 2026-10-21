@@ -1,45 +1,63 @@
 # Changelog
 
-Todas as mudanças relevantes do Lumivent são registradas neste arquivo.
+All notable changes to Lumivent are documented in this file.
 
-O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o
-projeto usa [Versionamento Semântico](https://semver.org/lang/pt-BR/).
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
+the project uses [Semantic Versioning](https://semver.org/).
 
-## [Não publicado]
+## [Unreleased]
+
+### Changed
+
+- Documentation is now in English and consolidated in the root files (README,
+  CONTRIBUTING, SECURITY, CODE_OF_CONDUCT); the `docs/` folder is no longer
+  published or installed by the package.
+
+### Added
+
+- User guide for every page of the app in the README.
+- `test/docs_test.dart`: relative links and anchors in the published Markdown
+  files are checked by `flutter test`.
+
+### Fixed
+
+- README: the number of fans per group is set in Lighting, not in Fans.
+- The GPU "blocked" hint no longer points to a file outside the repository.
 
 ## [1.0.0] — 2026-10-21
 
-Primeira versão pública.
+First public release.
 
-### Adicionado
+### Added
 
-- Monitoramento de CPU, GPU, memória, placa-mãe, fans AL V2 e SSDs NVMe, com
-  histórico de 5 minutos.
-- Curvas de fan por grupo do hub Lian Li UNI FAN AL V2, com presets, curvas
-  personalizadas, start/stop, fonte de temperatura e resposta configurável.
-- Iluminação ARGB por canvas de 320×200, cor fixa e modos de hardware para fans,
-  placa-mãe, gabinete, memórias Kingston Fury e GPU Gigabyte.
-- Efeitos nativos e importação de efeitos HTML/Canvas (arquivo, pasta, ZIP e cache
-  do Windows), com verificação de compatibilidade. Efeitos pagos (assinatura ou
-  compra) não são importados do cache do Windows.
-- “Desligar todos os ARGB”, apagar ao suspender/desligar e bandeja do sistema.
-- Início automático via unidade `systemd --user`.
-- Exportação e importação de configuração em JSON.
-- Diagnóstico de udev, drivers, SMBus, helper NVMe e programas conflitantes.
-- Pacote Arch Linux com regras udev, módulos, atalho, ícone, helper com
-  capabilities, documentação e as licenças de terceiros (Inter e QuickJS).
-- Tela **Configurações → Sobre → Licenças** com as licenças de tudo que vai no
-  app.
-- Documentação pública de arquitetura, configuração, hardware, desenvolvimento,
-  diagnóstico e release.
-- Automação de CI e de release com pacote `.pkg.tar.zst` para Arch Linux.
-- 498 testes automatizados, incluindo a verificação das regras de arquitetura.
+- Monitoring of CPU, GPU, memory, motherboard, AL V2 fans and NVMe SSDs, with a
+  5-minute history.
+- Fan curves per group of the Lian Li UNI FAN AL V2 hub, with presets, custom
+  curves, start/stop, temperature source and configurable response.
+- ARGB lighting through a 320×200 canvas, fixed color and hardware modes for
+  the fans, motherboard, case, Kingston Fury memory and Gigabyte GPU.
+- Built-in effects and import of HTML/Canvas effects (file, folder, ZIP and
+  Windows cache), with a compatibility check. Paid effects (subscription or
+  purchase) are not imported from the Windows cache.
+- "Turn off all ARGB", lights off on suspend/shutdown and a system tray icon.
+- Autostart through a `systemd --user` unit.
+- Configuration export and import as JSON.
+- Diagnostics for udev, drivers, SMBus, the NVMe helper and competing programs.
+- Arch Linux package with udev rules, modules, desktop entry, icon, a helper
+  with capabilities, documentation and third-party licenses (Inter and
+  QuickJS).
+- **Configurações → Sobre → Licenças** (Settings → About → Licenses) page with
+  the licenses of everything shipped in the app.
+- User and contributor documentation.
+- CI and release automation producing a `.pkg.tar.zst` package for Arch Linux.
+- 498 automated tests.
 
-### Segurança
+### Security
 
-- Escritas no ITE e na GPU passam por guardas que bloqueiam comandos capazes de
-  deixar o controlador em estado irrecuperável.
-- O helper de SMART é somente leitura e usa o mínimo de capabilities necessário.
-- As regras udev usam `uaccess` e não liberam os barramentos DDC dos monitores.
+- Motherboard and GPU writes go through safety checks that block commands
+  capable of leaving the controller in an unrecoverable state.
+- The SMART helper is read-only and uses the minimum capabilities required.
+- The udev rules use `uaccess` and do not expose the monitors' DDC buses.
 
+[Unreleased]: https://github.com/lcsssilva/lumivent/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/lcsssilva/lumivent/releases/tag/v1.0.0

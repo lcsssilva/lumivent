@@ -1,4 +1,4 @@
-// Architecture rules (docs/architecture.md), checked through imports:
+// Architecture rules, checked through imports:
 //
 //  1. core/ does not know app/ or features/.
 //  2. features/ do not know app/.
