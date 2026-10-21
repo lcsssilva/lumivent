@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Lumivent
+GenericName=Controle de iluminação e fans
+Comment=Iluminação RGB, curvas de fan e monitoramento de hardware
+Exec=lumivent
+TryExec=lumivent
+Icon=lumivent
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=RGB;LED;ARGB;fan;ventoinha;monitoramento;sensor;temperatura;
+StartupNotify=true
+StartupWMClass=io.github.lcsssilva.lumivent

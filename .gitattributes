@@ -1,0 +1,15 @@
+# Keep line endings consistent across Linux, macOS and Windows checkouts.
+* text=auto eol=lf
+
+*.sh text eol=lf
+PKGBUILD text eol=lf
+*.install text eol=lf
+*.yml text eol=lf
+
+# Binary assets and package artifacts.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ttf binary
+*.zst binary
+*.pkg.tar.zst binary

@@ -1,0 +1,77 @@
+name: Feature request
+description: Suggest a feature or an improvement for Lumivent
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideias são bem-vindas. Descreva o problema antes da solução: isso ajuda
+        a avaliar alternativas e o impacto no hardware suportado.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: Que dificuldade ou limitação você encontrou?
+      placeholder: Não consigo acompanhar a curva de fan e a temperatura no mesmo gráfico.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Solução proposta
+      description: Como você imagina o comportamento?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativas consideradas
+      description: Outros apps, contornos ou soluções que você já tentou.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - Monitoramento
+        - Fans
+        - Iluminação / efeitos
+        - Integração com o sistema
+        - Configuração / importação
+        - Interface
+        - Documentação
+        - Outro
+    validations:
+      required: true
+
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware envolvido (se aplicável)
+      description: Modelo da placa-mãe, hub, fans, memórias, GPU ou SSD.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Contexto adicional
+      description: Capturas, links ou detalhes de implementação.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmações
+      options:
+        - label: Procurei issues e a documentação antes de abrir esta sugestão.
+          required: true
+        - label: A sugestão não depende de redistribuir código, efeitos ou recursos proprietários.
+          required: true

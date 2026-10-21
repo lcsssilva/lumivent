@@ -1,0 +1,59 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/fans/fans.dart';
+import 'package:lumivent/features/lighting/lighting.dart';
+import 'package:lumivent/features/system/application/runtime_checks.dart';
+import 'package:lumivent/features/system/domain/diagnostics.dart';
+
+LightingStatus light(LightOutputState fans, {String? detail}) => LightingStatus(
+  {LightDeviceId.alv2Group1: LightOutputStatus(fans, detail: detail)},
+  fps: 30,
+  loops: const {
+    OutputFamily.fans: LoopStats(fps: 2, sendMs: 48.2),
+    OutputFamily.ite: LoopStats(fps: 30, sendMs: 0.9),
+    OutputFamily.ram: LoopStats(fps: 0, sendMs: null),
+    OutputFamily.gpu: LoopStats(fps: 8, sendMs: 124),
+  },
+);
+
+void main() {
+  test('nothing from the engine yet: both hub checks pending', () {
+    final c = runtimeChecks(null, null);
+    expect(c.map((c) => c.state), [CheckState.pending, CheckState.pending]);
+  });
+
+  test('RPM sync turned off by the app is ok, not yet is a warning', () {
+    expect(
+      runtimeChecks(
+        const FansStatus([], hubOk: true, syncOff: true),
+        null,
+      ).first.state,
+      CheckState.ok,
+    );
+    expect(
+      runtimeChecks(const FansStatus([], hubOk: false), null).first.state,
+      CheckState.warn,
+    );
+  });
+
+  test('ARGB sync and merge follow the hub init', () {
+    expect(
+      runtimeChecks(null, light(LightOutputState.ok))[1].state,
+      CheckState.ok,
+    );
+    final down = runtimeChecks(
+      null,
+      light(LightOutputState.unavailable, detail: 'sem permissão'),
+    )[1];
+    expect(down.state, CheckState.warn);
+    expect(down.detail, 'sem permissão');
+  });
+
+  test('loop line shows fps and send time per family', () {
+    final loop = runtimeChecks(null, light(LightOutputState.ok)).last;
+    expect(loop.label, 'Laço da iluminação');
+    expect(
+      loop.detail,
+      'fans 2,0 fps, 48,2 ms · placa/gabinete 30,0 fps, 0,9 ms · RAM 0,0 fps · GPU 8,0 fps, 124,0 ms',
+    );
+  });
+}

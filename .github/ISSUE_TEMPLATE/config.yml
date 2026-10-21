@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentação
+    url: https://github.com/lcsssilva/lumivent/tree/main/docs
+    about: Instalação, configuração, hardware, diagnóstico e desenvolvimento.
+  - name: Relatar uma vulnerabilidade
+    url: https://github.com/lcsssilva/lumivent/security/advisories/new
+    about: Envie problemas de segurança em privado, não como issue pública.

@@ -1,0 +1,123 @@
+name: Bug report
+description: Report a reproducible problem with Lumivent
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por reportar. Antes de continuar, confira a
+        [documentação](https://github.com/lcsssilva/lumivent/tree/main/docs) e
+        procure issues existentes.
+
+        Não cole dados pessoais, chaves, dumps completos de memória ou arquivos
+        proprietários de terceiros.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Descrição
+      description: O que aconteceu, em uma ou duas frases?
+      placeholder: Ao abrir a página de Iluminação, o app fecha sem mensagem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para reproduzir
+      description: Liste o caminho mínimo até o problema.
+      placeholder: |
+        1. Abra o Lumivent
+        2. Vá em Iluminação
+        3. Selecione o hub AL V2
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento esperado
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamento atual
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Versão do Lumivent
+      description: Saída de `pacman -Q lumivent` ou a versão exibida no app.
+      placeholder: lumivent 1.0.0-1
+    validations:
+      required: true
+
+  - type: input
+    id: system
+    attributes:
+      label: Sistema
+      description: Distribuição, versão e kernel.
+      placeholder: CachyOS, kernel 6.16.7, x86_64
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: Como instalou
+      options:
+        - Pacote .pkg.tar.zst do release
+        - makepkg a partir do código
+        - Bundle de desenvolvimento (flutter build)
+        - Outro
+    validations:
+      required: true
+
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware relevante
+      description: Placa-mãe, hub/fans, memórias, GPU e SSDs envolvidos.
+      placeholder: B650E AORUS, hub AL V2, 2x Fury Beast, RX 9060 XT
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs e diagnóstico
+      description: |
+        Rode o app pelo terminal e cole a saída. Inclua também a tela
+        **Configurações → Permissões e sistema** (texto ou captura).
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuração (opcional)
+      description: |
+        Se o problema envolve fans ou iluminação, cole o `config.json`
+        relevante. Remova qualquer dado que não queira tornar público.
+      render: json
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmações
+      options:
+        - label: Procurei issues e a documentação antes de abrir este report.
+          required: true
+        - label: Não incluí arquivos, efeitos ou binários proprietários de terceiros.
+          required: true
+        - label: Removi dados pessoais e segredos do texto e dos logs.
+          required: true

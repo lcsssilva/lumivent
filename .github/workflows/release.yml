@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag existente do release (ex.: v1.2.0)'
+        required: true
+        type: string
+      ref:
+        description: 'Ref para compilar (padrão: a tag; use main em reconstrução só de empacotamento)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: '3.47.7'
+  TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+
+jobs:
+  package:
+    name: Build Arch package
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    container:
+      image: archlinux:base-devel
+      options: --user root
+
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed \
+            git curl xz unzip which github-cli \
+            clang cmake ninja pkgconf gcc \
+            gtk3 glib2 libepoxy pango cairo gdk-pixbuf2 atk harfbuzz \
+            fontconfig freetype2 zlib gcc-libs libcap hidapi
+
+      - name: Checkout build ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.ref || inputs.tag) || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Create unprivileged build user
+        run: |
+          useradd -m builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Install Flutter
+        run: |
+          curl -fsSL -o /tmp/flutter.tar.xz \
+            "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
+          tar -xf /tmp/flutter.tar.xz -C /opt
+          chown -R builder:builder /opt/flutter
+
+      - name: Validate version
+        run: scripts/check-version.sh "$TAG"
+
+      - name: Build package
+        run: |
+          runuser -u builder -- env HOME=/home/builder bash -c "
+            set -euo pipefail
+            export PATH=/opt/flutter/bin:\$PATH
+            cd '$GITHUB_WORKSPACE'
+            flutter --disable-analytics
+            flutter config --enable-linux-desktop
+            flutter precache --linux
+            makepkg --nodeps --noconfirm
+          "
+
+      - name: Collect artifacts and checksums
+        id: artifacts
+        run: |
+          version="${TAG#v}"
+          pkg=$(find . -maxdepth 1 -name "lumivent-${version}-*.pkg.tar.zst" -print -quit)
+          test -n "$pkg" || { echo "pacote não encontrado" >&2; exit 1; }
+          pkg=$(basename "$pkg")
+          checksums="lumivent-${version}-sha256sums.txt"
+          sha256sum "$pkg" > "$checksums"
+          echo "package=$pkg" >> "$GITHUB_OUTPUT"
+          echo "checksums=$checksums" >> "$GITHUB_OUTPUT"
+          cat "$checksums"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="${TAG#v}"
+          package='${{ steps.artifacts.outputs.package }}'
+          checksums='${{ steps.artifacts.outputs.checksums }}'
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$package" "$checksums" --clobber
+          else
+            gh release create "$TAG" \
+              --title "Lumivent $version" \
+              --generate-notes \
+              --verify-tag \
+              "$package" "$checksums"
+          fi

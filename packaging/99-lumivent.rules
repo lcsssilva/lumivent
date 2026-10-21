@@ -1,0 +1,15 @@
+# lumivent: acesso do usuário logado (uaccess) só aos dispositivos que o app usa.
+
+# Lian Li UNI FAN AL V2 (fans e ARGB)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0cf2", ATTRS{idProduct}=="a104", TAG+="uaccess"
+
+# Gigabyte RGB Fusion 2, MCU ITE IT5702 (placa-mãe e ARGB do gabinete)
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="048d", ATTRS{idProduct}=="5702", TAG+="uaccess"
+
+# SMBus PIIX4 do chipset AMD (memórias Kingston Fury). Só aparece com
+# acpi_enforce_resources=lax. Os barramentos DDC dos monitores ficam de fora.
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", ATTR{name}=="SMBus PIIX4 adapter port 0 at 0b00", TAG+="uaccess"
+
+# RGB da placa de vídeo Gigabyte RX 9060 XT (controlador em 0x75). Só o
+# adaptador OEM do amdgpu; os barramentos DDC dos monitores ficam de fora.
+SUBSYSTEM=="i2c-dev", KERNEL=="i2c-[0-9]*", ATTR{name}=="AMDGPU DM i2c OEM bus", TAG+="uaccess"
