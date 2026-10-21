@@ -330,16 +330,19 @@ class LightingEngineModule implements EngineModule {
   }
 
   Future<void> _startup() async {
-    _outputs = _openOutputs();
-    if (_shouldBeOff) {
-      await _turnOff();
-    } else {
-      await _initDevices();
+    try {
+      _outputs = _openOutputs();
+      if (_shouldBeOff) {
+        await _turnOff();
+      } else {
+        await _initDevices();
+        if (_stopped) return;
+        await _reconcile();
+      }
       if (_stopped) return;
-      await _reconcile();
+    } finally {
+      if (!_stopped) _syncTimer();
     }
-    if (_stopped) return;
-    _syncTimer();
   }
 
   Future<void> _startWatcher() async {
@@ -1325,7 +1328,9 @@ class LightingEngineModule implements EngineModule {
           issue: LightOutputIssue.unsupported,
         );
       }
-      if (out == null) return const LightOutputStatus(LightOutputState.ok);
+      if (out == null) {
+        return const LightOutputStatus(LightOutputState.unavailable);
+      }
       final (up, reason) = switch (id) {
         _ when id.isFan => (_fansReady, LightOutputIssue.hub),
         LightDeviceId.chassis ||

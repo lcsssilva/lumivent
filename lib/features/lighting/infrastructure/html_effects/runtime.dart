@@ -339,6 +339,8 @@ class HtmlEffectRuntime implements EffectRuntime {
 /// Runtime used by the app: QuickJS in a worker isolate that can be killed
 /// when a frame exceeds [scriptHardLimit] or the effect throws.
 class IsolatedHtmlEffectRuntime implements EffectRuntime {
+  static const _maxBufferedLogs = 200;
+
   IsolatedHtmlEffectRuntime._(this.effect, this._connection, this._raster);
 
   @override
@@ -387,7 +389,10 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
       nowMs,
     ], timeout: scriptHardLimit) as List;
     final data = reply[0] as TransferableTypedData;
-    _logs.addAll((reply[1] as List).cast<String>());
+    _logs.addAll((reply[1] as List).cast<String>().take(_maxBufferedLogs));
+    if (_logs.length > _maxBufferedLogs) {
+      _logs.removeRange(0, _logs.length - _maxBufferedLogs);
+    }
     if (reply.length > 2 && reply[2] is num) {
       _lastScriptTime = Duration(microseconds: (reply[2] as num).toInt());
     }

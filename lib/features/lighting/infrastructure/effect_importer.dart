@@ -4,6 +4,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 
@@ -11,6 +12,11 @@ import '../domain/effect_library.dart';
 import '../domain/effect_meta.dart';
 import '../domain/installed_effect.dart';
 import 'effect_library.dart';
+
+const _maxHtmlBytes = 4 * 1024 * 1024;
+const _maxZipBytes = 64 * 1024 * 1024;
+const _maxZipHtmlBytes = 32 * 1024 * 1024;
+const _maxCatalogBytes = 8 * 1024 * 1024;
 
 class FileEffectImporter implements EffectImporter {
   FileEffectImporter(this.library);
@@ -92,7 +98,7 @@ class FileEffectImporter implements EffectImporter {
         report.add(
           await _install(
             id: id,
-            html: await html.readAsString(),
+            html: await _readHtml(html),
             origin: EffectOrigin.windowsCache,
             publisher: meta?.publisher,
             description: meta?.description,
@@ -138,7 +144,8 @@ class FileEffectImporter implements EffectImporter {
     for (final f in candidates) {
       if (!await f.exists()) continue;
       try {
-        final json = jsonDecode(await f.readAsString());
+        final bytes = await _readBounded(f, _maxCatalogBytes);
+        final json = jsonDecode(utf8.decode(bytes));
         final entries = _catalogEntries(json);
         if (entries.isNotEmpty) return entries;
       } on Object {
@@ -195,7 +202,7 @@ class FileEffectImporter implements EffectImporter {
   }
 
   Future<ImportReport> _importFile(File file) async {
-    final html = await file.readAsString();
+    final html = await _readHtml(file);
     final base = file.uri.pathSegments.where((s) => s.isNotEmpty).last;
     final title = parseEffect(html).title;
     final id = _idFor(
@@ -213,7 +220,7 @@ class FileEffectImporter implements EffectImporter {
     final direct = File('${dir.path}/effect.html');
     if (await direct.exists()) {
       final base = dir.uri.pathSegments.where((s) => s.isNotEmpty).last;
-      final html = await direct.readAsString();
+      final html = await _readHtml(direct);
       return _install(
         id: _idFor(parseEffect(html).title, base),
         html: html,
@@ -250,7 +257,7 @@ class FileEffectImporter implements EffectImporter {
                   .last
                   .replaceAll(RegExp(r'\.html?$', caseSensitive: false), '')
             : parent;
-        final html = await f.readAsString();
+        final html = await _readHtml(f);
         report.add(
           await _install(
             id: _idFor(parseEffect(html).title, base),
@@ -271,7 +278,9 @@ class FileEffectImporter implements EffectImporter {
     final report = ImportReport();
     final Archive archive;
     try {
-      archive = ZipDecoder().decodeBytes(await file.readAsBytes());
+      archive = ZipDecoder().decodeBytes(
+        await _readBounded(file, _maxZipBytes),
+      );
     } on Object catch (e) {
       report.issues.add(
         ImportIssue(ImportIssueKind.invalidZip, path: file.path, detail: '$e'),
@@ -283,6 +292,7 @@ class FileEffectImporter implements EffectImporter {
         .last
         .replaceAll(RegExp(r'\.zip$', caseSensitive: false), '');
     var found = 0;
+    var totalHtmlBytes = 0;
     for (final entry in archive) {
       if (!entry.isFile) continue;
       final name = entry.name.replaceAll('\\', '/');
@@ -291,6 +301,20 @@ class FileEffectImporter implements EffectImporter {
       if (!lower.endsWith('.html') && !lower.endsWith('.htm')) continue;
       found++;
       try {
+        final size = entry.size;
+        if (size < 0 ||
+            size > _maxHtmlBytes ||
+            totalHtmlBytes + size > _maxZipHtmlBytes) {
+          report.issues.add(
+            ImportIssue(
+              ImportIssueKind.unknown,
+              path: name,
+              detail: 'HTML entry exceeds the import size limit',
+            ),
+          );
+          continue;
+        }
+        totalHtmlBytes += size;
         final parts = name.split('/').where((s) => s.isNotEmpty).toList();
         final fileBase = parts.last.replaceAll(
           RegExp(r'\.html?$', caseSensitive: false),
@@ -299,7 +323,18 @@ class FileEffectImporter implements EffectImporter {
         final base = parts.length > 1 ? parts[parts.length - 2] : zipBase;
         // `effect.html` is the standard name: the folder names the effect.
         final isEffect = parts.last.toLowerCase() == 'effect.html';
-        final html = utf8.decode(entry.content, allowMalformed: true);
+        final content = entry.content;
+        if (content.length > _maxHtmlBytes) {
+          report.issues.add(
+            ImportIssue(
+              ImportIssueKind.unknown,
+              path: name,
+              detail: 'HTML entry exceeds the import size limit',
+            ),
+          );
+          continue;
+        }
+        final html = utf8.decode(content, allowMalformed: true);
         report.add(
           await _install(
             id: _idFor(parseEffect(html).title, isEffect ? base : fileBase),
@@ -349,6 +384,24 @@ class FileEffectImporter implements EffectImporter {
   String _idFor(String title, String fallback) {
     final raw = fallback.trim().isNotEmpty ? fallback : title;
     return sanitizeEffectId(raw.length > 80 ? raw.substring(0, 80) : raw);
+  }
+
+  Future<String> _readHtml(File file) async => utf8.decode(
+    await _readBounded(file, _maxHtmlBytes),
+    allowMalformed: true,
+  );
+
+  Future<Uint8List> _readBounded(File file, int limit) async {
+    final bytes = BytesBuilder(copy: false);
+    var length = 0;
+    await for (final chunk in file.openRead()) {
+      length += chunk.length;
+      if (length > limit) {
+        throw FormatException('File exceeds the $limit-byte import limit');
+      }
+      bytes.add(chunk);
+    }
+    return bytes.takeBytes();
   }
 }
 

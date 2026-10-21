@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: 60
 
     container:
-      image: archlinux:base-devel
+      image: archlinux:base-devel@sha256:0ccc8b2e55c0c26a6e501e892cc6b1cdea7cfdf77e432941320148b4dabd2bff
       options: --user root
 
     steps:
@@ -42,13 +42,13 @@ jobs:
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm --needed \
-            git curl xz unzip which github-cli \
+            git curl xz unzip which github-cli python \
             clang cmake ninja pkgconf gcc \
             gtk3 glib2 libepoxy pango cairo gdk-pixbuf2 atk harfbuzz \
             fontconfig freetype2 zlib gcc-libs libcap hidapi
 
       - name: Checkout build ref
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && (inputs.ref || inputs.tag) || github.ref }}
           fetch-depth: 0
@@ -61,8 +61,30 @@ jobs:
 
       - name: Install Flutter
         run: |
+          curl -fsSL -o /tmp/releases_linux.json \
+            https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json
+          expected_sha256=$(python3 - "$FLUTTER_VERSION" <<'PY'
+          import json
+          import sys
+
+          version = sys.argv[1]
+          with open("/tmp/releases_linux.json", encoding="utf-8") as metadata:
+              releases = json.load(metadata)["releases"]
+          archive = f"stable/linux/flutter_linux_{version}-stable.tar.xz"
+          matches = [
+              release for release in releases
+              if release["channel"] == "stable"
+              and release["version"] == version
+              and release["archive"] == archive
+          ]
+          if len(matches) != 1 or not matches[0].get("sha256"):
+              raise SystemExit(f"Flutter release metadata not found for {version}")
+          print(matches[0]["sha256"])
+          PY
+          )
           curl -fsSL -o /tmp/flutter.tar.xz \
             "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
+          printf '%s  %s\n' "$expected_sha256" /tmp/flutter.tar.xz | sha256sum --check -
           tar -xf /tmp/flutter.tar.xz -C /opt
           chown -R builder:builder /opt/flutter
 

@@ -174,9 +174,11 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
   }
 
   Future<void> _tick() async {
+    final gen = _generation;
     final runtime = _runtime;
     final effectId = _effectId;
     if (runtime == null || effectId == null || _busy) return;
+    if (!ref.mounted) return;
     if (ref.read(lightingProvider).effectId != effectId) return;
     _busy = true;
     final sw = Stopwatch()..start();
@@ -199,6 +201,9 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
         DateTime.now().difference(_started).inMicroseconds / 1000,
       );
       // The effect may have been switched while awaiting the frame.
+      if (!ref.mounted || gen != _generation || !identical(runtime, _runtime)) {
+        return;
+      }
       if (ref.read(lightingProvider).effectId != effectId) return;
       ref
           .read(engineProvider)
@@ -211,9 +216,14 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
       _countFrame(sw.elapsed);
     } on Object catch (e) {
       // The effect may have been switched off while this frame was running.
-      if (ref.read(lightingProvider).effectId == effectId) _fail('$e');
+      if (ref.mounted &&
+          gen == _generation &&
+          identical(runtime, _runtime) &&
+          ref.read(lightingProvider).effectId == effectId) {
+        _fail('$e');
+      }
     } finally {
-      _busy = false;
+      if (gen == _generation) _busy = false;
     }
   }
 

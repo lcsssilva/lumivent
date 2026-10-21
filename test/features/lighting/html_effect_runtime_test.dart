@@ -110,8 +110,12 @@ var ctx = document.getElementById('exCanvas').getContext('2d');
 var g = ctx.createLinearGradient(0, 0, 320, 0);
 g.addColorStop(0, '#ff0000');
 g.addColorStop(1, '#0000ff');
-ctx.fillStyle = g;
-ctx.fillRect(0, 0, 320, 200);
+function loop() {
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 320, 200);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 ''',
       ),
     );
@@ -123,6 +127,9 @@ ctx.fillRect(0, 0, 320, 200);
     expect(b0, lessThan(60));
     expect(r1, lessThan(60));
     expect(b1, greaterThan(200));
+    final nextGradientFrame = await gradient.renderFrame(16);
+    expect(nextGradientFrame.pixelAt(2, 100).$1, greaterThan(200));
+    expect(nextGradientFrame.pixelAt(317, 100).$3, greaterThan(200));
   }, skip: _skip);
 
   test('hsl, rgb, hex and named colors', () async {
@@ -238,6 +245,46 @@ requestAnimationFrame(loop);
             allOf(contains('interrupted'), isNot(contains('effect hung'))),
           ),
         ),
+      );
+    },
+    skip: _skip,
+    timeout: const Timeout(Duration(seconds: 20)),
+  );
+
+  test('bounds logs retained by the runtime', () async {
+    final rt = await IsolatedHtmlEffectRuntime.load(
+      effect(
+        script: '''
+var ctx = document.getElementById('exCanvas').getContext('2d');
+function loop() {
+  for (var i = 0; i < 250; i++) console.log(i);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+''',
+      ),
+    );
+    addTearDown(rt.dispose);
+
+    for (var i = 0; i < 5; i++) {
+      await rt.renderFrame(i * 16);
+    }
+
+    expect(rt.drainLog(), hasLength(200));
+  }, skip: _skip);
+
+  test(
+    'enforces the QuickJS memory limit',
+    () async {
+      await expectLater(
+        IsolatedHtmlEffectRuntime.load(
+          effect(
+            script:
+                'var allocations = []; '
+                'while (true) allocations.push(new Array(10000));',
+          ),
+        ),
+        throwsA(isA<EffectScriptException>()),
       );
     },
     skip: _skip,

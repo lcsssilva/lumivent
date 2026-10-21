@@ -116,6 +116,7 @@ class CanvasReplayer {
   final unknownOps = <String>{};
 
   void replay(Canvas canvas, CanvasCommandBuffer ops) {
+    _gradients.clear();
     var path = Path();
     canvas.save();
     // JS saves stay inside this one; the final restore undoes anything left.

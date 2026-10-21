@@ -30,11 +30,15 @@
   var bytes = new Uint8Array(buf);
   var view = new DataView(buf);
   var pos = 0;
+  var maxBufferBytes = 4 * 1024 * 1024;
 
   function ensure(n) {
+    if (pos + n > maxBufferBytes) {
+      throw new Error("canvas command buffer limit exceeded");
+    }
     if (pos + n <= buf.byteLength) return;
     var size = buf.byteLength;
-    while (size < pos + n) size *= 2;
+    while (size < pos + n) size = Math.min(size * 2, maxBufferBytes);
     var next = new ArrayBuffer(size);
     new Uint8Array(next).set(bytes.subarray(0, pos));
     buf = next;
@@ -343,11 +347,18 @@
   var nextGradient = 1;
   function Gradient(op, args) {
     this.__id = nextGradient++;
-    emit(op, [this.__id].concat(args));
+    this.__op = op;
+    this.__args = args;
+    this.__stops = [];
   }
+  Gradient.prototype.emit = function () {
+    emit(this.__op, [this.__id].concat(this.__args));
+    for (var i = 0; i < this.__stops.length; i++) {
+      emit(OP.cs, [this.__id, this.__stops[i][0], this.__stops[i][1]]);
+    }
+  };
   Gradient.prototype.addColorStop = function (offset, color) {
-    // Few stops per gradient: string encoding is irrelevant here.
-    emit(OP.cs, [this.__id, num(offset), String(color)]);
+    this.__stops.push([num(offset), String(color)]);
   };
 
   // ---- path: rectangles become fillRect ---------------------------------
@@ -479,6 +490,7 @@
       if (v instanceof Gradient) {
         pendingFill = null;
         hasPendingHsl = false;
+        v.emit();
         emit(OP.fs, [v]);
         return;
       }
@@ -494,7 +506,7 @@
       emitString(OP.fs, String(v));
       return;
     }
-    if (v instanceof Gradient) { emit(OP[op], [v]); return; }
+    if (v instanceof Gradient) { v.emit(); emit(OP[op], [v]); return; }
     var c2 = parseColor(v);
     if (c2 !== null) emitColorArg(OP[op], c2);
     else emitString(OP[op], String(v));
@@ -647,7 +659,11 @@
   };
   g.addEventListener = function () {};
   g.console = {
-    log: function () { g.__we_log.push(Array.prototype.join.call(arguments, " ")); },
+    log: function () {
+      var message = Array.prototype.join.call(arguments, " ").slice(0, 2048);
+      if (g.__we_log.length === 200) g.__we_log.shift();
+      g.__we_log.push(message);
+    },
     clear: function () {},
   };
   g.console.warn = g.console.error = g.console.info = g.console.debug = g.console.log;

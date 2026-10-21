@@ -987,7 +987,17 @@ void main() {
     final rig = Rig(tester, LightingConfig());
     await rig.advance(const Duration(seconds: 6));
     final first = rig.statuses.first;
-    expect(first.devices[LightDeviceId.chassis]!.state, LightOutputState.ok);
+    expect(
+      first.devices[LightDeviceId.chassis]!.state,
+      LightOutputState.unavailable,
+    );
+    expect(
+      rig.statuses.any(
+        (status) =>
+            status.devices[LightDeviceId.chassis]!.state == LightOutputState.ok,
+      ),
+      isTrue,
+    );
     final gpu = rig.statuses.last.devices[LightDeviceId.gpu]!;
     expect(gpu.state, LightOutputState.unavailable);
     expect(gpu.issue, LightOutputIssue.gpu);

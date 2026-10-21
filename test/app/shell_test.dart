@@ -1,11 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/app.dart';
+import 'package:lumivent/app/bootstrap_failure.dart';
 import 'package:lumivent/app/desktop/desktop_actions.dart';
 import 'package:lumivent/app/navigation/app_route.dart';
+import 'package:lumivent/app/shell/topbar.dart';
 import 'package:lumivent/app/ui_language_binding.dart';
 import 'package:lumivent/core/engine/engine_host.dart';
 import 'package:lumivent/core/i18n/app_strings.dart';
@@ -153,6 +156,24 @@ void main() {
     expect(find.text('Manter na bandeja ao fechar'), findsOneWidget);
   });
 
+  testWidgets('bootstrap failure shows diagnostic details and config action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      BootstrapFailureApp(
+        error: StateError('config directory is not writable'),
+        configDir: tmp,
+      ),
+    );
+
+    expect(find.text('Lumivent could not start'), findsOneWidget);
+    expect(
+      find.textContaining('config directory is not writable'),
+      findsOneWidget,
+    );
+    expect(find.text('Open configuration folder'), findsOneWidget);
+  });
+
   testWidgets('engine devices appear in the sidebar and Settings', (
     tester,
   ) async {
@@ -235,7 +256,7 @@ void main() {
   test('the chosen language survives a restart', () async {
     container
         .read(preferencesProvider.notifier)
-        .change((p) => p.copyWith(language: AppLanguage.en));
+        .change((p) => p.copyWith(language: AppLanguage.pt));
     await store.flush();
 
     final restarted = appContainer(
@@ -244,8 +265,8 @@ void main() {
       FakeAutostart(),
     );
     addTearDown(restarted.dispose);
-    expect(restarted.read(preferencesProvider).language, AppLanguage.en);
-    expect(restarted.read(stringsProvider), same(AppStrings.en));
+    expect(restarted.read(preferencesProvider).language, AppLanguage.pt);
+    expect(restarted.read(stringsProvider), same(AppStrings.pt));
   });
 
   testWidgets('a fresh install opens in English', (tester) async {
@@ -258,7 +279,7 @@ void main() {
     await pumpApp(tester);
     expect(container.read(preferencesProvider).language, AppLanguage.en);
     expect(find.text(AppRoute.monitoring.subtitle(AppStrings.en)), findsOne);
-    expect(find.text('Monitoramento'), findsNothing);
+    expect(find.text(AppRoute.monitoring.label(AppStrings.pt)), findsNothing);
   });
 
   test('every saved language maps to a catalog language', () {
@@ -276,7 +297,7 @@ void main() {
         container
             .read(preferencesProvider.notifier)
             .change((p) => p.copyWith(language: language));
-        await pumpApp(tester, size: size);
+        await pumpApp(tester, size: Size(size.width, size.height - 32));
         engine.emit(DevicesChanged(_snapshot));
 
         for (final route in AppRoute.values) {
@@ -284,6 +305,24 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 500));
           expect(tester.takeException(), isNull, reason: route.name);
+          final labelFinder = find.descendant(
+            of: find.byType(TopBar),
+            matching: find.text(
+              route.label(
+                language == AppLanguage.en ? AppStrings.en : AppStrings.pt,
+              ),
+            ),
+          );
+          if (labelFinder.evaluate().isNotEmpty) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              labelFinder.first,
+            );
+            expect(
+              paragraph.didExceedMaxLines,
+              isFalse,
+              reason: '${route.name} label at $label',
+            );
+          }
         }
       });
     }

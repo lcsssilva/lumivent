@@ -34,7 +34,14 @@ abstract final class CanvasOp {
 class CanvasCommandBuffer {
   CanvasCommandBuffer(Uint8List bytes)
     : _bytes = bytes,
-      _data = ByteData.sublistView(bytes);
+      _data = ByteData.sublistView(bytes) {
+    if (bytes.lengthInBytes > maxBytes) {
+      throw const FormatException('Canvas command buffer exceeds byte limit');
+    }
+  }
+
+  static const maxBytes = 4 * 1024 * 1024;
+  static const maxOps = 200000;
 
   final Uint8List _bytes;
   final ByteData _data;
@@ -51,11 +58,25 @@ class CanvasCommandBuffer {
 
   bool get hasNext => _pos < _data.lengthInBytes;
 
+  void _require(int length) {
+    if (length < 0 || _pos > _data.lengthInBytes - length) {
+      throw const FormatException('Truncated canvas command buffer');
+    }
+  }
+
+  void _countOp() {
+    count++;
+    if (count > maxOps) {
+      throw const FormatException('Canvas command buffer exceeds op limit');
+    }
+  }
+
   bool next() {
-    if (_pos + 2 > _data.lengthInBytes) return false;
+    if (!hasNext) return false;
+    _require(2);
     opcode = _data.getUint8(_pos++);
     if (opcode == CanvasOp.fillRect16) {
-      if (_pos + 12 > _data.lengthInBytes) return false;
+      _require(12);
       argCount = 5;
       for (var i = 0; i < 4; i++) {
         _numbers[i] = _data.getInt16(_pos, Endian.little).toDouble();
@@ -67,11 +88,11 @@ class CanvasCommandBuffer {
       _pos += 4;
       _strings[4] = null;
       _tags[4] = 3;
-      count++;
+      _countOp();
       return true;
     }
     if (opcode == CanvasOp.fillRect16Hsl) {
-      if (_pos + 12 > _data.lengthInBytes) return false;
+      _require(12);
       argCount = 7;
       for (var i = 0; i < 4; i++) {
         _numbers[i] = _data.getInt16(_pos, Endian.little).toDouble();
@@ -87,7 +108,7 @@ class CanvasCommandBuffer {
         _strings[i] = null;
         _tags[i] = 0;
       }
-      count++;
+      _countOp();
       return true;
     }
     argCount = _data.getUint8(_pos++);
@@ -95,21 +116,26 @@ class CanvasCommandBuffer {
       throw FormatException('Canvas op with $argCount arguments');
     }
     for (var i = 0; i < argCount; i++) {
+      _require(1);
       final tag = _data.getUint8(_pos++);
       _tags[i] = tag;
       switch (tag) {
         case 0:
         case 2:
+          _require(4);
           _numbers[i] = _data.getFloat32(_pos, Endian.little);
           _pos += 4;
           _strings[i] = null;
         case 3:
+          _require(4);
           _colors[i] = _data.getUint32(_pos, Endian.little);
           _pos += 4;
           _strings[i] = null;
         case 1:
+          _require(2);
           final len = _data.getUint16(_pos, Endian.little);
           _pos += 2;
+          _require(len);
           _strings[i] = utf8.decode(
             Uint8List.sublistView(_bytes, _pos, _pos + len),
           );
@@ -118,7 +144,7 @@ class CanvasCommandBuffer {
           throw FormatException('Unknown argument tag: $tag');
       }
     }
-    count++;
+    _countOp();
     return true;
   }
 

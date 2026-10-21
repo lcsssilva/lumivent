@@ -10,7 +10,7 @@ pkgver=1.0.0
 pkgrel=1
 pkgdesc='Iluminação, controle de fans e monitoramento para Linux'
 url='https://github.com/lcsssilva/lumivent'
-arch=('x86_64' 'aarch64')
+arch=('x86_64')
 license=('MIT' 'OFL-1.1')
 install=lumivent.install
 # Nome antigo do projeto.

@@ -343,6 +343,20 @@ void main() {
       expect(buffer.next(), isFalse);
       expect(buffer.count, 5);
     });
+
+    test('rejects a truncated command instead of reading past the buffer', () {
+      final buffer = CanvasCommandBuffer(
+        Uint8List.fromList([CanvasOp.fillRect, 1, 0]),
+      );
+      expect(() => buffer.next(), throwsA(isA<FormatException>()));
+    });
+
+    test('rejects an oversized command buffer', () {
+      expect(
+        () => CanvasCommandBuffer(Uint8List(4 * 1024 * 1024 + 1)),
+        throwsA(isA<FormatException>()),
+      );
+    });
   });
 }
 

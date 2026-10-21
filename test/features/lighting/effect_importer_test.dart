@@ -63,6 +63,30 @@ void main() {
     );
   });
 
+  test('imports malformed UTF-8 with replacement characters', () async {
+    final bytes = Uint8List.fromList(effectHtml('Rainbow').codeUnits);
+    final title = bytes.indexOf('Rainbow'.codeUnits.first);
+    bytes[title] = 0xff;
+    final file = File('${temp.path}/rainbow.html')..writeAsBytesSync(bytes);
+
+    final report = await importer.importPaths([file.path]);
+
+    expect(report.imported, 1);
+    expect(report.issues, isEmpty);
+    expect(await library.readHtml('rainbow'), contains('\uFFFD'));
+  });
+
+  test('rejects an HTML file larger than the import limit', () async {
+    final file = File('${temp.path}/large.html')
+      ..writeAsBytesSync(Uint8List(4 * 1024 * 1024 + 1));
+
+    final report = await importer.importPaths([file.path]);
+
+    expect(report.imported, 0);
+    expect(report.issues, hasLength(1));
+    expect(report.issues.single.detail, contains('import limit'));
+  });
+
   test('re-importing replaces the effect instead of duplicating it', () async {
     final file = File('${temp.path}/rainbow.html')
       ..writeAsStringSync(effectHtml('Rainbow'));
@@ -134,6 +158,20 @@ void main() {
       expect((await library.list()).single.id, 'mypack');
     },
   );
+
+  test('skips ZIP entries whose uncompressed HTML exceeds the limit', () async {
+    final html = Uint8List(4 * 1024 * 1024 + 1);
+    final archive = Archive()
+      ..add(ArchiveFile('Big/effect.html', html.length, html));
+    final zip = File('${temp.path}/large.zip')
+      ..writeAsBytesSync(ZipEncoder().encodeBytes(archive));
+
+    final report = await importer.importPaths([zip.path]);
+
+    expect(report.imported, 0);
+    expect(report.issues, hasLength(1));
+    expect(report.issues.single.detail, contains('size limit'));
+  });
 
   test(
     'reports invalid paths and unsafe ZIP entries without aborting',
