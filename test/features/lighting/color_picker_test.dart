@@ -4,6 +4,8 @@ import 'package:lumivent/core/ui/theme.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/presentation/color_picker.dart';
 
+import '../../support/app_harness.dart';
+
 void main() {
   test('rgbToHsv covers every hue sector', () {
     expect(rgbToHsv(const Rgb(255, 0, 0)).$1, closeTo(0, 1e-9));
@@ -20,12 +22,14 @@ void main() {
   ) async {
     Rgb? last;
     await tester.pumpWidget(
-      MaterialApp(
-        theme: buildTheme(),
-        home: Scaffold(
-          body: ColorPicker(
-            color: const Rgb(255, 0, 0),
-            onChanged: (c) => last = c,
+      withPortuguese(
+        MaterialApp(
+          theme: buildTheme(),
+          home: Scaffold(
+            body: ColorPicker(
+              color: const Rgb(255, 0, 0),
+              onChanged: (c) => last = c,
+            ),
           ),
         ),
       ),
@@ -55,14 +59,16 @@ void main() {
 
   testWidgets('the dialog closes with Fechar', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        theme: buildTheme(),
-        home: Builder(
-          builder: (ctx) => Scaffold(
-            body: ElevatedButton(
-              onPressed: () =>
-                  showColorPickerDialog(ctx, const Rgb(1, 2, 3), (_) {}),
-              child: const Text('abrir'),
+      withPortuguese(
+        MaterialApp(
+          theme: buildTheme(),
+          home: Builder(
+            builder: (ctx) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () =>
+                    showColorPickerDialog(ctx, const Rgb(1, 2, 3), (_) {}),
+                child: const Text('abrir'),
+              ),
             ),
           ),
         ),

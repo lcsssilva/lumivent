@@ -654,7 +654,7 @@ void main() {
     test('a forbidden packet explains itself', () {
       expect(
         Alv2ForbiddenPacket('teste').toString(),
-        'pacote AL V2 bloqueado: teste',
+        'AL V2 packet blocked: teste',
       );
     });
 

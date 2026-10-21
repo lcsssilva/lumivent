@@ -337,7 +337,7 @@ void main() {
 
   test('sanitizes ids and refuses path traversal', () async {
     expect(sanitizeEffectId('Neon Shift!'), 'neon-shift');
-    expect(sanitizeEffectId('  ***  '), 'efeito');
+    expect(sanitizeEffectId('  ***  '), 'effect');
     expect(sanitizeEffectId('../../etc/passwd'), 'etc-passwd');
     expect(isSafeEffectId('ok-1.test'), isTrue);
     expect(isSafeEffectId('../x'), isFalse);

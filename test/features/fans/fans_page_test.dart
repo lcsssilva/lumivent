@@ -12,6 +12,8 @@ import 'package:lumivent/features/preferences/preferences.dart';
 
 import '../../fakes.dart';
 
+import '../../support/app_harness.dart';
+
 class _MemoryRepo implements FansRepository {
   FansConfig config = FansConfig.defaults();
   int saves = 0;
@@ -60,9 +62,11 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          theme: buildTheme(),
-          home: const Scaffold(body: FansPage()),
+        child: withPortuguese(
+          MaterialApp(
+            theme: buildTheme(),
+            home: const Scaffold(body: FansPage()),
+          ),
         ),
       ),
     );

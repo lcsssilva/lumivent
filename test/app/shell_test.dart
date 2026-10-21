@@ -6,10 +6,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/app.dart';
 import 'package:lumivent/app/desktop/desktop_actions.dart';
 import 'package:lumivent/app/navigation/app_route.dart';
+import 'package:lumivent/app/ui_language_binding.dart';
 import 'package:lumivent/core/engine/engine_host.dart';
 import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/core/i18n/strings_provider.dart';
-import 'package:lumivent/core/i18n/ui_language.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/devices/devices.dart';
 import 'package:lumivent/features/fans/fans.dart';
@@ -80,6 +80,24 @@ final _snapshot = DeviceSnapshot(
   scannedAt: DateTime(2026, 10, 18),
 );
 
+ProviderContainer appContainer(
+  ConfigStore store,
+  FakeEngine engine,
+  FakeAutostart autostart,
+) => ProviderContainer(
+  overrides: [
+    engineProvider.overrideWithValue(engine),
+    configStoreProvider.overrideWithValue(store),
+    ...PreferencesModule.overrides(store),
+    ...LightingModule.overrides(store),
+    ...FansModule.overrides(store),
+    uiLanguageFromPreferences(),
+    autostartServiceProvider.overrideWithValue(autostart),
+    environmentDiagnosticsProvider.overrideWithValue(NoDiagnostics()),
+    desktopActionsProvider.overrideWithValue(FakeDesktop()),
+  ],
+);
+
 void main() {
   late Directory tmp;
   late ConfigStore store;
@@ -98,26 +116,7 @@ void main() {
     );
     engine = FakeEngine();
     autostart = FakeAutostart();
-    container = ProviderContainer(
-      overrides: [
-        engineProvider.overrideWithValue(engine),
-        configStoreProvider.overrideWithValue(store),
-        ...PreferencesModule.overrides(store),
-        ...LightingModule.overrides(store),
-        ...FansModule.overrides(store),
-        uiLanguageProvider.overrideWith(
-          (ref) => switch (ref.watch(
-            preferencesProvider.select((p) => p.language),
-          )) {
-            AppLanguage.en => UiLanguage.en,
-            AppLanguage.pt => UiLanguage.pt,
-          },
-        ),
-        autostartServiceProvider.overrideWithValue(autostart),
-        environmentDiagnosticsProvider.overrideWithValue(NoDiagnostics()),
-        desktopActionsProvider.overrideWithValue(FakeDesktop()),
-      ],
-    );
+    container = appContainer(store, engine, autostart);
   });
 
   tearDown(() {
@@ -125,8 +124,11 @@ void main() {
     tmp.deleteSync(recursive: true);
   });
 
-  Future<void> pumpApp(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1400, 1000);
+  Future<void> pumpApp(
+    WidgetTester tester, {
+    Size size = const Size(1400, 1000),
+  }) async {
+    tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(
@@ -227,6 +229,65 @@ void main() {
     expect(find.text('Idioma'), findsOneWidget);
     expect(container.read(preferencesProvider).language, AppLanguage.pt);
   });
+
+  // Real IO does not advance on the testWidgets fake clock, so the restart is
+  // checked outside the widget tree.
+  test('the chosen language survives a restart', () async {
+    container
+        .read(preferencesProvider.notifier)
+        .change((p) => p.copyWith(language: AppLanguage.en));
+    await store.flush();
+
+    final restarted = appContainer(
+      await ConfigStore.open(tmp),
+      FakeEngine(),
+      FakeAutostart(),
+    );
+    addTearDown(restarted.dispose);
+    expect(restarted.read(preferencesProvider).language, AppLanguage.en);
+    expect(restarted.read(stringsProvider), same(AppStrings.en));
+  });
+
+  testWidgets('a fresh install opens in English', (tester) async {
+    final freshDir = Directory.systemTemp.createTempSync('lumivent-fresh-');
+    addTearDown(() => freshDir.deleteSync(recursive: true));
+    final fresh = (await tester.runAsync(() => ConfigStore.open(freshDir)))!;
+    container.dispose();
+    container = appContainer(fresh, engine, autostart);
+
+    await pumpApp(tester);
+    expect(container.read(preferencesProvider).language, AppLanguage.en);
+    expect(find.text(AppRoute.monitoring.subtitle(AppStrings.en)), findsOne);
+    expect(find.text('Monitoramento'), findsNothing);
+  });
+
+  test('every saved language maps to a catalog language', () {
+    for (final language in AppLanguage.values) {
+      expect(uiLanguageOf(language).name, language.name);
+    }
+  });
+
+  // Manual QA §7 #12: the narrowest window (the minimum size) and the default
+  // size render every page without overflow in both languages.
+  for (final language in AppLanguage.values) {
+    for (final size in const [Size(1040, 680), Size(1280, 800)]) {
+      final label = '${size.width.toInt()}x${size.height.toInt()}';
+      testWidgets('no overflow in ${language.name} at $label', (tester) async {
+        container
+            .read(preferencesProvider.notifier)
+            .change((p) => p.copyWith(language: language));
+        await pumpApp(tester, size: size);
+        engine.emit(DevicesChanged(_snapshot));
+
+        for (final route in AppRoute.values) {
+          container.read(routeProvider.notifier).go(route);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(tester.takeException(), isNull, reason: route.name);
+        }
+      });
+    }
+  }
 
   testWidgets('English catalog renders every route', (tester) async {
     container

@@ -371,6 +371,20 @@ void main() {
     });
     tearDown(() => tmp.deleteSync(recursive: true));
 
+    test('legacy default names become empty; chosen names are kept', () async {
+      await store.saveSection('fans', {
+        'groups': [
+          {'name': 'Grupo 0'},
+          {'name': ' Group 1 '},
+          // Another group's default is a name the user chose for this one.
+          {'name': 'Grupo 1'},
+          {'name': 'Topo'},
+        ],
+      });
+      final c = FansModule.repository(store).load();
+      expect(c.groups.map((g) => g.name), ['', '', 'Grupo 1', 'Topo']);
+    });
+
     test('round trip', () async {
       final repo = FansModule.repository(store);
       expect(

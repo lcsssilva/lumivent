@@ -108,7 +108,7 @@ class GpuController {
     if (fwData == null) return false;
     final fw = parseGpuFirmware(fwData);
     if (fw == null) {
-      _disabledReason = 'resposta inesperada ao firmware 0x10: ${_hex(fwData)}';
+      _disabledReason = 'unexpected reply to firmware 0x10: ${_hex(fwData)}';
       return false;
     }
     _firmware = fw.version;
@@ -120,7 +120,7 @@ class GpuController {
     if (ssidData == null) return false;
     final ssid = parseGpuSsid(ssidData);
     if (ssid == null) {
-      _disabledReason = 'resposta inesperada ao SSID 0x11: ${_hex(ssidData)}';
+      _disabledReason = 'unexpected reply to SSID 0x11: ${_hex(ssidData)}';
       return false;
     }
     _ssid = ssid;
@@ -180,10 +180,10 @@ class GpuController {
       _disabledReason = e.message;
       return false;
     } on RawI2cException catch (e) {
-      _disabledReason = 'escrita 0x12 falhou: ${e.message} (errno ${e.errno})';
+      _disabledReason = '0x12 write failed: ${e.message} (errno ${e.errno})';
       return false;
     } on Object catch (e) {
-      _disabledReason = 'escrita 0x12 falhou: $e';
+      _disabledReason = '0x12 write failed: $e';
       return false;
     }
   }
@@ -228,12 +228,12 @@ class GpuController {
       return null;
     } on RawI2cException catch (e) {
       _disabledReason =
-          'leitura do comando 0x${command.toRadixString(16)} falhou: '
+          'read of command 0x${command.toRadixString(16)} failed: '
           '${e.message} (errno ${e.errno})';
       return null;
     } on Object catch (e) {
       _disabledReason =
-          'leitura do comando 0x${command.toRadixString(16)} falhou: $e';
+          'read of command 0x${command.toRadixString(16)} failed: $e';
       return null;
     }
   }

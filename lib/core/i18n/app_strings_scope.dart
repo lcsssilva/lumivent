@@ -17,10 +17,9 @@ class AppStringsScope extends InheritedWidget {
 
   static AppStrings of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<AppStringsScope>();
-    // Standalone widget tests and previews may build a page without the app
-    // shell. They keep the historical Portuguese text unless they wrap the
-    // tree with an explicit scope.
-    return scope?.strings ?? AppStrings.pt;
+    // Outside the app shell (standalone widget tests, previews) there is no
+    // scope: use the default language, like a fresh install.
+    return scope?.strings ?? AppStrings.en;
   }
 
   @override

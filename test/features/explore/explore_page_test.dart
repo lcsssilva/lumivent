@@ -16,6 +16,8 @@ import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 
 import '../../fakes.dart';
 
+import '../../support/app_harness.dart';
+
 EffectSource _source() =>
     EffectSource(title: 'Teste', properties: [], script: 'var a = 1;');
 
@@ -133,9 +135,11 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          theme: buildTheme(),
-          home: const Scaffold(body: ExplorePage()),
+        child: withPortuguese(
+          MaterialApp(
+            theme: buildTheme(),
+            home: const Scaffold(body: ExplorePage()),
+          ),
         ),
       ),
     );

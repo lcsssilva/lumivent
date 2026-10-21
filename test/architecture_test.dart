@@ -193,4 +193,30 @@ void main() {
 
     expect(leaks, isEmpty, reason: leaks.join('\n'));
   });
+
+  test('Portuguese text lives only in the catalogs', () {
+    // Accented Portuguese letters in code outside the catalogs mean a UI text
+    // or technical message that escaped translation (messages are English).
+    final accented = RegExp('[áàâãéêíóôõúçÁÀÂÃÉÊÍÓÔÕÚÇ]');
+    const allowed = {'Português'};
+    final leaks = <String>[];
+    for (final file
+        in Directory(libRoot)
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.dart'))) {
+      final path = file.path.substring(libRoot.length + 1);
+      if (path.startsWith('core/i18n/catalogs/') || path == 'main_spike.dart') {
+        continue;
+      }
+      final lines = file.readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i].trim();
+        if (line.startsWith('//')) continue;
+        final code = allowed.fold(line, (l, word) => l.replaceAll(word, ''));
+        if (accented.hasMatch(code)) leaks.add('$path:${i + 1}: $line');
+      }
+    }
+    expect(leaks, isEmpty, reason: leaks.join('\n'));
+  });
 }

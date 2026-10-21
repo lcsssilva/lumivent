@@ -13,6 +13,8 @@ import 'package:lumivent/features/preferences/preferences.dart';
 import '../../fakes.dart';
 import 'smart_fixture.dart';
 
+import '../../support/app_harness.dart';
+
 void main() {
   late Directory tmp;
   late FakeEngine engine;
@@ -41,9 +43,11 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          theme: buildTheme(),
-          home: const Scaffold(body: MonitoringPage()),
+        child: withPortuguese(
+          MaterialApp(
+            theme: buildTheme(),
+            home: const Scaffold(body: MonitoringPage()),
+          ),
         ),
       ),
     );

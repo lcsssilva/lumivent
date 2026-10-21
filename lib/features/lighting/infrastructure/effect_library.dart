@@ -29,7 +29,7 @@ String sanitizeEffectId(String raw) {
       .replaceAll(RegExp(r'[^a-z0-9._-]+'), '-')
       .replaceAll(RegExp(r'-+'), '-')
       .replaceAll(RegExp(r'^[.-]+|[.-]+$'), '');
-  return slug.isEmpty ? 'efeito' : slug;
+  return slug.isEmpty ? 'effect' : slug;
 }
 
 /// `true` when [id] is a single, safe path segment.

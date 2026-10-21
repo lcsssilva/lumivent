@@ -13,7 +13,7 @@ import '../core/persistence/config_store.dart';
 const transferableSections = ['preferences', 'lighting', 'fans'];
 
 /// Suffix of the copy of `config.json` taken before an import.
-const importBackupSuffix = 'antes-import';
+const importBackupSuffix = 'before-import';
 
 /// Default name of an exported file.
 const exportFileName = 'lumivent-config.json';

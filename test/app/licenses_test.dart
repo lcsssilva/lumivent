@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/licenses.dart';
 import 'package:lumivent/app/shell/about_card.dart';
 
+import '../support/app_harness.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -22,7 +24,7 @@ void main() {
 
   testWidgets('about card opens the licenses page', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(home: Scaffold(body: AboutCard())),
+      withPortuguese(const MaterialApp(home: Scaffold(body: AboutCard()))),
     );
     expect(find.textContaining('Licença MIT'), findsOneWidget);
 

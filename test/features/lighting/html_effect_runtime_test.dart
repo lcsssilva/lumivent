@@ -235,7 +235,7 @@ requestAnimationFrame(loop);
           isA<EffectScriptException>().having(
             (e) => e.message,
             'message',
-            allOf(contains('interrupted'), isNot(contains('excedeu'))),
+            allOf(contains('interrupted'), isNot(contains('effect hung'))),
           ),
         ),
       );

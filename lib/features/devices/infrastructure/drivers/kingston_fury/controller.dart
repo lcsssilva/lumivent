@@ -98,9 +98,7 @@ class FuryController {
   /// Direct mode: sends 12 [rgb] colors (36 bytes), only changed bytes. False if not applied.
   bool setColors(int slot, List<int> rgb) {
     if (rgb.length != furyColorBytes) {
-      throw ArgumentError(
-        'esperados $furyColorBytes bytes, veio ${rgb.length}',
-      );
+      throw ArgumentError('expected $furyColorBytes bytes, got ${rgb.length}');
     }
     return _run(slot, (bus, addr, s) {
       if (s.mode != _Mode.direct) {

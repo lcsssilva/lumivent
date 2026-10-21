@@ -5,6 +5,8 @@ import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/presentation/led_canvas.dart';
 
+import '../../support/app_harness.dart';
+
 void main() {
   test('GPU area stays on the canvas even without addressable LEDs', () {
     final c = LightingConfig();
@@ -23,16 +25,18 @@ void main() {
     ValueChanged<LightDeviceId?>? onSelect,
   }) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            width: 640,
-            child: LedCanvas(
-              config: LightingConfig(),
-              time: ValueNotifier<double>(0),
-              selected: selected,
-              onSelect: onSelect ?? (_) {},
-              onPlace: (id, r) => onPlace(id, r),
+      withPortuguese(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 640,
+              child: LedCanvas(
+                config: LightingConfig(),
+                time: ValueNotifier<double>(0),
+                selected: selected,
+                onSelect: onSelect ?? (_) {},
+                onPlace: (id, r) => onPlace(id, r),
+              ),
             ),
           ),
         ),

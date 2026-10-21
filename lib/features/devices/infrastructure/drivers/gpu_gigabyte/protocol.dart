@@ -156,7 +156,7 @@ void checkGpuPacket(
   }
   if (packet.length != gpuPacketLength) {
     throw GpuGuardException(
-      'pacote com ${packet.length} B; o controlador exige $gpuPacketLength B',
+      'packet has ${packet.length} B; the controller requires $gpuPacketLength B',
     );
   }
   final command = packet[0];
@@ -174,7 +174,7 @@ void checkGpuPacket(
   }
   if (packet[1] != 0x01) {
     throw GpuGuardException(
-      'byte 1 = 0x${packet[1].toRadixString(16)}; esperado 0x01',
+      'byte 1 = 0x${packet[1].toRadixString(16)}; expected 0x01',
     );
   }
 
@@ -197,15 +197,15 @@ void checkGpuPacket(
   }
   final effect = GpuEffectCode.byCode(packet[2]);
   if (effect == null) {
-    throw GpuGuardException(
-      'efeito 0x${packet[2].toRadixString(16)} desconhecido',
-    );
+    throw GpuGuardException('unknown effect 0x${packet[2].toRadixString(16)}');
   }
   if (packet[3] > gpuSpeedMax) {
-    throw GpuGuardException('velocidade ${packet[3]} fora de 0–$gpuSpeedMax');
+    throw GpuGuardException('speed ${packet[3]} outside 0–$gpuSpeedMax');
   }
   if (packet[4] > gpuBrightnessMax) {
-    throw GpuGuardException('brilho ${packet[4]} fora de 0–$gpuBrightnessMax');
+    throw GpuGuardException(
+      'brightness ${packet[4]} outside 0–$gpuBrightnessMax',
+    );
   }
   if (packet[9] != 0) {
     throw GpuGuardException('zone index ${packet[9]}; this board uses 0');
@@ -229,12 +229,12 @@ void checkGpuPacket(
   }
   if (count != effect.colors) {
     throw GpuGuardException(
-      '${effect.styleName} exige ${effect.colors} cores; pacote declara $count',
+      '${effect.styleName} requires ${effect.colors} colors; the packet declares $count',
     );
   }
   for (var i = 11 + 3 * effect.colors; i < gpuPacketLength; i++) {
     if (packet[i] != 0) {
-      throw GpuGuardException('lixo depois da paleta em [$i]');
+      throw GpuGuardException('garbage after the palette at [$i]');
     }
   }
 }

@@ -23,12 +23,12 @@ const iteForbiddenCommands = <int, String>{
 
 class IteForbiddenCommand implements Exception {
   IteForbiddenCommand(this.command, [String? reason])
-    : reason = reason ?? iteForbiddenCommands[command] ?? 'proibido';
+    : reason = reason ?? iteForbiddenCommands[command] ?? 'forbidden';
   final int command;
   final String reason;
   @override
   String toString() =>
-      'pacote CC ${command.toRadixString(16).padLeft(2, '0').toUpperCase()} bloqueado: $reason';
+      'CC ${command.toRadixString(16).padLeft(2, '0').toUpperCase()} packet blocked: $reason';
 }
 
 /// Throws [IteForbiddenCommand] if [packet] is forbidden, including

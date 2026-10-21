@@ -15,6 +15,8 @@ import 'package:lumivent/features/lighting/presentation/lighting_page.dart';
 
 import '../../fakes.dart';
 
+import '../../support/app_harness.dart';
+
 class _MemoryRepo implements LightingConfigRepository {
   LightingConfig config = LightingConfig();
   int saves = 0;
@@ -60,9 +62,11 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          theme: buildTheme(),
-          home: const Scaffold(body: LightingPage()),
+        child: withPortuguese(
+          MaterialApp(
+            theme: buildTheme(),
+            home: const Scaffold(body: LightingPage()),
+          ),
         ),
       ),
     );
@@ -604,9 +608,11 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp(
-          theme: buildTheme(),
-          home: const Scaffold(body: ArgbToggle()),
+        child: withPortuguese(
+          MaterialApp(
+            theme: buildTheme(),
+            home: const Scaffold(body: ArgbToggle()),
+          ),
         ),
       ),
     );

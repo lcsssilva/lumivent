@@ -92,7 +92,7 @@ class CanvasCommandBuffer {
     }
     argCount = _data.getUint8(_pos++);
     if (argCount > _tags.length) {
-      throw FormatException('Canvas op com $argCount argumentos');
+      throw FormatException('Canvas op with $argCount arguments');
     }
     for (var i = 0; i < argCount; i++) {
       final tag = _data.getUint8(_pos++);
@@ -115,7 +115,7 @@ class CanvasCommandBuffer {
           );
           _pos += len;
         default:
-          throw FormatException('Tag de argumento desconhecida: $tag');
+          throw FormatException('Unknown argument tag: $tag');
       }
     }
     count++;

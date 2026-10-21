@@ -7,8 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../core/engine/engine_host.dart';
-import '../core/i18n/strings_provider.dart';
-import '../core/i18n/ui_language.dart';
 import '../core/persistence/config_store.dart';
 import '../features/fans/fans.dart';
 import '../features/lighting/lighting.dart';
@@ -19,6 +17,7 @@ import 'desktop/desktop_actions.dart';
 import 'desktop/desktop_controller.dart';
 import 'engine_modules.dart';
 import 'licenses.dart';
+import 'ui_language_binding.dart';
 
 Future<void> bootstrap(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,15 +47,7 @@ Future<void> bootstrap(List<String> args) async {
       ),
       ...SystemModule.overrides(executable: Platform.resolvedExecutable),
       desktopActionsProvider.overrideWith((ref) => desktop),
-      // The interface language follows the saved preference and rebuilds the
-      // catalog immediately when it changes (no restart).
-      uiLanguageProvider.overrideWith(
-        (ref) =>
-            switch (ref.watch(preferencesProvider.select((p) => p.language))) {
-              AppLanguage.en => UiLanguage.en,
-              AppLanguage.pt => UiLanguage.pt,
-            },
-      ),
+      uiLanguageFromPreferences(),
     ],
   );
   // The LED loop follows the FPS preference.

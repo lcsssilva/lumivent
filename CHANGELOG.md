@@ -14,6 +14,9 @@ the project uses [Semantic Versioning](https://semver.org/).
   change applies immediately and is saved in `config.json`. Existing
   installations without a saved language open in English — switch back once in
   Preferences. Numbers follow the selected language (`1,234.5` × `1.234,5`).
+- The backup taken before a configuration import is now
+  `config.json.before-import` (was `config.json.antes-import`), and driver and
+  effect-runtime error details are in English.
 - Documentation is now in English and consolidated in the root files (README,
   CONTRIBUTING, SECURITY, CODE_OF_CONDUCT); the `docs/` folder is no longer
   published or installed by the package.

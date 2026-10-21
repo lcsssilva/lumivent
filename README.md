@@ -496,7 +496,7 @@ app's QuickJS runtime.
 | Path | Contents |
 |---|---|
 | `~/.config/lumivent/config.json` | preferences, lighting and fans |
-| `~/.config/lumivent/config.json.antes-import` | backup taken before an import |
+| `~/.config/lumivent/config.json.before-import` | backup taken before an import |
 | `~/.config/lumivent/config.json.bad` | a corrupted file, preserved |
 | `~/.local/share/lumivent/effects/<id>/` | imported effects |
 | `~/.config/systemd/user/lumivent.service` | autostart unit, when enabled |
@@ -512,7 +512,7 @@ How the configuration file is handled:
 - **Corruption**: invalid JSON is renamed to `config.json.bad` (never silently
   overwritten) and the app starts with defaults.
 - **Import**: replaces the preferences, lighting and fans sections in a single
-  write, after copying the current file to `config.json.antes-import`. Files
+  write, after copying the current file to `config.json.before-import`. Files
   from a newer schema version are refused. The import applies immediately, with
   no restart.
 

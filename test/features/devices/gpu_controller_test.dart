@@ -523,7 +523,7 @@ void main() {
       transport.failRead = true;
       final c = make();
       expect(c.init(), isFalse);
-      expect(c.disabledReason, contains('leitura do comando 0x10'));
+      expect(c.disabledReason, contains('read of command 0x10'));
       expect(c.disabledReason, contains('errno 5'));
       expect(transport.writes, hasLength(1));
       expect(
@@ -609,7 +609,7 @@ void main() {
       final c = make();
       expect(c.turnOff(), isFalse);
       expect(transport.writes.map((p) => p[0]), [0x10]);
-      expect(c.disabledReason, contains('leitura do comando 0x10'));
+      expect(c.disabledReason, contains('read of command 0x10'));
     });
 
     test('invalidate forces a new identification', () {

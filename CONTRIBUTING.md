@@ -58,8 +58,9 @@ merged.
 - A new driver needs tests for the exact bytes it sends, for its safety checks
   and for missing devices and permissions — using a fake transport, never real
   hardware.
-- Widget tests match the Portuguese catalog (`find.text`); new pages also get
-  an English smoke test.
+- Widget tests match the Portuguese catalog (`find.text`): wrap the tree with
+  `withPortuguese` from `test/support/app_harness.dart` (without it, widgets use
+  the default English catalog). New pages also get an English smoke test.
 - Tests must not depend on the network, real `/dev` nodes or global state shared
   between tests.
 - The bench tools in `tool/` drive real hardware and require the app to be

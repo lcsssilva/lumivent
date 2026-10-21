@@ -30,6 +30,8 @@ class TopBar extends ConsumerWidget {
               children: [
                 Text(
                   route.label(context.strings),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -38,6 +40,8 @@ class TopBar extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   route.subtitle(context.strings),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
                 ),
               ],

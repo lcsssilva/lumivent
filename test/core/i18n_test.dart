@@ -277,7 +277,7 @@ void main() {
       expect(seen, same(AppStrings.en));
     });
 
-    testWidgets('standalone widgets fall back to Portuguese', (tester) async {
+    testWidgets('standalone widgets fall back to English', (tester) async {
       late AppStrings seen;
       await tester.pumpWidget(
         Builder(
@@ -287,7 +287,7 @@ void main() {
           },
         ),
       );
-      expect(seen, same(AppStrings.pt));
+      expect(seen, same(AppStrings.en));
     });
   });
 }

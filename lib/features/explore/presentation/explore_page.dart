@@ -229,30 +229,35 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
               ),
-            const Spacer(),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  key: const Key('import-files'),
-                  onPressed: _busy ? null : _importFiles,
-                  icon: const Icon(Icons.insert_drive_file_outlined, size: 18),
-                  label: Text(e.importEffect),
-                ),
-                OutlinedButton.icon(
-                  key: const Key('import-folder'),
-                  onPressed: _busy ? null : _importFolder,
-                  icon: const Icon(Icons.folder_open_outlined, size: 18),
-                  label: Text(e.folder),
-                ),
-                FilledButton.tonalIcon(
-                  key: const Key('import-windows-cache'),
-                  onPressed: _busy ? null : _importWindowsCache,
-                  icon: const Icon(Icons.desktop_windows_outlined, size: 18),
-                  label: Text(e.importFromWindows),
-                ),
-              ],
+            Expanded(
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    key: const Key('import-files'),
+                    onPressed: _busy ? null : _importFiles,
+                    icon: const Icon(
+                      Icons.insert_drive_file_outlined,
+                      size: 18,
+                    ),
+                    label: Text(e.importEffect),
+                  ),
+                  OutlinedButton.icon(
+                    key: const Key('import-folder'),
+                    onPressed: _busy ? null : _importFolder,
+                    icon: const Icon(Icons.folder_open_outlined, size: 18),
+                    label: Text(e.folder),
+                  ),
+                  FilledButton.tonalIcon(
+                    key: const Key('import-windows-cache'),
+                    onPressed: _busy ? null : _importWindowsCache,
+                    icon: const Icon(Icons.desktop_windows_outlined, size: 18),
+                    label: Text(e.importFromWindows),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

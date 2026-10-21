@@ -150,7 +150,7 @@ class LogindPowerWatcher implements PowerWatcher {
     try {
       await cb().timeout(callbackTimeout);
     } on TimeoutException {
-      _log('callback excedeu ${callbackTimeout.inMilliseconds} ms');
+      _log('callback exceeded ${callbackTimeout.inMilliseconds} ms');
     } catch (e) {
       _log('callback: $e');
     }

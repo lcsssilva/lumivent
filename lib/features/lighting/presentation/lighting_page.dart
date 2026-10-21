@@ -136,7 +136,14 @@ class _LightingPageState extends ConsumerState<LightingPage>
                       child: Text('${(cfg.brightness * 100).round()} %'),
                     ),
                     const SizedBox(width: gap),
-                    Text(l.offOnSleep),
+                    // Long in English; shrinks before the slider does.
+                    Flexible(
+                      child: Text(
+                        l.offOnSleep,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     Switch(
                       key: const ValueKey('off-on-sleep'),

@@ -232,7 +232,7 @@ class _Rasterizer {
     prev?.dispose();
     _frame = img;
     if (data == null) {
-      throw const EffectScriptException('leitura do quadro falhou');
+      throw const EffectScriptException('frame read failed');
     }
     return EffectFrame(
       width,
@@ -480,7 +480,7 @@ class _WorkerConnection {
   Future<Object?> request(List<Object?> message, {required Duration timeout}) {
     if (_dead) {
       return Future.error(
-        const EffectScriptException('O efeito foi encerrado.'),
+        const EffectScriptException('The effect was stopped.'),
       );
     }
     final id = _next++;
@@ -489,7 +489,7 @@ class _WorkerConnection {
     _timers[id] = Timer(timeout, () {
       _fail(
         EffectScriptException(
-          'efeito travado: quadro excedeu ${timeout.inMilliseconds} ms',
+          'effect hung: frame exceeded ${timeout.inMilliseconds} ms',
         ),
       );
     });
@@ -524,7 +524,7 @@ class _WorkerConnection {
     final text = message is List && message.isNotEmpty
         ? '${message.first}'
         : '$message';
-    _fail(EffectScriptException('isolate do efeito: $text'));
+    _fail(EffectScriptException('effect isolate: $text'));
   }
 
   void _fail(Object error) {
@@ -543,7 +543,7 @@ class _WorkerConnection {
     _errors.close();
   }
 
-  void close() => _fail(const EffectScriptException('Efeito descarregado.'));
+  void close() => _fail(const EffectScriptException('Effect unloaded.'));
 }
 
 void _workerMain(SendPort main) {

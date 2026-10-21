@@ -18,6 +18,8 @@ import 'package:lumivent/features/preferences/domain/preferences.dart';
 
 import '../../fakes.dart';
 
+import '../../support/app_harness.dart';
+
 class _Library implements EffectLibrary {
   _Library(this.effect);
   final InstalledEffect effect;
@@ -130,10 +132,12 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(
-            theme: buildTheme(),
-            home: const Scaffold(
-              body: SingleChildScrollView(child: EffectPanel()),
+          child: withPortuguese(
+            MaterialApp(
+              theme: buildTheme(),
+              home: const Scaffold(
+                body: SingleChildScrollView(child: EffectPanel()),
+              ),
             ),
           ),
         ),
