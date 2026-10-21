@@ -117,23 +117,34 @@ Known limitations:
 
 ### Prebuilt package (Arch Linux/CachyOS, x86_64)
 
-Each [release](https://github.com/lcsssilva/lumivent/releases) publishes:
+Each [release](https://github.com/lcsssilva/lumivent/releases) publishes two
+files, named after its version (for example, `v1.0.0`):
 
-- `lumivent-X.Y.Z-1-x86_64.pkg.tar.zst`;
-- `lumivent-X.Y.Z-sha256sums.txt`.
+- `lumivent-1.0.0-1-x86_64.pkg.tar.zst` — the package;
+- `lumivent-1.0.0-sha256sums.txt` — its checksum.
 
-Download both, verify the checksum and install:
+Download both into a new, empty directory, verify the checksum and install.
+With the [GitHub CLI](https://cli.github.com/) (works in bash, zsh and fish):
 
 ```sh
-sha256sum -c lumivent-X.Y.Z-sha256sums.txt
-sudo pacman -U lumivent-X.Y.Z-1-x86_64.pkg.tar.zst
+mkdir lumivent-release && cd lumivent-release
+gh release download --repo lcsssilva/lumivent --pattern 'lumivent-*'
+sha256sum -c lumivent-*-sha256sums.txt
+sudo pacman -U lumivent-*-x86_64.pkg.tar.zst
 ```
 
-If the checksum fails, do not install: download again from the official
-releases page. To upgrade, repeat with the newer package; `pacman` keeps
-`~/.config/lumivent/`. Packaging-only rebuilds keep the version and bump the
-`pkgrel` (`...-2-x86_64.pkg.tar.zst`); always use the latest artifact of a
-release.
+`gh release download` without a tag fetches the latest release; append a tag
+(`gh release download v1.0.0 --repo lcsssilva/lumivent`) for a specific one.
+Without `gh`, download both files from the releases page in your browser, then
+run the last two commands in the directory where they were saved. The checksum
+file refers to the package by name, so both must be in the same directory.
+
+`sha256sum -c` must report `OK` (localized, e.g. `SUCESSO`). If it reports
+`FAILED` or a missing file, do not install: download again from the official
+releases page. To upgrade, repeat the steps in a new, empty directory (so the
+wildcards match only the new files); `pacman` keeps `~/.config/lumivent/`.
+Packaging-only rebuilds keep the version and bump the `pkgrel`
+(`...-2-x86_64.pkg.tar.zst`); always use the latest artifact of a release.
 
 ### Building the package
 
