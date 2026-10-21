@@ -70,9 +70,7 @@ QuickJsRuntime2 newInterruptibleQuickJs() {
   final setHandler = _lookupSetHandler();
   if (created.length != 1 || setHandler == null) {
     js.dispose();
-    throw UnsupportedError(
-      'não foi possível instalar o limite de tempo do QuickJS',
-    );
+    throw UnsupportedError('could not install the QuickJS time limit');
   }
   setHandler(
     created.single.cast(),

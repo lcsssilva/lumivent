@@ -14,62 +14,60 @@ enum EffectSupport {
   unsupported,
 }
 
+/// Feature an effect needs from the host. The presentation maps the index to
+/// the catalog (`LightingStrings.compatibilityIssue`).
+enum EffectIssue { capture, pixels, audio, images, api }
+
 class EffectCompatibility {
   const EffectCompatibility(this.support, this.issues);
 
   final EffectSupport support;
 
-  /// Short, user-facing names of the missing features (Portuguese).
-  final List<String> issues;
+  /// Missing features, without user-facing text.
+  final List<EffectIssue> issues;
 
   bool get canRun => support != EffectSupport.unsupported;
-
-  String get label => switch (support) {
-    EffectSupport.compatible => 'Compatível',
-    EffectSupport.partial => 'Parcial',
-    EffectSupport.unsupported => 'Não suportado',
-  };
 
   @override
   bool operator ==(Object other) =>
       other is EffectCompatibility &&
       other.support == support &&
-      _sameStrings(other.issues, issues);
+      _sameIssues(other.issues, issues);
 
   @override
   int get hashCode => Object.hash(support, Object.hashAll(issues));
 }
 
 /// APIs that make an effect unusable with this runtime.
-const _unsupported = <(String, String)>[
-  ('engine.zone', 'captura de tela'),
-  ('screenCapture', 'captura de tela'),
-  ('desktopCapturer', 'captura de tela'),
-  ('getImageData', 'leitura de pixels'),
+const _unsupported = <(String, EffectIssue)>[
+  ('engine.zone', EffectIssue.capture),
+  ('screenCapture', EffectIssue.capture),
+  ('desktopCapturer', EffectIssue.capture),
+  ('getImageData', EffectIssue.pixels),
 ];
 
 /// APIs that work with a stub, degrading the effect.
-const _partial = <(String, String)>[
-  ('engine.audio', 'áudio (silêncio)'),
-  ('drawImage', 'imagens'),
+const _partial = <(String, EffectIssue)>[
+  ('engine.audio', EffectIssue.audio),
+  ('drawImage', EffectIssue.images),
 ];
 
 /// Analyzes the effect script (and its property types).
 EffectCompatibility analyzeEffect(EffectSource effect) {
   final script = effect.script;
-  final issues = <String>[];
+  final issues = <EffectIssue>[];
 
-  for (final (api, label) in _unsupported) {
-    if (script.contains(api)) _append(issues, label);
+  for (final (api, issue) in _unsupported) {
+    if (script.contains(api)) _append(issues, issue);
   }
-  for (final (api, label) in _partial) {
-    if (script.contains(api)) _append(issues, label);
+  for (final (api, issue) in _partial) {
+    if (script.contains(api)) _append(issues, issue);
   }
   if (effect.properties.any((p) => p.type.toLowerCase() == 'audio')) {
-    _append(issues, 'áudio (silêncio)');
+    _append(issues, EffectIssue.audio);
   }
 
-  const blocking = {'captura de tela', 'leitura de pixels'};
+  const blocking = {EffectIssue.capture, EffectIssue.pixels};
   if (issues.any(blocking.contains)) {
     return EffectCompatibility(EffectSupport.unsupported, issues);
   }
@@ -79,11 +77,11 @@ EffectCompatibility analyzeEffect(EffectSource effect) {
   );
 }
 
-void _append(List<String> list, String value) {
+void _append(List<EffectIssue> list, EffectIssue value) {
   if (!list.contains(value)) list.add(value);
 }
 
-bool _sameStrings(List<String> a, List<String> b) {
+bool _sameIssues(List<EffectIssue> a, List<EffectIssue> b) {
   if (a.length != b.length) return false;
   for (var i = 0; i < a.length; i++) {
     if (a[i] != b[i]) return false;

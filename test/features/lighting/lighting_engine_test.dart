@@ -990,7 +990,8 @@ void main() {
     expect(first.devices[LightDeviceId.chassis]!.state, LightOutputState.ok);
     final gpu = rig.statuses.last.devices[LightDeviceId.gpu]!;
     expect(gpu.state, LightOutputState.unavailable);
-    expect(gpu.detail, contains('GPU de teste'));
+    expect(gpu.issue, LightOutputIssue.gpu);
+    expect(gpu.args, ['GPU de teste indisponível']);
     // Only the fps and the loop stats change while everything is fine: at
     // most one per second.
     expect(rig.statuses.length, lessThanOrEqualTo(8));
@@ -1035,9 +1036,10 @@ void main() {
       s.devices[LightDeviceId.chassis]!.state,
       LightOutputState.unavailable,
     );
-    expect(s.devices[LightDeviceId.motherboard]!.detail, contains('ITE'));
+    expect(s.devices[LightDeviceId.motherboard]!.issue, LightOutputIssue.ite);
+    expect(s.devices[LightDeviceId.ram1]!.issue, LightOutputIssue.blocked);
     expect(
-      s.devices[LightDeviceId.ram1]!.detail,
+      s.devices[LightDeviceId.ram1]!.args,
       contains('identity is not FURY'),
     );
     expect(s.devices[LightDeviceId.alv2Group1]!.state, LightOutputState.ok);

@@ -23,16 +23,6 @@ class NvmeSmartLog {
     required this.sensorsKelvin,
   });
 
-  /// Critical warning bits (byte 0).
-  static const warningBits = {
-    0: 'reserva abaixo do limite',
-    1: 'temperatura fora da faixa',
-    2: 'confiabilidade degradada',
-    3: 'mídia somente leitura',
-    4: 'backup da memória volátil falhou',
-    5: 'PMR somente leitura',
-  };
-
   /// One "data unit" = 1000 sectors of 512 bytes.
   static const dataUnitBytes = 512000;
 
@@ -61,10 +51,10 @@ class NvmeSmartLog {
   int get bytesRead => dataUnitsRead * dataUnitBytes;
   int get bytesWritten => dataUnitsWritten * dataUnitBytes;
 
-  /// Description of enabled critical warning bits.
-  List<String> get warnings => [
-    for (final MapEntry(key: bit, value: text) in warningBits.entries)
-      if (criticalWarning & (1 << bit) != 0) text,
+  /// Enabled critical warning bit numbers (byte 0). The UI translates them.
+  List<int> get warnings => [
+    for (var bit = 0; bit < 8; bit++)
+      if (criticalWarning & (1 << bit) != 0) bit,
   ];
 
   /// Remaining life (%) = 100 − PercentageUsed, clamped to 0–100
@@ -88,6 +78,24 @@ enum SsdHealth {
       : good;
 }
 
+/// Why SMART data is unavailable. [message], [exitCode], and [stderr] are
+/// technical data from the helper; the UI composes the sentence.
+enum SsdErrorKind {
+  helperMissing,
+  helperFailed,
+  helperExit,
+  invalidResponse,
+  device,
+}
+
+class SsdSmartError {
+  const SsdSmartError(this.kind, {this.message, this.exitCode, this.stderr});
+  final SsdErrorKind kind;
+  final String? message;
+  final int? exitCode;
+  final String? stderr;
+}
+
 /// An NVMe SSD: sysfs identification (no privileges) + helper SMART data.
 class SsdInfo {
   const SsdInfo({
@@ -109,7 +117,7 @@ class SsdInfo {
 
   /// `null` if the helper is not installed or fails ([smartError]).
   final NvmeSmartLog? smart;
-  final String? smartError;
+  final SsdSmartError? smartError;
 }
 
 /// Port: reads SSDs (identification + SMART). Runs in the engine.

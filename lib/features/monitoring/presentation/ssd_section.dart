@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings.dart';
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../preferences/preferences.dart';
@@ -22,19 +24,21 @@ class SsdSection extends ConsumerWidget {
     final unit = ref.watch(
       preferencesProvider.select((p) => p.temperatureUnit),
     );
+    final strings = context.strings;
+    final s = strings.monitoring;
     final missingSmart =
         ssds?.where((s) => s.smart == null).toList() ?? const [];
     return WeCard(
-      title: 'Armazenamento',
+      title: s.storage,
       trailing: readAt == null
           ? null
           : Text(
-              'atualiza a cada minuto · lido às ${_hms(readAt)}',
+              s.ssdRefreshedAt(_hms(readAt)),
               style: const TextStyle(color: WeColors.muted, fontSize: 12),
             ),
       child: switch (ssds) {
-        null => const NoReading('Lendo SSDs…'),
-        [] => const NoReading('Nenhum SSD NVMe encontrado.'),
+        null => NoReading(s.readingSsds),
+        [] => NoReading(s.noNvme),
         _ => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -57,13 +61,28 @@ class SsdSection extends ConsumerWidget {
 String _hms(DateTime t) =>
     [t.hour, t.minute, t.second].map((v) => '$v'.padLeft(2, '0')).join(':');
 
+String ssdErrorText(SsdSmartError e, AppStrings strings) {
+  final s = strings.monitoring;
+  return switch (e.kind) {
+    SsdErrorKind.helperMissing => s.ssdHelperMissing,
+    SsdErrorKind.helperFailed => s.ssdHelperFailed(e.message ?? ''),
+    SsdErrorKind.helperExit => s.ssdHelperExit(e.exitCode ?? 0, e.stderr ?? ''),
+    SsdErrorKind.invalidResponse => s.ssdInvalidResponse,
+    SsdErrorKind.device => e.message ?? '',
+  };
+}
+
 class _SmartBanner extends StatelessWidget {
   const _SmartBanner(this.ssds);
   final List<SsdInfo> ssds;
 
   @override
   Widget build(BuildContext context) {
-    final reasons = {for (final s in ssds) ?s.smartError};
+    final strings = context.strings;
+    final reasons = {
+      for (final s in ssds)
+        if (s.smartError case final e?) ssdErrorText(e, strings),
+    };
     return Container(
       margin: const EdgeInsets.only(bottom: WeSizes.unit * 1.5),
       padding: const EdgeInsets.all(WeSizes.unit * 1.5),
@@ -81,9 +100,7 @@ class _SmartBanner extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'SMART indisponível: vida restante, TBW e horas ligado não estão disponíveis.',
-                ),
+                Text(strings.monitoring.smartUnavailable),
                 const SizedBox(height: 2),
                 Text(
                   reasons.join(' · '),
@@ -106,11 +123,13 @@ class _SsdRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.strings;
+    final s = strings.monitoring;
     final smart = ssd.smart;
     final health = smart?.health;
     final ident = [
       ssd.controller,
-      if (ssd.capacityBytes case final c?) formatStorage(c),
+      if (ssd.capacityBytes case final c?) formatStorage(c, strings),
       if (ssd.firmware.isNotEmpty) 'fw ${ssd.firmware}',
       if (ssd.serial.isNotEmpty) 'S/N ${ssd.serial}',
     ].join(' · ');
@@ -144,9 +163,9 @@ class _SsdRow extends StatelessWidget {
               ),
               const SizedBox(width: WeSizes.unit * 2),
               health == null
-                  ? const StatusPill(label: 'Sem SMART', color: WeColors.muted)
+                  ? StatusPill(label: s.noSmart, color: WeColors.muted)
                   : StatusPill(
-                      label: healthLabel(health),
+                      label: healthLabel(health, strings),
                       color: healthColor(health),
                     ),
               const SizedBox(width: WeSizes.unit * 1.5),
@@ -154,7 +173,7 @@ class _SsdRow extends StatelessWidget {
                 onPressed: smart == null
                     ? null
                     : () => showSmartDetails(context, ssd, unit),
-                child: const Text('Detalhes'),
+                child: Text(strings.common.details),
               ),
             ],
           ),
@@ -167,35 +186,38 @@ class _SsdRow extends StatelessWidget {
               children: [
                 if (smart != null) _LifeTile(smart),
                 _tile(
-                  'Temperatura',
+                  s.temperature,
                   formatTemp(liveTemp ?? smart?.compositeCelsius, unit),
                 ),
                 if (smart != null) ...[
-                  _tile('Horas ligado', '${grouped(smart.powerOnHours)} h'),
-                  _tile('Escritos', formatStorage(smart.bytesWritten)),
-                  _tile('Lidos', formatStorage(smart.bytesRead)),
-                  _tile('Ciclos de energia', grouped(smart.powerCycles)),
                   _tile(
-                    'Desligamentos inseguros',
-                    grouped(smart.unsafeShutdowns),
+                    s.powerOnHours,
+                    '${strings.grouped(smart.powerOnHours)} h',
+                  ),
+                  _tile(s.written, formatStorage(smart.bytesWritten, strings)),
+                  _tile(s.read, formatStorage(smart.bytesRead, strings)),
+                  _tile(s.powerCycles, strings.grouped(smart.powerCycles)),
+                  _tile(
+                    s.unsafeShutdowns,
+                    strings.grouped(smart.unsafeShutdowns),
                   ),
                   _tile(
-                    'Erros de mídia',
-                    grouped(smart.mediaErrors),
+                    s.mediaErrors,
+                    strings.grouped(smart.mediaErrors),
                     color: smart.mediaErrors > 0 ? WeColors.danger : null,
                   ),
                   _tile(
-                    'Reserva disponível',
+                    s.availableSpare,
                     '${smart.availableSpare} %',
                     color: smart.availableSpare <= smart.availableSpareThreshold
                         ? WeColors.danger
                         : null,
                   ),
                   _tile(
-                    'Alerta crítico',
+                    s.criticalWarning,
                     smart.warnings.isEmpty
-                        ? 'Nenhum'
-                        : smart.warnings.join(', '),
+                        ? strings.common.none
+                        : smart.warnings.map(s.smartWarning).join(', '),
                     color: smart.warnings.isEmpty ? null : WeColors.danger,
                   ),
                 ],
@@ -242,9 +264,9 @@ class _LifeTile extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Vida restante',
-          style: TextStyle(color: WeColors.muted, fontSize: 12),
+        Text(
+          context.strings.monitoring.remainingLife,
+          style: const TextStyle(color: WeColors.muted, fontSize: 12),
         ),
         const SizedBox(height: 2),
         Text(
@@ -278,45 +300,46 @@ Future<void> showSmartDetails(
   SsdInfo ssd,
   TemperatureUnit unit,
 ) {
-  final s = ssd.smart!;
+  final strings = context.strings;
+  final s = strings.monitoring;
+  final smart = ssd.smart!;
   String kelvin(int k) => formatTemp(k - 273.15, unit);
   final rows = <(String, String)>[
     (
-      'Alerta crítico',
-      '0x${s.criticalWarning.toRadixString(16).padLeft(2, '0').toUpperCase()}'
-          '${s.warnings.isEmpty ? '' : ' (${s.warnings.join(', ')})'}',
+      s.criticalWarning,
+      '0x${smart.criticalWarning.toRadixString(16).padLeft(2, '0').toUpperCase()}'
+          '${smart.warnings.isEmpty ? '' : ' (${smart.warnings.map(s.smartWarning).join(', ')})'}',
     ),
-    ('Temperatura composta', kelvin(s.compositeKelvin)),
-    ('Reserva disponível', '${s.availableSpare} %'),
-    ('Limite da reserva', '${s.availableSpareThreshold} %'),
-    ('Percentual usado', '${s.percentageUsed} %'),
-    ('Vida restante', '${s.lifeRemaining} % (${healthLabel(s.health)})'),
+    (s.compositeTemperature, kelvin(smart.compositeKelvin)),
+    (s.availableSpare, '${smart.availableSpare} %'),
+    (s.spareThreshold, '${smart.availableSpareThreshold} %'),
+    (s.percentageUsed, '${smart.percentageUsed} %'),
     (
-      'Data units lidas',
-      '${grouped(s.dataUnitsRead)} (${formatStorage(s.bytesRead)})',
-    ),
-    (
-      'Data units escritas',
-      '${grouped(s.dataUnitsWritten)} (${formatStorage(s.bytesWritten)})',
-    ),
-    ('Comandos de leitura', grouped(s.hostReadCommands)),
-    ('Comandos de escrita', grouped(s.hostWriteCommands)),
-    ('Tempo ocupado do controlador', '${grouped(s.controllerBusyMinutes)} min'),
-    ('Ciclos de energia', grouped(s.powerCycles)),
-    ('Horas ligado', '${grouped(s.powerOnHours)} h'),
-    ('Desligamentos inseguros', grouped(s.unsafeShutdowns)),
-    ('Erros de mídia e integridade', grouped(s.mediaErrors)),
-    ('Entradas no log de erros', grouped(s.errorLogEntries)),
-    (
-      'Tempo acima da temperatura de alerta',
-      '${grouped(s.warningTempMinutes)} min',
+      s.remainingLife,
+      '${smart.lifeRemaining} % (${healthLabel(smart.health, strings)})',
     ),
     (
-      'Tempo acima da temperatura crítica',
-      '${grouped(s.criticalTempMinutes)} min',
+      s.dataUnitsRead,
+      '${strings.grouped(smart.dataUnitsRead)} '
+          '(${formatStorage(smart.bytesRead, strings)})',
     ),
-    for (final (i, k) in s.sensorsKelvin.indexed)
-      if (k != 0) ('Sensor de temperatura ${i + 1}', kelvin(k)),
+    (
+      s.dataUnitsWritten,
+      '${strings.grouped(smart.dataUnitsWritten)} '
+          '(${formatStorage(smart.bytesWritten, strings)})',
+    ),
+    (s.hostReadCommands, strings.grouped(smart.hostReadCommands)),
+    (s.hostWriteCommands, strings.grouped(smart.hostWriteCommands)),
+    (s.controllerBusy, '${strings.grouped(smart.controllerBusyMinutes)} min'),
+    (s.powerCycles, strings.grouped(smart.powerCycles)),
+    (s.powerOnHours, '${strings.grouped(smart.powerOnHours)} h'),
+    (s.unsafeShutdowns, strings.grouped(smart.unsafeShutdowns)),
+    (s.mediaErrorsAndIntegrity, strings.grouped(smart.mediaErrors)),
+    (s.errorLogEntries, strings.grouped(smart.errorLogEntries)),
+    (s.warningTempTime, '${strings.grouped(smart.warningTempMinutes)} min'),
+    (s.criticalTempTime, '${strings.grouped(smart.criticalTempMinutes)} min'),
+    for (final (i, k) in smart.sensorsKelvin.indexed)
+      if (k != 0) (s.sensorTemperature(i + 1), kelvin(k)),
   ];
   return showDialog<void>(
     context: context,
@@ -343,7 +366,7 @@ Future<void> showSmartDetails(
               ),
               const SizedBox(height: 2),
               Text(
-                '${ssd.controller} · SMART/Health (log 02h)',
+                '${ssd.controller} · ${s.smartDialogSubtitle}',
                 style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
               ),
               const SizedBox(height: WeSizes.unit * 2),
@@ -386,7 +409,7 @@ Future<void> showSmartDetails(
                 alignment: Alignment.centerRight,
                 child: FilledButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Fechar'),
+                  child: Text(strings.common.close),
                 ),
               ),
             ],

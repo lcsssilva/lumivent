@@ -1322,27 +1322,16 @@ class LightingEngineModule implements EngineModule {
       if (!id.isSupported) {
         return const LightOutputStatus(
           LightOutputState.unsupported,
-          detail: 'Placa de vídeo ainda sem suporte.',
+          issue: LightOutputIssue.unsupported,
         );
       }
       if (out == null) return const LightOutputStatus(LightOutputState.ok);
       final (up, reason) = switch (id) {
-        _ when id.isFan => (
-          _fansReady,
-          'Hub AL V2 não encontrado ou sem permissão de acesso.',
-        ),
-        LightDeviceId.chassis || LightDeviceId.motherboard => (
-          _boardReady,
-          'Controlador ITE da placa-mãe não encontrado ou sem permissão de acesso.',
-        ),
-        LightDeviceId.gpu => (
-          _gpuReady,
-          'Controlador RGB da GPU não encontrado ou sem permissão de acesso.',
-        ),
-        _ => (
-          !_ramDown.contains(id),
-          'Memória Kingston Fury não encontrada ou sem permissão de acesso ao barramento SMBus.',
-        ),
+        _ when id.isFan => (_fansReady, LightOutputIssue.hub),
+        LightDeviceId.chassis ||
+        LightDeviceId.motherboard => (_boardReady, LightOutputIssue.ite),
+        LightDeviceId.gpu => (_gpuReady, LightOutputIssue.gpu),
+        _ => (!_ramDown.contains(id), LightOutputIssue.ram),
       };
       if (up) return const LightOutputStatus(LightOutputState.ok);
       final blocked = out.blockedReason(id);
@@ -1352,12 +1341,14 @@ class LightingEngineModule implements EngineModule {
         // generic "safety block".
         return LightOutputStatus(
           LightOutputState.unavailable,
-          detail: blocked ?? reason,
+          issue: LightOutputIssue.gpu,
+          args: blocked == null ? const [] : [blocked],
         );
       }
       return LightOutputStatus(
         LightOutputState.unavailable,
-        detail: blocked == null ? reason : 'Bloqueado por segurança: $blocked',
+        issue: blocked == null ? reason : LightOutputIssue.blocked,
+        args: blocked == null ? const [] : [blocked],
       );
     }
 

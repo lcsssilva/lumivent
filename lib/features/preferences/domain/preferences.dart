@@ -6,11 +6,15 @@
 
 enum TemperatureUnit { celsius, fahrenheit }
 
+/// Interface language. English is the default (new installs and old configs).
+enum AppLanguage { en, pt }
+
 class Preferences {
   const Preferences({
     this.closeToTray = true,
     this.temperatureUnit = TemperatureUnit.celsius,
     this.effectsFps = 30,
+    this.language = AppLanguage.en,
   });
 
   static const fpsOptions = [15, 30, 60];
@@ -22,14 +26,19 @@ class Preferences {
   /// Frames per second for the LED loop (the AL V2 is limited to ~15).
   final int effectsFps;
 
+  /// UI language; missing or unknown values fall back to English.
+  final AppLanguage language;
+
   Preferences copyWith({
     bool? closeToTray,
     TemperatureUnit? temperatureUnit,
     int? effectsFps,
+    AppLanguage? language,
   }) => Preferences(
     closeToTray: closeToTray ?? this.closeToTray,
     temperatureUnit: temperatureUnit ?? this.temperatureUnit,
     effectsFps: effectsFps ?? this.effectsFps,
+    language: language ?? this.language,
   );
 
   factory Preferences.fromJson(Map<String, Object?> json) {
@@ -48,6 +57,11 @@ class Preferences {
               .firstOrNull ??
           d.temperatureUnit,
       effectsFps: fpsOptions.contains(fps) ? fps : d.effectsFps,
+      language:
+          AppLanguage.values
+              .where((l) => l.name == json['language'])
+              .firstOrNull ??
+          d.language,
     );
   }
 
@@ -55,6 +69,7 @@ class Preferences {
     'closeToTray': closeToTray,
     'temperatureUnit': temperatureUnit.name,
     'effectsFps': effectsFps,
+    'language': language.name,
   };
 
   @override
@@ -62,10 +77,12 @@ class Preferences {
       other is Preferences &&
       other.closeToTray == closeToTray &&
       other.temperatureUnit == temperatureUnit &&
-      other.effectsFps == effectsFps;
+      other.effectsFps == effectsFps &&
+      other.language == language;
 
   @override
-  int get hashCode => Object.hash(closeToTray, temperatureUnit, effectsFps);
+  int get hashCode =>
+      Object.hash(closeToTray, temperatureUnit, effectsFps, language);
 }
 
 /// Persistence port for preferences.

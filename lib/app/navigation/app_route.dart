@@ -1,33 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum AppRoute {
-  monitoring(
-    'Monitoramento',
-    'Sensores da CPU, GPU, placa-mãe e SSDs',
-    Icons.monitor_heart_outlined,
-  ),
-  lighting(
-    'Iluminação',
-    'Efeitos e cores de todos os dispositivos ARGB',
-    Icons.auto_awesome_outlined,
-  ),
-  fans(
-    'Fans',
-    'Velocidade das fans AL V2 por curva ou preset',
-    Icons.toys_outlined,
-  ),
-  explore('Explore', 'Biblioteca de efeitos', Icons.explore_outlined),
-  settings(
-    'Configurações',
-    'Inicialização, preferências e diagnóstico',
-    Icons.settings_outlined,
-  );
+import '../../core/i18n/app_strings.dart';
 
-  const AppRoute(this.label, this.subtitle, this.icon);
-  final String label;
-  final String subtitle;
+enum AppRoute {
+  monitoring(Icons.monitor_heart_outlined),
+  lighting(Icons.auto_awesome_outlined),
+  fans(Icons.toys_outlined),
+  explore(Icons.explore_outlined),
+  settings(Icons.settings_outlined);
+
+  const AppRoute(this.icon);
   final IconData icon;
+}
+
+extension AppRouteStrings on AppRoute {
+  String label(AppStrings s) => switch (this) {
+    AppRoute.monitoring => s.shell.monitoring,
+    AppRoute.lighting => s.shell.lighting,
+    AppRoute.fans => s.shell.fans,
+    AppRoute.explore => s.shell.explore,
+    AppRoute.settings => s.shell.settings,
+  };
+
+  String subtitle(AppStrings s) => switch (this) {
+    AppRoute.monitoring => s.shell.monitoringSubtitle,
+    AppRoute.lighting => s.shell.lightingSubtitle,
+    AppRoute.fans => s.shell.fansSubtitle,
+    AppRoute.explore => s.shell.exploreSubtitle,
+    AppRoute.settings => s.shell.settingsSubtitle,
+  };
 }
 
 class RouteNotifier extends Notifier<AppRoute> {

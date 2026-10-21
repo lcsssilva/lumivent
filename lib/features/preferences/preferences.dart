@@ -4,6 +4,6 @@ library;
 
 export 'application/preferences_controller.dart'
     show PreferencesController, preferencesProvider;
-export 'domain/preferences.dart' show Preferences, TemperatureUnit;
+export 'domain/preferences.dart' show AppLanguage, Preferences, TemperatureUnit;
 export 'preferences_module.dart';
 export 'presentation/preferences_card.dart' show PreferencesCard;

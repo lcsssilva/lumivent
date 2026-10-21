@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_strings.dart';
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../domain/fan_curve.dart';
 import '../domain/fan_group.dart';
@@ -143,7 +145,13 @@ class _FanCurveEditorState extends State<FanCurveEditor> {
           onSecondaryTapDown: (d) => _remove(plot, d.localPosition),
           child: CustomPaint(
             size: Size(c.maxWidth, widget.height),
-            painter: _CurvePainter(widget.group, widget.live, plot, _dragging),
+            painter: _CurvePainter(
+              widget.group,
+              widget.live,
+              plot,
+              _dragging,
+              context.strings,
+            ),
           ),
         );
       },
@@ -179,12 +187,13 @@ class _Plot {
 }
 
 class _CurvePainter extends CustomPainter {
-  _CurvePainter(this.group, this.live, this.plot, this.dragging);
+  _CurvePainter(this.group, this.live, this.plot, this.dragging, this.strings);
 
   final FanGroupConfig group;
   final FanCurveLive live;
   final _Plot plot;
   final int? dragging;
+  final AppStrings strings;
 
   double _pct(num rpm) =>
       (rpm / group.size.maxRpm * 100).clamp(0, 100).toDouble();
@@ -239,7 +248,7 @@ class _CurvePainter extends CustomPainter {
       _text(canvas, '$p %', Offset(r.left - 6, y), align: TextAlign.right);
       _text(
         canvas,
-        '${(group.size.maxRpm * p / 100).round()}',
+        strings.grouped((group.size.maxRpm * p / 100).round()),
         Offset(r.right + 6, y),
       );
     }
@@ -345,7 +354,10 @@ class _CurvePainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5,
       );
-      final label = 'duty ${live.duty ?? '—'} % · ${rpm.round()} rpm';
+      final label = strings.fans.dutyAndRpm(
+        live.duty?.toString() ?? '—',
+        strings.grouped(rpm.round()),
+      );
       final tp = TextPainter(
         text: TextSpan(
           text: label,

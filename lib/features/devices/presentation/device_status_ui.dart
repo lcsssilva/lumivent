@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_strings.dart';
 import '../../../core/ui/theme.dart';
 import '../domain/device.dart';
 
 extension DeviceStatusUi on DeviceStatus {
-  String get label => switch (this) {
-    DeviceStatus.ok => 'Conectado',
-    DeviceStatus.missing => 'Não encontrado',
-    DeviceStatus.noPermission => 'Sem permissão',
-    DeviceStatus.unavailable => 'Indisponível',
-    DeviceStatus.blocked => 'Bloqueado',
-    DeviceStatus.unsupported => 'Sem suporte',
-    DeviceStatus.error => 'Erro',
-  };
+  String label(AppStrings strings) {
+    final s = strings.devices;
+    return switch (this) {
+      DeviceStatus.ok => s.connected,
+      DeviceStatus.missing => s.notFound,
+      DeviceStatus.noPermission => s.noPermission,
+      DeviceStatus.unavailable => s.unavailable,
+      DeviceStatus.blocked => s.blocked,
+      DeviceStatus.unsupported => s.unsupported,
+      DeviceStatus.error => s.error,
+    };
+  }
 
   Color get color => switch (this) {
     DeviceStatus.ok => WeColors.ok,
@@ -21,6 +25,33 @@ extension DeviceStatusUi on DeviceStatus {
     DeviceStatus.unavailable ||
     DeviceStatus.blocked => WeColors.warn,
     DeviceStatus.error => WeColors.danger,
+  };
+}
+
+/// Localized generic device name. The model (hardware) is not translated.
+String deviceName(DeviceInfo device, AppStrings strings) {
+  final s = strings.devices;
+  return switch (device.label) {
+    DeviceLabel.alv2Fans => s.alv2Fans,
+    DeviceLabel.boardAndCase => s.boardAndCase,
+    DeviceLabel.memoryModules => s.memoryModules,
+    DeviceLabel.memoryModule => s.memoryModule(device.slot ?? 0),
+    DeviceLabel.graphicsCard => s.graphicsCard,
+  };
+}
+
+/// What the user can do about [DeviceInfo.issue], if any.
+String? deviceIssue(DeviceInfo device, AppStrings strings) {
+  final s = strings.devices;
+  return switch (device.issue) {
+    null => null,
+    DeviceIssue.udevRules => s.udevRulesHint,
+    DeviceIssue.fanUsbCable => s.fanUsbCableHint,
+    DeviceIssue.motherboardRgb => s.motherboardRgbHint,
+    DeviceIssue.memoryBus => s.memoryBusHint,
+    DeviceIssue.gpuSsid => s.gpuSsidHint,
+    DeviceIssue.unsafeAddress => s.unsafeAddressHint,
+    DeviceIssue.noResponse => s.noResponse(device.issueArg ?? ''),
   };
 }
 

@@ -25,7 +25,7 @@ InstalledEffect _effect(
   String? publisher = 'Autor',
   List<String> tags = const [],
   EffectSupport support = EffectSupport.compatible,
-  List<String> issues = const [],
+  List<EffectIssue> issues = const [],
 }) => InstalledEffect(
   id: id,
   title: title,
@@ -105,13 +105,13 @@ void main() {
         publisher: 'Outro Autor',
         tags: const ['Advanced'],
         support: EffectSupport.partial,
-        issues: const ['áudio (silêncio)'],
+        issues: const [EffectIssue.audio],
       ),
       _effect(
         'screen',
         'Screen Capture',
         support: EffectSupport.unsupported,
-        issues: const ['captura de tela'],
+        issues: const [EffectIssue.capture],
       ),
     ]);
     container = ProviderContainer(

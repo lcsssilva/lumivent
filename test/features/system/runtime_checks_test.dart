@@ -1,11 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/features/fans/fans.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
 import 'package:lumivent/features/system/application/runtime_checks.dart';
 import 'package:lumivent/features/system/domain/diagnostics.dart';
+import 'package:lumivent/features/system/presentation/diagnostics_card.dart';
 
-LightingStatus light(LightOutputState fans, {String? detail}) => LightingStatus(
-  {LightDeviceId.alv2Group1: LightOutputStatus(fans, detail: detail)},
+LightingStatus light(
+  LightOutputState fans, {
+  LightOutputIssue? issue,
+  List<String> args = const [],
+}) => LightingStatus(
+  {LightDeviceId.alv2Group1: LightOutputStatus(fans, issue: issue, args: args)},
   fps: 30,
   loops: const {
     OutputFamily.fans: LoopStats(fps: 2, sendMs: 48.2),
@@ -42,18 +48,19 @@ void main() {
     );
     final down = runtimeChecks(
       null,
-      light(LightOutputState.unavailable, detail: 'sem permissão'),
+      light(LightOutputState.unavailable, issue: LightOutputIssue.ite),
     )[1];
     expect(down.state, CheckState.warn);
-    expect(down.detail, 'sem permissão');
+    expect(down.data['issue'], LightOutputIssue.ite.index);
   });
 
   test('loop line shows fps and send time per family', () {
     final loop = runtimeChecks(null, light(LightOutputState.ok)).last;
-    expect(loop.label, 'Laço da iluminação');
+    expect(loop.id, DiagnosticId.lightingLoop);
     expect(
-      loop.detail,
-      'fans 2,0 fps, 48,2 ms · placa/gabinete 30,0 fps, 0,9 ms · RAM 0,0 fps · GPU 8,0 fps, 124,0 ms',
+      diagnosticDetail(loop, AppStrings.pt),
+      'fans 2,0 fps, 48,2 ms · placa/gabinete 30,0 fps, 0,9 ms · RAM 0,0 fps '
+      '· GPU 8,0 fps, 124,0 ms',
     );
   });
 }

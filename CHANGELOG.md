@@ -9,12 +9,21 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The interface is now bilingual: **English (default)** and **Portuguese**.
+  Choose **Settings → Preferences → Language** (`English` / `Português`); the
+  change applies immediately and is saved in `config.json`. Existing
+  installations without a saved language open in English — switch back once in
+  Preferences. Numbers follow the selected language (`1,234.5` × `1.234,5`).
 - Documentation is now in English and consolidated in the root files (README,
   CONTRIBUTING, SECURITY, CODE_OF_CONDUCT); the `docs/` folder is no longer
   published or installed by the package.
 
 ### Added
 
+- All interface text now lives in typed English/Portuguese catalogs
+  (`lib/core/i18n/catalogs/`); device statuses and errors cross the engine as
+  typed issues and are translated in the presentation layer.
+- Language is part of configuration export/import.
 - User guide for every page of the app in the README.
 - `test/docs_test.dart`: relative links and anchors in the published Markdown
   files are checked by `flutter test`.

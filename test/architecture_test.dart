@@ -123,4 +123,74 @@ void main() {
       expect(File('${m.path}/$name.dart').existsSync(), isTrue, reason: name);
     }
   });
+
+  test('app and presentation have no Portuguese UI literals', () {
+    // Words that only make sense in Portuguese UI text. The language selector
+    // uses the endonym "Português", which is intentionally not translated.
+    const forbidden = [
+      'Configurações',
+      'Iluminação',
+      'Preferências',
+      'Monitoramento',
+      'Gabinete',
+      'Memória',
+      'Curva',
+      'Velocidade',
+      'Idioma',
+      'Licenças',
+      'Erro',
+      'Falha',
+      'Não',
+      'não',
+      'efeito',
+      'arquivo',
+      'pasta',
+      'placa',
+      'ventoinha',
+      'grupo',
+      'tela',
+      'sistema',
+      'iniciar',
+      'salvar',
+      'remover',
+      'cancelar',
+    ];
+    const allowed = {'Português'};
+    final leaks = <String>[];
+
+    final targets = <Directory>[
+      Directory('$libRoot/app'),
+      ...Directory('$libRoot/features')
+          .listSync()
+          .whereType<Directory>()
+          .map((m) => Directory('${m.path}/presentation'))
+          .where((d) => d.existsSync()),
+    ];
+
+    for (final dir in targets) {
+      for (final file
+          in dir
+              .listSync(recursive: true)
+              .whereType<File>()
+              .where((f) => f.path.endsWith('.dart'))) {
+        final lines = file.readAsLinesSync();
+        for (var i = 0; i < lines.length; i++) {
+          final line = lines[i].trim();
+          if (line.startsWith('//')) continue;
+          for (final word in forbidden) {
+            final boundary = RegExp(
+              '(^|[^A-Za-zÀ-ÿ])${RegExp.escape(word)}([^A-Za-zÀ-ÿ]|\$)',
+              caseSensitive: false,
+            );
+            if (boundary.hasMatch(line) && !allowed.any(line.contains)) {
+              final path = file.path.substring(libRoot.length + 1);
+              leaks.add('$path:${i + 1}: $word');
+            }
+          }
+        }
+      }
+    }
+
+    expect(leaks, isEmpty, reason: leaks.join('\n'));
+  });
 }

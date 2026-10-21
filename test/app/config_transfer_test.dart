@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/config_transfer.dart';
 import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/fans/fans.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
@@ -59,7 +60,7 @@ void main() {
 
   test('invalid files are rejected with a message for the user', () {
     void rejects(String text, String message) => expect(
-      () => importableSections(text),
+      () => importableSections(text, strings: AppStrings.pt),
       throwsA(
         isA<FormatException>().having((e) => e.message, 'message', message),
       ),

@@ -22,11 +22,17 @@ import 'effects_controller.dart';
 import 'lighting_controller.dart';
 import 'lighting_messages.dart';
 
+/// Why the HTML effect is not running. The presentation maps it to the
+/// catalog (`LightingStrings.effectLoadFailed`/`effectPaused`/...).
+enum HtmlEffectIssue { loadFailed, paused, unsupported }
+
 class HtmlEffectStatus {
   const HtmlEffectStatus({
     this.effectId,
     this.loading = false,
     this.paused = false,
+    this.issue,
+    this.issueArgs = const [],
     this.error,
     this.fps = 0,
     this.frameMs = 0,
@@ -38,18 +44,24 @@ class HtmlEffectStatus {
 
   /// Stopped because frames take too long (an effect stuck in a loop).
   final bool paused;
+
+  /// Reason the effect is not running; [error] carries technical detail.
+  final HtmlEffectIssue? issue;
+  final List<String> issueArgs;
   final String? error;
 
   /// Measured render FPS and mean frame time of the last second.
   final double fps;
   final double frameMs;
 
-  bool get running => effectId != null && !loading && !paused && error == null;
+  bool get running => effectId != null && !loading && !paused && issue == null;
 
   HtmlEffectStatus copyWith({
     String? effectId,
     bool? loading,
     bool? paused,
+    HtmlEffectIssue? issue,
+    List<String>? issueArgs,
     String? error,
     double? fps,
     double? frameMs,
@@ -57,6 +69,8 @@ class HtmlEffectStatus {
     effectId: effectId ?? this.effectId,
     loading: loading ?? this.loading,
     paused: paused ?? this.paused,
+    issue: issue ?? this.issue,
+    issueArgs: issueArgs ?? this.issueArgs,
     error: error ?? this.error,
     fps: fps ?? this.fps,
     frameMs: frameMs ?? this.frameMs,
@@ -113,11 +127,16 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
     try {
       final library = ref.read(effectLibraryProvider);
       final effect = await library.find(slug);
-      if (effect == null) throw StateError('Efeito instalado não encontrado.');
+      if (effect == null) throw StateError('installed effect not found');
       if (!effect.canRun) {
-        throw StateError(
-          'Efeito não suportado: ${effect.compatibility.issues.join(', ')}.',
-        );
+        if (gen == _generation) {
+          state = HtmlEffectStatus(
+            effectId: effectId,
+            issue: HtmlEffectIssue.unsupported,
+            issueArgs: [for (final i in effect.compatibility.issues) i.name],
+          );
+        }
+        return;
       }
       final html = await library.readHtml(slug);
       final values =
@@ -147,7 +166,8 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
       if (gen == _generation) {
         state = HtmlEffectStatus(
           effectId: effectId,
-          error: 'Falha ao carregar o efeito: $e',
+          issue: HtmlEffectIssue.loadFailed,
+          error: '$e',
         );
       }
     }
@@ -203,9 +223,7 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
     if (took > slowFrameLimit) {
       _slowFrames++;
       if (_slowFrames >= maxSlowFrames) {
-        _pause(
-          'Efeito pausado: quadro demorou ${(took.inMicroseconds / 1000).round()} ms.',
-        );
+        _pause((took.inMicroseconds / 1000).round());
         return;
       }
     } else {
@@ -234,22 +252,31 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
     }
   }
 
-  void _pause(String message) {
+  void _pause(int ms) {
     _timer?.cancel();
     _timer = null;
     _runtime?.dispose();
     _runtime = null;
     _liveFrame?.value = null;
-    state = state.copyWith(paused: true, error: message, loading: false);
+    state = state.copyWith(
+      paused: true,
+      issue: HtmlEffectIssue.paused,
+      issueArgs: ['$ms'],
+      loading: false,
+    );
   }
 
-  void _fail(String message) {
+  void _fail(String detail) {
     _timer?.cancel();
     _timer = null;
     _runtime?.dispose();
     _runtime = null;
     _liveFrame?.value = null;
-    state = HtmlEffectStatus(effectId: _effectId, error: message);
+    state = HtmlEffectStatus(
+      effectId: _effectId,
+      issue: HtmlEffectIssue.loadFailed,
+      error: detail,
+    );
   }
 
   void _stop() {

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../application/system_controller.dart';
+import '../domain/autostart.dart';
 
 class StartupCard extends ConsumerStatefulWidget {
   const StartupCard({super.key});
@@ -26,27 +28,29 @@ class _StartupCardState extends ConsumerState<StartupCard> {
     final autostart = ref.watch(autostartProvider);
     final location = ref.watch(autostartServiceProvider).location;
     final state = autostart.value;
+    final strings = context.strings;
+    final s = strings.settings;
+    final error = autostart.error;
+    final errorText = switch (error) {
+      null => null,
+      AutostartException e => strings.system.autostartFailed(
+        e.command,
+        e.stderr,
+      ),
+      _ => '$error',
+    };
     return WeCard(
-      title: 'Inicialização',
+      title: s.startup,
       child: SettingRow(
-        title: 'Iniciar com o sistema',
+        title: s.startAtLogin,
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Unidade systemd --user, inicia minimizado na bandeja: $location',
-            ),
+            Text(s.systemdUnit(location)),
             if (state?.stale ?? false)
-              const Text(
-                'A unidade instalada aponta para outro executável. '
-                'Desative e ative de novo para usar este.',
-                style: TextStyle(color: WeColors.warn),
-              ),
-            if (autostart.hasError)
-              Text(
-                '${autostart.error}',
-                style: const TextStyle(color: WeColors.danger),
-              ),
+              Text(s.staleUnit, style: const TextStyle(color: WeColors.warn)),
+            if (errorText != null)
+              Text(errorText, style: const TextStyle(color: WeColors.danger)),
           ],
         ),
         control: Switch(

@@ -155,7 +155,7 @@ class FansConfig {
     for (var g = 0; g < fanGroupCount; g++)
       FanGroupConfig(
         group: g,
-        name: 'Grupo $g',
+        name: '',
         size: g == 1 ? FanSize.mm140 : FanSize.mm120,
       ),
   ]);

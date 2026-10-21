@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/domain/effect_compat.dart';
+import 'package:lumivent/features/lighting/domain/effect_library.dart';
 import 'package:lumivent/features/lighting/domain/installed_effect.dart';
 import 'package:lumivent/features/lighting/infrastructure/effect_importer.dart';
 import 'package:lumivent/features/lighting/infrastructure/effect_library.dart';
@@ -46,7 +47,7 @@ void main() {
       ..writeAsStringSync(effectHtml('Rainbow Test'));
     final report = await importer.importPaths([file.path]);
     expect(report.imported, 1);
-    expect(report.errors, isEmpty);
+    expect(report.issues, isEmpty);
 
     final effects = await library.list();
     expect(effects.single.id, 'rainbow');
@@ -116,7 +117,7 @@ void main() {
 
     final report = await importer.importPaths([zip.path]);
     expect(report.imported, 2);
-    expect(report.errors, isEmpty);
+    expect(report.issues, isEmpty);
     final effects = await library.list();
     expect(effects.map((e) => e.id).toSet(), {'neon', 'liquid'});
     expect(effects.every((e) => e.origin == EffectOrigin.zip), isTrue);
@@ -147,7 +148,7 @@ void main() {
         '${temp.path}/nao-existe.html',
       ]);
       expect(report.imported, 1);
-      expect(report.errors, hasLength(1));
+      expect(report.issues, hasLength(1));
       expect((await library.list()).single.id, 'good');
     },
   );
@@ -194,7 +195,7 @@ void main() {
     final report = await importer.importWindowsCache(cache.path);
     expect(report.catalogFound, isTrue);
     expect(report.imported, 3);
-    expect(report.errors, isEmpty);
+    expect(report.issues, isEmpty);
 
     final rainbow = await library.find('rainbow');
     expect(rainbow!.title, 'Rainbow SR');
@@ -268,8 +269,7 @@ void main() {
     final report = await importer.importWindowsCache(cache.path);
     expect(report.imported, 1);
     expect(report.paidSkipped, 2);
-    expect(report.errors, isEmpty);
-    expect(report.summary, '1 importado, 2 pagos não importados');
+    expect(report.issues, isEmpty);
     expect([for (final e in await library.list()) e.id], ['free']);
   });
 
@@ -284,7 +284,7 @@ void main() {
 
     final report = await importer.importWindowsCache(cache.path);
     expect(report.paidSkipped, 1);
-    expect(report.errors, isEmpty);
+    expect(report.issues, isEmpty);
     expect(report.isEmpty, isFalse);
   });
 
@@ -297,14 +297,14 @@ void main() {
 
     final report = await importer.importWindowsCache(cache.path);
     expect(report.imported, 0);
-    expect(report.errors.single, contains('catalog_en.json'));
+    expect(report.issues.single.kind, ImportIssueKind.catalogMissing);
     expect(await library.list(), isEmpty);
   });
 
   test('rejects a folder without an effects cache', () async {
     final report = await importer.importWindowsCache(temp.path);
     expect(report.imported, 0);
-    expect(report.errors.single, contains('pasta cache'));
+    expect(report.issues.single.kind, ImportIssueKind.chooseWindowsCache);
   });
 
   test('library writes, stores a thumbnail, and removes an effect', () async {

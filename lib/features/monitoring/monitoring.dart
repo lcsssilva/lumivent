@@ -15,8 +15,15 @@ export 'domain/metrics.dart'
         SensorHistory,
         SensorSample,
         SensorSource;
-export 'domain/ssd.dart' show NvmeSmartLog, SsdHealth, SsdInfo, SsdReader;
-export 'infrastructure/nvme.dart' show findNvmeSmartHelper, nvmeHelperHint;
+export 'domain/ssd.dart'
+    show
+        NvmeSmartLog,
+        SsdErrorKind,
+        SsdHealth,
+        SsdInfo,
+        SsdReader,
+        SsdSmartError;
+export 'infrastructure/nvme.dart' show findNvmeSmartHelper;
 export 'monitoring_module.dart';
 export 'presentation/monitoring_page.dart' show MonitoringPage;
 export 'presentation/topbar_sensors.dart' show TopbarSensors;

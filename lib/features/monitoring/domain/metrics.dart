@@ -50,7 +50,7 @@ abstract final class Metrics {
   static const boardTemps = [
     MetricDef('board.system1', 'System 1', MetricUnit.celsius),
     MetricDef('board.pch', 'PCH', MetricUnit.celsius),
-    MetricDef('board.cpu', 'CPU (soquete)', MetricUnit.celsius),
+    MetricDef('board.cpu', 'CPU (socket)', MetricUnit.celsius),
     MetricDef('board.pciex16', 'PCIEX16', MetricUnit.celsius),
     MetricDef('board.vrm', 'VRM MOS', MetricUnit.celsius),
     MetricDef('board.ec1', 'EC_TEMP1', MetricUnit.celsius),
@@ -62,7 +62,7 @@ abstract final class Metrics {
   /// Read-only motherboard fan connectors, in protocol notes §2.5 order: 0–4 on IT8689E,
   /// 5–7 on IT8792E. The AIO pump is on CPU_FAN.
   static const boardFans = [
-    MetricDef('board.fan.cpu', 'Bomba (CPU_FAN)', MetricUnit.rpm),
+    MetricDef('board.fan.cpu', 'Pump (CPU_FAN)', MetricUnit.rpm),
     MetricDef('board.fan.sys1', 'System 1', MetricUnit.rpm),
     MetricDef('board.fan.sys2', 'System 2', MetricUnit.rpm),
     MetricDef('board.fan.sys3', 'System 3', MetricUnit.rpm),

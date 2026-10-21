@@ -32,8 +32,11 @@ no root service, no custom kernel module and no webview.
 > **Status:** 1.x. Support targets a specific, validated set of hardware —
 > check [Supported hardware](#supported-hardware) before installing.
 >
-> The app's interface is in Portuguese. This README quotes the on-screen labels
-> as they appear, followed by an English translation.
+> The interface is available in English (the default) and Portuguese. Choose
+> **Settings → Preferences → Language** (**Configurações → Preferências →
+> Idioma**) to switch; the change applies at once and is saved in `config.json`.
+> The user guide below shows the English and Portuguese labels where they
+> differ.
 
 ## Contents
 
@@ -472,7 +475,7 @@ app's QuickJS runtime.
 | Card | Contents |
 |---|---|
 | Inicialização (startup) | **Iniciar com o sistema**: a `systemd --user` unit that starts minimized in the tray. If the unit points to another executable, turn it off and on again |
-| Preferências (preferences) | keep in tray on close, temperature unit (°C/°F) and effect frame rate (15, 30 or 60 fps) |
+| Preferências (preferences) | language (**English** / **Português**, applies immediately), keep in tray on close, temperature unit (°C/°F) and effect frame rate (15, 30 or 60 fps) |
 | Configuração (configuration) | **Exportar…** / **Importar…** (export/import) preferences, lighting and fans as JSON |
 | Dispositivos (devices) | state of each device, **Detectar novamente** (detect again) and competing-program warnings |
 | Permissões e sistema (permissions and system) | checks for udev rules, `it87`, SMBus/PIIX4, `spd5118`, the NVMe helper and the lighting loop |
@@ -524,6 +527,7 @@ The `preferences` section:
 | `closeToTray` | bool | `true` | closing the window only hides it to the tray |
 | `temperatureUnit` | `"celsius"` \| `"fahrenheit"` | `"celsius"` | unit shown in the interface |
 | `effectsFps` | `15` \| `30` \| `60` | `30` | frame rate of the lighting loop |
+| `language` | `"en"` \| `"pt"` | `"en"` | interface language; missing or invalid values fall back to English |
 
 ## Troubleshooting
 

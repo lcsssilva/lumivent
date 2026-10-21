@@ -64,7 +64,7 @@ class HardwareEquivalent {
 /// * solid -> `StaticColor` / `static` / GPU `Static`
 /// * spectrum -> `RainbowMorph` / `colorCycle` / GPU `Cycle`
 /// * breathing -> `Breathing`, no board equivalent / GPU `Pulse`
-/// * rainbowWave -> `Rainbow` (direction "Esquerda" = left) / `wave` / GPU `Rainbow`
+/// * rainbowWave -> `Rainbow` (direction "Left" = left) / `wave` / GPU `Rainbow`
 /// * scanner -> `Scan`, color + background, fans only, fixed speed
 /// * colorWave -> `Taichi`, the two colors and the direction, fans only
 ///
@@ -149,7 +149,7 @@ HardwareEquivalent? hardwareEquivalentOf(LightingConfig c) {
       );
     case 'rainbowWave':
       return HardwareEquivalent(
-        fans: fans('Rainbow', left: values.option('direction') == 'Esquerda'),
+        fans: fans('Rainbow', left: values.option('direction') == 'Left'),
         board: board(BoardEffectMode.wave),
         gpu: gpu(GpuEffect.rainbow),
       );
@@ -166,7 +166,7 @@ HardwareEquivalent? hardwareEquivalentOf(LightingConfig c) {
         fans: fans(
           colorWaveFirmwareMode,
           colors: [values.color('color'), values.color('color2')],
-          left: values.option('direction') == 'Esquerda',
+          left: values.option('direction') == 'Left',
         ),
         board: null,
       );

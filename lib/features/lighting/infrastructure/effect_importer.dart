@@ -34,13 +34,17 @@ class FileEffectImporter implements EffectImporter {
           } else if (lower.endsWith('.html') || lower.endsWith('.htm')) {
             report.add(await _importFile(File(path)));
           } else {
-            report.errors.add('$path: não é HTML nem ZIP');
+            report.issues.add(
+              ImportIssue(ImportIssueKind.notHtmlOrZip, path: path),
+            );
           }
         } else {
-          report.errors.add('$path: não encontrado');
+          report.issues.add(ImportIssue(ImportIssueKind.notFound, path: path));
         }
       } on Object catch (e) {
-        report.errors.add('$path: $e');
+        report.issues.add(
+          ImportIssue(ImportIssueKind.unknown, path: path, detail: '$e'),
+        );
       }
     }
     library.invalidate();
@@ -52,22 +56,21 @@ class FileEffectImporter implements EffectImporter {
     final report = ImportReport();
     final root = Directory(folder);
     if (!await root.exists()) {
-      report.errors.add('$folder: pasta não encontrada');
+      report.issues.add(
+        ImportIssue(ImportIssueKind.folderNotFound, path: folder),
+      );
       return report;
     }
     final effects = _cacheEffectsDir(root);
     if (effects == null) {
-      report.errors.add('Escolha a pasta cache de efeitos do Windows.');
+      report.issues.add(const ImportIssue(ImportIssueKind.chooseWindowsCache));
       return report;
     }
     final catalog = await _readCatalog(root);
     report.catalogFound = catalog != null;
     if (catalog == null) {
       // Without the catalog there is no way to tell paid effects apart.
-      report.errors.add(
-        'catalog_en.json não encontrado na pasta cache: sem ele não dá para '
-        'saber quais efeitos são pagos.',
-      );
+      report.issues.add(const ImportIssue(ImportIssueKind.catalogMissing));
       return report;
     }
 
@@ -98,11 +101,15 @@ class FileEffectImporter implements EffectImporter {
           ),
         );
       } on Object catch (e) {
-        report.errors.add('$id: $e');
+        report.issues.add(
+          ImportIssue(ImportIssueKind.unknown, path: id, detail: '$e'),
+        );
       }
     }
-    if (report.total == 0 && report.paidSkipped == 0 && report.errors.isEmpty) {
-      report.errors.add('Nenhum effect.html encontrado em ${effects.path}.');
+    if (report.total == 0 && report.paidSkipped == 0 && report.issues.isEmpty) {
+      report.issues.add(
+        ImportIssue(ImportIssueKind.noEffectHtml, path: effects.path),
+      );
     }
     library.invalidate();
     return report;
@@ -226,7 +233,9 @@ class FileEffectImporter implements EffectImporter {
       }
     }
     if (htmlFiles.isEmpty) {
-      report.errors.add('${dir.path}: nenhum effect.html encontrado');
+      report.issues.add(
+        ImportIssue(ImportIssueKind.noEffectHtml, path: dir.path),
+      );
       return report;
     }
     for (final f in htmlFiles) {
@@ -250,7 +259,9 @@ class FileEffectImporter implements EffectImporter {
           ),
         );
       } on Object catch (e) {
-        report.errors.add('${f.path}: $e');
+        report.issues.add(
+          ImportIssue(ImportIssueKind.unknown, path: f.path, detail: '$e'),
+        );
       }
     }
     return report;
@@ -262,7 +273,9 @@ class FileEffectImporter implements EffectImporter {
     try {
       archive = ZipDecoder().decodeBytes(await file.readAsBytes());
     } on Object catch (e) {
-      report.errors.add('${file.path}: ZIP inválido ($e)');
+      report.issues.add(
+        ImportIssue(ImportIssueKind.invalidZip, path: file.path, detail: '$e'),
+      );
       return report;
     }
     final zipBase = file.uri.pathSegments
@@ -295,10 +308,14 @@ class FileEffectImporter implements EffectImporter {
           ),
         );
       } on Object catch (e) {
-        report.errors.add('$name: $e');
+        report.issues.add(
+          ImportIssue(ImportIssueKind.unknown, path: name, detail: '$e'),
+        );
       }
     }
-    if (found == 0) report.errors.add('O ZIP não tem arquivos HTML.');
+    if (found == 0) {
+      report.issues.add(const ImportIssue(ImportIssueKind.noHtmlInZip));
+    }
     return report;
   }
 

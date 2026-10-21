@@ -4,6 +4,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings.dart';
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../devices/devices.dart';
@@ -56,6 +58,8 @@ class FanHardwarePanel extends ConsumerWidget {
     final mode = Alv2LightMode.byName(hw.mode);
     final groupNames = ref.watch(fanGroupNamesProvider);
     final order = cfg.alv2MergeOrder;
+    final strings = context.strings;
+    final l = strings.lighting;
 
     void setHw(Alv2HardwareConfig Function(Alv2HardwareConfig) f) =>
         controller.update((c) {
@@ -83,11 +87,11 @@ class FanHardwarePanel extends ConsumerWidget {
     final names = _modeNames(scope);
     return WeCard(
       flat: true,
-      title: 'Hardware · ${deviceLabel(id, groupNames)}',
+      title: l.hardwareTitle(deviceLabel(strings, id, groupNames)),
       trailing: OutlinedButton(
         key: const ValueKey('identify'),
         onPressed: () => controller.identify(group),
-        child: const Text('Identificar'),
+        child: Text(l.identify),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -95,20 +99,14 @@ class FanHardwarePanel extends ConsumerWidget {
           SegmentedButton<Alv2Scope>(
             key: const ValueKey('hw-scope'),
             showSelectedIcon: false,
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: Alv2Scope.whole,
-                label: Text(
-                  'Ventoinha inteira',
-                  style: TextStyle(fontSize: 12),
-                ),
+                label: Text(l.wholeFan, style: const TextStyle(fontSize: 12)),
               ),
               ButtonSegment(
                 value: Alv2Scope.innerOuter,
-                label: Text(
-                  'Interno + externo',
-                  style: TextStyle(fontSize: 12),
-                ),
+                label: Text(l.innerOuter, style: const TextStyle(fontSize: 12)),
               ),
             ],
             selected: {hw.scope},
@@ -121,7 +119,7 @@ class FanHardwarePanel extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           PanelRow(
-            label: 'Modo',
+            label: l.mode,
             control: PanelDropdown<String>(
               key: const ValueKey('hw-mode'),
               value: hw.mode,
@@ -131,17 +129,17 @@ class FanHardwarePanel extends ConsumerWidget {
             ),
           ),
           if (cfg.alv2Merge)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 4),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                'Merge ativo: o modo de grupo é substituído pelo modo merge.',
-                style: TextStyle(color: WeColors.warn, fontSize: 12),
+                l.mergeActive,
+                style: const TextStyle(color: WeColors.warn, fontSize: 12),
               ),
             ),
-          ..._effectControls(mode, hw, setHw, 'hw'),
+          ..._effectControls(strings, mode, hw, setHw, 'hw'),
           const Divider(height: 24),
           PanelRow(
-            label: 'Ventoinhas no grupo',
+            label: l.fansInGroup,
             control: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -166,7 +164,7 @@ class FanHardwarePanel extends ConsumerWidget {
             ),
           ),
           PanelRow(
-            label: 'Merge entre grupos',
+            label: l.mergeBetweenGroups,
             control: Switch(
               key: const ValueKey('hw-merge'),
               value: cfg.alv2Merge,
@@ -176,7 +174,7 @@ class FanHardwarePanel extends ConsumerWidget {
           ),
           if (cfg.alv2Merge) ...[
             PanelRow(
-              label: 'Modo merge',
+              label: l.mergeMode,
               control: PanelDropdown<String>(
                 key: const ValueKey('hw-merge-mode'),
                 value: mergeBase,
@@ -189,7 +187,7 @@ class FanHardwarePanel extends ConsumerWidget {
             // Group 0 is empty and stays first; groups 1–3 follow the path
             // the merge should take, whatever port each chain is on.
             PanelRow(
-              label: 'Ordem do merge',
+              label: l.mergeOrder,
               control: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -199,14 +197,14 @@ class FanHardwarePanel extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '$i. ${fanGroupName(order[i], groupNames)}',
+                          '$i. ${fanGroupName(strings, order[i], groupNames)}',
                           key: ValueKey('merge-order-$i'),
                           style: const TextStyle(fontSize: 13),
                         ),
                         IconButton(
                           key: ValueKey('merge-up-$i'),
                           visualDensity: VisualDensity.compact,
-                          tooltip: 'Antes',
+                          tooltip: strings.common.before,
                           icon: const Icon(Icons.arrow_upward, size: 18),
                           onPressed: i > 1
                               ? () => _moveMerge(controller, i, i - 1)
@@ -215,7 +213,7 @@ class FanHardwarePanel extends ConsumerWidget {
                         IconButton(
                           key: ValueKey('merge-down-$i'),
                           visualDensity: VisualDensity.compact,
-                          tooltip: 'Depois',
+                          tooltip: strings.common.after,
                           icon: const Icon(Icons.arrow_downward, size: 18),
                           onPressed: i < order.length - 1
                               ? () => _moveMerge(controller, i, i + 1)
@@ -226,14 +224,14 @@ class FanHardwarePanel extends ConsumerWidget {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.only(bottom: 4),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                'Os ajustes do merge valem para todos os grupos.',
-                style: TextStyle(color: WeColors.warn, fontSize: 12),
+                l.mergeShared,
+                style: const TextStyle(color: WeColors.warn, fontSize: 12),
               ),
             ),
-            ..._effectControls(mergeMode, merge, setMerge, 'merge'),
+            ..._effectControls(strings, mergeMode, merge, setMerge, 'merge'),
           ],
         ],
       ),
@@ -243,11 +241,13 @@ class FanHardwarePanel extends ConsumerWidget {
   /// Speed, brightness, direction and colors of one hardware effect. `prefix`
   /// namespaces the widget keys (group panel vs merge).
   List<Widget> _effectControls(
+    AppStrings strings,
     Alv2LightMode? mode,
     Alv2HardwareConfig hw,
     void Function(Alv2HardwareConfig Function(Alv2HardwareConfig)) setHw,
     String prefix,
   ) {
+    final l = strings.lighting;
     final colorCount = mode?.colorCount ?? 0;
     final colors = [
       for (var i = 0; i < colorCount; i++)
@@ -259,7 +259,7 @@ class FanHardwarePanel extends ConsumerWidget {
     return [
       if (mode?.hasSpeed ?? false)
         PanelSlider(
-          label: 'Velocidade',
+          label: l.speed,
           valueText: '${hw.speed + 1}/5',
           value: hw.speed.toDouble(),
           min: 0,
@@ -268,7 +268,7 @@ class FanHardwarePanel extends ConsumerWidget {
           onChanged: (v) => setHw((h) => h.copyWith(speed: v.round())),
         ),
       PanelSlider(
-        label: 'Brilho',
+        label: l.brightness,
         valueText: '${hw.brightness + 1}/5',
         value: hw.brightness.toDouble(),
         min: 0,
@@ -278,13 +278,13 @@ class FanHardwarePanel extends ConsumerWidget {
       ),
       if (mode?.hasDirection ?? false)
         PanelRow(
-          label: 'Direção',
+          label: l.direction,
           control: SegmentedButton<bool>(
             key: ValueKey('$prefix-direction'),
             showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: false, label: Text('Direita')),
-              ButtonSegment(value: true, label: Text('Esquerda')),
+            segments: [
+              ButtonSegment(value: false, label: Text(l.right)),
+              ButtonSegment(value: true, label: Text(l.left)),
             ],
             selected: {hw.directionLeft},
             onSelectionChanged: (s) =>
@@ -293,7 +293,7 @@ class FanHardwarePanel extends ConsumerWidget {
         ),
       if (colorCount > 0)
         PanelRow(
-          label: 'Cores',
+          label: l.colors,
           control: Wrap(
             spacing: 6,
             children: [
@@ -337,6 +337,8 @@ class GpuHardwarePanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cfg = ref.watch(lightingProvider);
     final controller = ref.read(lightingProvider.notifier);
+    final strings = context.strings;
+    final l = strings.lighting;
     final hw = cfg.gpuHardware;
     final colors = [
       for (var i = 0; i < hw.effect.colors; i++)
@@ -351,23 +353,23 @@ class GpuHardwarePanel extends ConsumerWidget {
 
     return WeCard(
       flat: true,
-      title: 'Hardware · Placa de vídeo',
+      title: l.hardwareTitle(l.graphicsCard),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           PanelRow(
-            label: 'Modo',
+            label: l.mode,
             control: PanelDropdown<GpuEffect>(
               key: const ValueKey('gpu-mode'),
               value: hw.effect,
               items: GpuEffect.values,
-              labelOf: gpuEffectLabel,
+              labelOf: (e) => gpuEffectLabel(strings, e),
               onChanged: (e) => setHw((h) => h.copyWith(effect: e)),
             ),
           ),
           if (hw.effect.hasSpeed)
             PanelSlider(
-              label: 'Velocidade',
+              label: l.speed,
               valueText: '${hw.speed}/10',
               value: hw.speed.toDouble(),
               min: 0,
@@ -377,7 +379,7 @@ class GpuHardwarePanel extends ConsumerWidget {
             ),
           if (hw.effect.hasBrightness)
             PanelSlider(
-              label: 'Brilho',
+              label: l.brightness,
               valueText: '${hw.brightness}/10',
               value: hw.brightness.toDouble(),
               min: 0,
@@ -387,7 +389,7 @@ class GpuHardwarePanel extends ConsumerWidget {
             ),
           if (hw.effect == GpuEffect.colorShift)
             PanelRow(
-              label: 'Cores (8)',
+              label: l.colorsCount(8),
               control: Wrap(
                 spacing: 6,
                 children: [
@@ -407,20 +409,18 @@ class GpuHardwarePanel extends ConsumerWidget {
             )
           else if (hw.effect != GpuEffect.off)
             PanelRow(
-              label: 'Cor',
+              label: l.color,
               control: ColorSwatchButton(
                 key: const ValueKey('gpu-color'),
                 color: hw.color,
                 onChanged: (c) => setHw((h) => h.copyWith(color: c)),
               ),
             ),
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
             child: Text(
-              'O controlador aceita um efeito a cada 120 ms. O app só envia '
-              'cores depois de ler o SSID da placa; se a leitura do OEM '
-              'falhar, a GPU fica indisponível.',
-              style: TextStyle(color: WeColors.muted, fontSize: 12),
+              l.gpuNote,
+              style: const TextStyle(color: WeColors.muted, fontSize: 12),
             ),
           ),
         ],
@@ -436,6 +436,8 @@ class BoardHardwarePanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cfg = ref.watch(lightingProvider);
     final controller = ref.read(lightingProvider.notifier);
+    final strings = context.strings;
+    final l = strings.lighting;
 
     void setZone(int z, BoardZoneConfig Function(BoardZoneConfig) f) =>
         controller.update(
@@ -445,27 +447,27 @@ class BoardHardwarePanel extends ConsumerWidget {
 
     return WeCard(
       flat: true,
-      title: 'Hardware · Placa-mãe',
+      title: l.boardHardwareTitle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final z in boardZoneIds) ...[
             Text(
-              boardZoneLabel(z),
+              boardZoneLabel(strings, z),
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             PanelRow(
-              label: 'Modo',
+              label: l.mode,
               control: PanelDropdown<BoardEffectMode>(
                 key: ValueKey('board-mode-$z'),
                 value: cfg.boardZones[z]!.mode,
                 items: BoardEffectMode.values,
-                labelOf: boardModeLabel,
+                labelOf: (m) => boardModeLabel(strings, m),
                 onChanged: (m) => setZone(z, (b) => b.copyWith(mode: m)),
               ),
             ),
             PanelRow(
-              label: 'Cor',
+              label: l.color,
               control: ColorSwatchButton(
                 key: ValueKey('board-color-$z'),
                 color: cfg.boardZones[z]!.color,
@@ -473,7 +475,7 @@ class BoardHardwarePanel extends ConsumerWidget {
               ),
             ),
             PanelSlider(
-              label: 'Velocidade',
+              label: l.speed,
               valueText: '${cfg.boardZones[z]!.speed}',
               value: cfg.boardZones[z]!.speed.toDouble(),
               min: 0,
@@ -482,7 +484,7 @@ class BoardHardwarePanel extends ConsumerWidget {
               onChanged: (v) => setZone(z, (b) => b.copyWith(speed: v.round())),
             ),
             PanelSlider(
-              label: 'Brilho',
+              label: l.brightness,
               valueText: '${cfg.boardZones[z]!.brightness}',
               value: cfg.boardZones[z]!.brightness.toDouble(),
               min: 0,

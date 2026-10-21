@@ -44,7 +44,9 @@ class FakeSsds implements SsdReader {
         serial: 'S',
         firmware: 'F',
         smart: reads >= smartFrom ? smartLog() : null,
-        smartError: reads >= smartFrom ? null : 'helper is not installed',
+        smartError: reads >= smartFrom
+            ? null
+            : const SsdSmartError(SsdErrorKind.helperMissing),
       ),
     ];
   }

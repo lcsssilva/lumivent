@@ -299,7 +299,7 @@ void main() {
           expect(cfg[g].startStop, isTrue);
           expect(cfg[g].source, FanTempSource.gpuEdge);
           expect(cfg[g].response, FanResponse.smooth);
-          expect(cfg[g].name, 'Grupo $g');
+          expect(cfg[g].name, base[g].name);
           expect(cfg[g].size, base[g].size);
         }
         expect(cfg[1], origem);

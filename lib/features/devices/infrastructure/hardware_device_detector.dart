@@ -15,10 +15,6 @@ import 'drivers/ite5702/protocol.dart';
 import 'drivers/kingston_fury/protocol.dart';
 import 'process_scan.dart';
 
-const _udevHint =
-    'Instale o pacote lumivent (regras udev) e '
-    'reconecte o dispositivo ou reinicie.';
-
 class HardwareDeviceDetector implements DeviceDetector {
   HardwareDeviceDetector({this._hid, this.hidError, this.sysfsRoot = '/sys'});
 
@@ -29,7 +25,7 @@ class HardwareDeviceDetector implements DeviceDetector {
       return HardwareDeviceDetector(hid: HidApi.open());
     } on Object catch (e) {
       return HardwareDeviceDetector(
-        hidError: 'libhidapi-hidraw indisponível: $e',
+        hidError: 'libhidapi-hidraw unavailable: $e',
       );
     }
   }
@@ -71,25 +67,27 @@ class HardwareDeviceDetector implements DeviceDetector {
   void dispose() => _hid?.dispose();
 
   DeviceInfo _probeAlv2() {
-    DeviceInfo info(DeviceStatus s, {String? detail, String? hint}) =>
-        DeviceInfo(
-          id: 'alv2',
-          kind: DeviceKind.fans,
-          name: 'Fans AL V2',
-          model: 'Lian Li UNI FAN AL V2',
-          status: s,
-          detail: detail,
-          hint: hint,
-        );
+    DeviceInfo info(
+      DeviceStatus s, {
+      String? detail,
+      DeviceIssue? issue,
+      String? issueArg,
+    }) => DeviceInfo(
+      id: 'alv2',
+      kind: DeviceKind.fans,
+      label: DeviceLabel.alv2Fans,
+      model: 'Lian Li UNI FAN AL V2',
+      status: s,
+      detail: detail,
+      issue: issue,
+      issueArg: issueArg,
+    );
 
     final hid = _hid;
     if (hid == null) return info(DeviceStatus.error, detail: hidError);
     final all = hid.enumerate(vendorId: alv2VendorId, productId: alv2ProductId);
     if (all.isEmpty) {
-      return info(
-        DeviceStatus.missing,
-        hint: 'Confira o cabo USB do controlador das fans.',
-      );
+      return info(DeviceStatus.missing, issue: DeviceIssue.fanUsbCable);
     }
     final target =
         all.where((d) => d.interfaceNumber == alv2Interface).firstOrNull ??
@@ -102,34 +100,33 @@ class HardwareDeviceDetector implements DeviceDetector {
       );
       final fw = parseAlv2Firmware(payload);
       return fw == null
-          ? info(
-              DeviceStatus.error,
-              detail: 'resposta inesperada ao pedir o firmware',
-            )
+          ? info(DeviceStatus.error, detail: 'unexpected firmware response')
           : info(DeviceStatus.ok, detail: 'firmware v$fw · ${target.path}');
     });
   }
 
   DeviceInfo _probeIte() {
-    DeviceInfo info(DeviceStatus s, {String? detail, String? hint}) =>
-        DeviceInfo(
-          id: 'ite5702',
-          kind: DeviceKind.motherboard,
-          name: 'Placa-mãe e gabinete',
-          model: 'Gigabyte RGB Fusion 2 (ITE 5702)',
-          status: s,
-          detail: detail,
-          hint: hint,
-        );
+    DeviceInfo info(
+      DeviceStatus s, {
+      String? detail,
+      DeviceIssue? issue,
+      String? issueArg,
+    }) => DeviceInfo(
+      id: 'ite5702',
+      kind: DeviceKind.motherboard,
+      label: DeviceLabel.boardAndCase,
+      model: 'Gigabyte RGB Fusion 2 (ITE 5702)',
+      status: s,
+      detail: detail,
+      issue: issue,
+      issueArg: issueArg,
+    );
 
     final hid = _hid;
     if (hid == null) return info(DeviceStatus.error, detail: hidError);
     final all = hid.enumerate(vendorId: iteVendorId, productId: iteProductId);
     if (all.isEmpty) {
-      return info(
-        DeviceStatus.missing,
-        hint: 'O controlador RGB da placa-mãe não foi encontrado no USB.',
-      );
+      return info(DeviceStatus.missing, issue: DeviceIssue.motherboardRgb);
     }
     // On hidraw, collections 0x10 and 0xCC share the same node; report ID CC
     // picks the right one.
@@ -141,7 +138,7 @@ class HardwareDeviceDetector implements DeviceDetector {
       sleep(const Duration(milliseconds: 20));
       final parsed = parseIteInfo(dev.getFeature(iteReportId, iteReportLength));
       return parsed == null
-          ? info(DeviceStatus.error, detail: 'resposta inesperada ao CC 60')
+          ? info(DeviceStatus.error, detail: 'unexpected CC 60 response')
           : info(
               DeviceStatus.ok,
               detail:
@@ -153,7 +150,13 @@ class HardwareDeviceDetector implements DeviceDetector {
   DeviceInfo _withHid(
     HidApi hid,
     String path,
-    DeviceInfo Function(DeviceStatus, {String? detail, String? hint}) info,
+    DeviceInfo Function(
+      DeviceStatus, {
+      String? detail,
+      DeviceIssue? issue,
+      String? issueArg,
+    })
+    info,
     DeviceInfo Function(HidDevice dev) body,
   ) {
     final HidDevice dev;
@@ -161,7 +164,11 @@ class HardwareDeviceDetector implements DeviceDetector {
       dev = hid.openPath(path);
     } on HidException catch (e) {
       return isPermissionDenied(path)
-          ? info(DeviceStatus.noPermission, detail: path, hint: _udevHint)
+          ? info(
+              DeviceStatus.noPermission,
+              detail: path,
+              issue: DeviceIssue.udevRules,
+            )
           : info(DeviceStatus.error, detail: e.message);
     }
     try {
@@ -174,16 +181,23 @@ class HardwareDeviceDetector implements DeviceDetector {
   }
 
   List<DeviceInfo> _probeFury() {
-    DeviceInfo info(int slot, DeviceStatus s, {String? detail, String? hint}) =>
-        DeviceInfo(
-          id: slot == 0 ? 'fury' : 'fury-$slot',
-          kind: DeviceKind.memory,
-          name: slot == 0 ? 'Módulos de memória' : 'Módulo de memória $slot',
-          model: 'Kingston Fury DDR5',
-          status: s,
-          detail: detail,
-          hint: hint,
-        );
+    DeviceInfo info(
+      int slot,
+      DeviceStatus s, {
+      String? detail,
+      DeviceIssue? issue,
+      String? issueArg,
+    }) => DeviceInfo(
+      id: slot == 0 ? 'fury' : 'fury-$slot',
+      kind: DeviceKind.memory,
+      label: slot == 0 ? DeviceLabel.memoryModules : DeviceLabel.memoryModule,
+      slot: slot == 0 ? null : slot,
+      model: 'Kingston Fury DDR5',
+      status: s,
+      detail: detail,
+      issue: issue,
+      issueArg: issueArg,
+    );
 
     final bus = findI2cBusByName(furyBusName, sysfsRoot: sysfsRoot);
     if (bus == null) {
@@ -191,10 +205,8 @@ class HardwareDeviceDetector implements DeviceDetector {
         info(
           0,
           DeviceStatus.unavailable,
-          detail: 'adaptador "$furyBusName" ausente',
-          hint:
-              'Requer acpi_enforce_resources=lax e o módulo i2c-dev '
-              '(veja o README; reinicie).',
+          detail: 'adapter "$furyBusName" missing',
+          issue: DeviceIssue.memoryBus,
         ),
       ];
     }
@@ -204,7 +216,12 @@ class HardwareDeviceDetector implements DeviceDetector {
     } on SmbusException catch (e) {
       return [
         e.permissionDenied
-            ? info(0, DeviceStatus.noPermission, detail: bus, hint: _udevHint)
+            ? info(
+                0,
+                DeviceStatus.noPermission,
+                detail: bus,
+                issue: DeviceIssue.udevRules,
+              )
             : info(0, DeviceStatus.error, detail: e.toString()),
       ];
     }
@@ -219,23 +236,32 @@ class HardwareDeviceDetector implements DeviceDetector {
   }
 
   DeviceInfo _probeGpu() {
-    DeviceInfo info(DeviceStatus s, {String? detail, String? hint}) =>
-        DeviceInfo(
-          id: 'gpu',
-          kind: DeviceKind.gpu,
-          name: 'Placa de vídeo',
-          model: 'Gigabyte RX 9060 XT',
-          status: s,
-          detail: detail,
-          hint: hint,
-        );
+    DeviceInfo info(
+      DeviceStatus s, {
+      String? detail,
+      DeviceIssue? issue,
+      String? issueArg,
+    }) => DeviceInfo(
+      id: 'gpu',
+      kind: DeviceKind.gpu,
+      label: DeviceLabel.graphicsCard,
+      model: 'Gigabyte RX 9060 XT',
+      status: s,
+      detail: detail,
+      issue: issue,
+      issueArg: issueArg,
+    );
 
     final GpuController gpu;
     try {
       gpu = GpuController.open(sysfsRoot: sysfsRoot);
     } on GpuException catch (e) {
       return e.permissionDenied
-          ? info(DeviceStatus.noPermission, detail: e.message, hint: _udevHint)
+          ? info(
+              DeviceStatus.noPermission,
+              detail: e.message,
+              issue: DeviceIssue.udevRules,
+            )
           : info(DeviceStatus.unavailable, detail: e.message);
     }
     try {
@@ -243,7 +269,7 @@ class HardwareDeviceDetector implements DeviceDetector {
         return info(
           DeviceStatus.blocked,
           detail: gpu.disabledReason,
-          hint: 'O app não envia efeitos sem confirmar o SSID 0x2429.',
+          issue: DeviceIssue.gpuSsid,
         );
       }
       final node = gpu.busPath?.split('/').last ?? '?';
@@ -261,23 +287,36 @@ class HardwareDeviceDetector implements DeviceDetector {
     String bus,
     int addr,
     int slot,
-    DeviceInfo Function(int, DeviceStatus, {String? detail, String? hint}) info,
+    DeviceInfo Function(
+      int,
+      DeviceStatus, {
+      String? detail,
+      DeviceIssue? issue,
+      String? issueArg,
+    })
+    info,
   ) {
     final where = '${bus.split('/').last} 0x${addr.toRadixString(16)}';
     final int dd;
     try {
       dd = smbus.readByteData(addr, furyGuardRegister);
     } on SmbusException {
-      return info(slot, DeviceStatus.missing, detail: '$where não respondeu');
+      return info(
+        slot,
+        DeviceStatus.missing,
+        detail: '$where · no response',
+        issue: DeviceIssue.noResponse,
+        issueArg: where,
+      );
     }
     final ddHex = '0x${dd.toRadixString(16).padLeft(2, '0').toUpperCase()}';
     return furyGuardAllows(dd)
-        ? info(slot, DeviceStatus.ok, detail: '$where · guarda 0xDD = $ddHex')
+        ? info(slot, DeviceStatus.ok, detail: '$where · guard 0xDD = $ddHex')
         : info(
             slot,
             DeviceStatus.blocked,
-            detail: '$where · 0xDD = $ddHex (controlador PWM)',
-            hint: 'Endereço ignorado por segurança: não é o LED da memória.',
+            detail: '$where · 0xDD = $ddHex (PWM controller)',
+            issue: DeviceIssue.unsafeAddress,
           );
   }
 }

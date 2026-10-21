@@ -57,7 +57,7 @@ void main() {
 
     test('critical warning bits and conversions', () {
       final s = smartLog(criticalWarning: 0x09, dataUnitsWritten: 1000);
-      expect(s.warnings, ['reserva abaixo do limite', 'mídia somente leitura']);
+      expect(s.warnings, [0, 3]);
       expect(s.bytesWritten, 512000000);
       expect(smartLog().compositeCelsius, closeTo(40.85, 1e-9));
     });

@@ -13,10 +13,8 @@ final lightingRepositoryProvider = Provider<LightingConfigRepository>(
 
 /// Names of the AL V2 hub groups (index = group 0–3) on the lighting screen.
 /// The app wires it to the names set on the fans page; an empty name falls
-/// back to "Grupo N".
-final fanGroupNamesProvider = Provider<List<String>>(
-  (ref) => const ['Grupo 0', 'Grupo 1', 'Grupo 2', 'Grupo 3'],
-);
+/// back to the catalog's default group name.
+final fanGroupNamesProvider = Provider<List<String>>((ref) => const []);
 
 /// Lighting configuration: every change goes to the engine immediately; the
 /// save is debounced, because the canvas editor and the sliders change the

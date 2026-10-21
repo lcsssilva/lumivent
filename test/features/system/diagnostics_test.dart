@@ -46,7 +46,7 @@ void main() {
       ),
     );
     expect(checks.map((c) => c.state), everyElement(CheckState.ok));
-    expect(checks[1].detail, 'it8689 + it8792');
+    expect(checks[1].data['modules'], ['it8689', 'it8792']);
   });
 
   test('udev rules are also found in the legacy /etc location', () {
@@ -60,6 +60,7 @@ void main() {
       getcap: (_) => '',
     );
     expect(c.state, CheckState.warn);
-    expect(c.detail, contains('pacote lumivent'));
+    expect(c.data['path'], '/x/lumivent-nvme-smart');
+    expect(c.data['hasCaps'], isFalse);
   });
 }

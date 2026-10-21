@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../application/effects_controller.dart';
@@ -75,6 +76,8 @@ class _LightingPageState extends ConsumerState<LightingPage>
     final cfg = ref.watch(lightingProvider);
     final installed = ref.watch(installedEffectsProvider).value ?? const [];
     final controller = ref.read(lightingProvider.notifier);
+    final strings = context.strings;
+    final l = strings.lighting;
     const gap = WeSizes.unit * 2;
 
     return Padding(
@@ -99,11 +102,11 @@ class _LightingPageState extends ConsumerState<LightingPage>
                     color: WeColors.warn,
                   ),
                   const SizedBox(width: 8),
-                  const Expanded(child: Text('Todos os ARGB estão desligados')),
+                  Expanded(child: Text(l.allArgbOff)),
                   TextButton(
                     key: const ValueKey('argb-on'),
                     onPressed: () => controller.setArgbOff(false),
-                    child: const Text('Ligar'),
+                    child: Text(l.turnOn),
                   ),
                 ],
               ),
@@ -116,9 +119,9 @@ class _LightingPageState extends ConsumerState<LightingPage>
               children: [
                 Row(
                   children: [
-                    const Text(
-                      'Brilho',
-                      style: TextStyle(fontWeight: FontWeight.w500),
+                    Text(
+                      l.brightness,
+                      style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                     Expanded(
                       child: Slider(
@@ -133,7 +136,7 @@ class _LightingPageState extends ConsumerState<LightingPage>
                       child: Text('${(cfg.brightness * 100).round()} %'),
                     ),
                     const SizedBox(width: gap),
-                    const Text('Apagar ao suspender ou desligar'),
+                    Text(l.offOnSleep),
                     const SizedBox(width: 8),
                     Switch(
                       key: const ValueKey('off-on-sleep'),
@@ -145,18 +148,9 @@ class _LightingPageState extends ConsumerState<LightingPage>
                 ),
                 Row(
                   children: [
-                    const Expanded(
-                      child: Text(
-                        'Usar os efeitos do próprio hardware quando possível',
-                      ),
-                    ),
+                    Expanded(child: Text(l.useHardwareEffects)),
                     Tooltip(
-                      message:
-                          'Fans e placa-mãe animam o efeito no próprio firmware, '
-                          'com movimento mais suave. A fase entre os dispositivos '
-                          'pode não ficar idêntica. Nos efeitos sem equivalente, '
-                          'e sem esta opção, as fans recebem 2 quadros por '
-                          'segundo: mais rápido, a velocidade delas oscila.',
+                      message: l.hardwareEffectsHint,
                       child: const Icon(
                         Icons.info_outline,
                         size: 16,
@@ -183,7 +177,7 @@ class _LightingPageState extends ConsumerState<LightingPage>
           const SizedBox(height: gap),
           Expanded(
             child: WeCard(
-              title: 'Canvas $canvasWidth×$canvasHeight',
+              title: l.canvasSize(canvasWidth, canvasHeight),
               // Flexible so the card body takes the remaining height and the
               // canvas can size itself; the card is inside an Expanded.
               child: Flexible(
@@ -236,9 +230,9 @@ class _LightingPageState extends ConsumerState<LightingPage>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.stretch,
                                     children: [
-                                      const Text(
-                                        'Biblioteca de efeitos',
-                                        style: TextStyle(
+                                      Text(
+                                        l.effectLibrary,
+                                        style: const TextStyle(
                                           color: WeColors.muted,
                                           fontSize: 12.5,
                                         ),
@@ -252,7 +246,11 @@ class _LightingPageState extends ConsumerState<LightingPage>
                                             ChoiceChip(
                                               key: ValueKey('effect-${e.id}'),
                                               label: Text(
-                                                effectLabel(e.id, e.name),
+                                                effectLabel(
+                                                  strings,
+                                                  e.id,
+                                                  e.name,
+                                                ),
                                               ),
                                               selected: cfg.effectId == e.id,
                                               onSelected: (_) =>
@@ -282,11 +280,12 @@ class _LightingPageState extends ConsumerState<LightingPage>
                                       ),
                                       if (installed.isEmpty) ...[
                                         const SizedBox(height: 8),
-                                        const Text(
-                                          'Importe efeitos HTML na aba '
-                                          'Explore.',
-                                          key: Key('no-installed-effects'),
-                                          style: TextStyle(
+                                        Text(
+                                          l.importEffectsHint,
+                                          key: const Key(
+                                            'no-installed-effects',
+                                          ),
+                                          style: const TextStyle(
                                             color: WeColors.muted,
                                             fontSize: 12,
                                           ),

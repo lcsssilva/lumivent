@@ -9,8 +9,6 @@ import 'dart:typed_data';
 import '../domain/ssd.dart';
 
 const nvmeHelperName = 'lumivent-nvme-smart';
-const nvmeHelperHint =
-    'Instale o pacote lumivent (helper em /usr/lib/lumivent).';
 
 /// Where the helper may be: `$LUMIVENT_NVME_SMART`, the package, or a manual install
 /// (for development, see README.md).
@@ -74,7 +72,7 @@ Uint8List? _fromHex(String hex) {
 }
 
 /// One helper output line: `{"ctrl":…, "log":hex}` or `{"ctrl":…, "error":…}`.
-({String ctrl, NvmeSmartLog? log, String? error})? parseHelperLine(
+({String ctrl, NvmeSmartLog? log, SsdSmartError? error})? parseHelperLine(
   String line,
 ) {
   final Object? json;
@@ -86,12 +84,20 @@ Uint8List? _fromHex(String hex) {
   if (json is! Map<String, Object?> || json['ctrl'] is! String) return null;
   final ctrl = json['ctrl']! as String;
   if (json['error'] case final String error) {
-    return (ctrl: ctrl, log: null, error: error);
+    return (
+      ctrl: ctrl,
+      log: null,
+      error: SsdSmartError(SsdErrorKind.device, message: error),
+    );
   }
   final bytes = json['log'] is String ? _fromHex(json['log']! as String) : null;
   final log = bytes == null ? null : parseNvmeSmartLog(bytes);
   return log == null
-      ? (ctrl: ctrl, log: null, error: 'resposta inválida do helper')
+      ? (
+          ctrl: ctrl,
+          log: null,
+          error: const SsdSmartError(SsdErrorKind.invalidResponse),
+        )
       : (ctrl: ctrl, log: log, error: null);
 }
 
@@ -149,22 +155,27 @@ class NvmeSsdReader implements SsdReader {
   }
 
   /// SMART per controller and, if the whole helper failed, the reason.
-  Future<(Map<String, ({NvmeSmartLog? log, String? error})>, String?)>
+  Future<
+    (Map<String, ({NvmeSmartLog? log, SsdSmartError? error})>, SsdSmartError?)
+  >
   _runHelper(List<String> ctrls) async {
     final helper = _helper ?? findNvmeSmartHelper();
     if (helper == null) {
       return (
         const <String, Never>{},
-        'O helper $nvmeHelperName não está instalado. $nvmeHelperHint',
+        const SsdSmartError(SsdErrorKind.helperMissing),
       );
     }
     final ProcessResult r;
     try {
       r = await Process.run(helper, ctrls).timeout(timeout);
     } on Object catch (e) {
-      return (const <String, Never>{}, 'falha ao executar o helper: $e');
+      return (
+        const <String, Never>{},
+        SsdSmartError(SsdErrorKind.helperFailed, message: '$e'),
+      );
     }
-    final out = <String, ({NvmeSmartLog? log, String? error})>{};
+    final out = <String, ({NvmeSmartLog? log, SsdSmartError? error})>{};
     for (final line in const LineSplitter().convert(r.stdout as String)) {
       final p = parseHelperLine(line);
       if (p != null) out[p.ctrl] = (log: p.log, error: p.error);
@@ -173,7 +184,11 @@ class NvmeSsdReader implements SsdReader {
       out,
       out.length == ctrls.length
           ? null
-          : 'o helper saiu com ${r.exitCode}: ${(r.stderr as String).trim()}',
+          : SsdSmartError(
+              SsdErrorKind.helperExit,
+              exitCode: r.exitCode,
+              stderr: (r.stderr as String).trim(),
+            ),
     );
   }
 

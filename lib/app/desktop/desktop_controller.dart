@@ -10,6 +10,8 @@ import 'package:tray_manager/tray_manager.dart' as tray;
 import 'package:window_manager/window_manager.dart';
 
 import '../../core/engine/engine_host.dart';
+import '../../core/i18n/app_strings.dart';
+import '../../core/i18n/strings_provider.dart';
 import '../../core/persistence/config_store.dart';
 import '../../features/lighting/lighting.dart';
 import '../../features/preferences/preferences.dart';
@@ -39,6 +41,8 @@ class DesktopController with WindowListener implements DesktopActions {
     await windowManager.setPreventClose(true);
     windowManager.addListener(this);
     _setUpTray();
+    // Rewrite the labels when the interface language changes.
+    _container.listen(stringsProvider, (_, _) => _syncTrayLabels());
     _container.listen(
       lightingProvider.select((s) => s.argbOff),
       (_, off) => _syncArgb(off),
@@ -46,6 +50,8 @@ class DesktopController with WindowListener implements DesktopActions {
     );
     if (startMinimized && !trayAvailable) await showWindow();
   }
+
+  AppStrings get _strings => _container.read(stringsProvider);
 
   void _setUpTray() {
     try {
@@ -70,21 +76,18 @@ class DesktopController with WindowListener implements DesktopActions {
         return it;
       }
 
+      final strings = _strings.shell;
       _windowItem = item(
-        'Ocultar janela',
+        strings.hideWindow,
         tray.MenuItemType.normal,
         () => unawaited(toggleWindow()),
       );
-      _argbItem = item(
-        'Desligar todos os ARGB',
-        tray.MenuItemType.checkbox,
-        () {
-          final lighting = _container.read(lightingProvider.notifier);
-          lighting.setArgbOff(!_container.read(lightingProvider).argbOff);
-        },
-      );
+      _argbItem = item(strings.turnOffAllArgb, tray.MenuItemType.checkbox, () {
+        final lighting = _container.read(lightingProvider.notifier);
+        lighting.setArgbOff(!_container.read(lightingProvider).argbOff);
+      });
       _quitItem = item(
-        'Sair',
+        strings.quit,
         tray.MenuItemType.normal,
         () => unawaited(quit()),
       );
@@ -114,7 +117,17 @@ class DesktopController with WindowListener implements DesktopActions {
 
   Future<void> _syncWindowItem() async {
     final visible = await windowManager.isVisible();
-    _windowItem?.label = visible ? 'Ocultar janela' : 'Mostrar janela';
+    final strings = _strings.shell;
+    _windowItem?.label = visible ? strings.hideWindow : strings.showWindow;
+  }
+
+  /// Re-applies the catalog after a language change (labels are native state).
+  void _syncTrayLabels() {
+    if (_tray == null) return;
+    final strings = _strings.shell;
+    _argbItem?.label = strings.turnOffAllArgb;
+    _quitItem?.label = strings.quit;
+    unawaited(_syncWindowItem());
   }
 
   Future<void> showWindow() async {

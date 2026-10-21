@@ -8,10 +8,15 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
+import '../../../core/i18n/catalogs/explore_strings.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../lighting/lighting.dart';
 import '../application/effect_filter.dart';
+
+String _formatIssue(ExploreStrings e, ImportIssue issue) =>
+    e.importIssue(issue.kind.name, issue.path ?? '', error: issue.detail);
 
 class ExplorePage extends ConsumerStatefulWidget {
   const ExplorePage({super.key});
@@ -48,27 +53,39 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   Future<void> _run(Future<ImportReport> Function() action) async {
     if (_busy) return;
+    final strings = context.strings;
     setState(() => _busy = true);
     try {
       final report = await action();
       _thumbs.clear();
-      final errors = report.errors;
+      final issues = report.issues;
+      final summary = strings.explore.importSummary(
+        imported: report.imported,
+        replaced: report.replaced,
+        skipped: report.skipped,
+        paidSkipped: report.paidSkipped,
+        errors: issues.length,
+      );
       _tell(
-        errors.isEmpty
-            ? 'Importação concluída: ${report.summary}'
-            : '${report.summary}. ${errors.first}',
-        error: errors.isNotEmpty,
+        issues.isEmpty
+            ? strings.explore.importDone(summary)
+            : strings.explore.importDoneWithError(
+                summary,
+                _formatIssue(strings.explore, issues.first),
+              ),
+        error: issues.isNotEmpty,
       );
     } on Object catch (e) {
-      _tell('Falha na importação: $e', error: true);
+      _tell(strings.explore.importFailed('$e'), error: true);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _importFiles() async {
+    final strings = context.strings.explore;
     final files = await FilePicker.pickFiles(
-      dialogTitle: 'Importar efeitos (.html ou .zip)',
+      dialogTitle: strings.importEffectsDialogTitle,
       type: FileType.custom,
       allowedExtensions: ['html', 'htm', 'zip'],
     );
@@ -85,7 +102,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   Future<void> _importFolder() async {
     final dir = await FilePicker.getDirectoryPath(
-      dialogTitle: 'Importar pasta com efeitos',
+      dialogTitle: context.strings.explore.importFolderDialogTitle,
     );
     if (dir == null || dir.isEmpty) return;
     await _run(
@@ -95,7 +112,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   Future<void> _importWindowsCache() async {
     final dir = await FilePicker.getDirectoryPath(
-      dialogTitle: 'Pasta de efeitos do Windows (ou a pasta cache)',
+      dialogTitle: context.strings.explore.importWindowsDialogTitle,
     );
     if (dir == null || dir.isEmpty) return;
     await _run(
@@ -107,29 +124,29 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     ref
         .read(lightingProvider.notifier)
         .update((c) => c.copyWith(effectId: effect.effectId));
-    _tell('“${effect.title}” aplicado. Ajuste os controles em Iluminação.');
+    _tell(context.strings.explore.effectApplied(effect.title));
   }
 
   Future<void> _remove(InstalledEffect effect) async {
+    final strings = context.strings;
     final applied = ref.read(lightingProvider).effectId == effect.effectId;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Remover “${effect.title}”?'),
+        title: Text(strings.explore.removeTitle(effect.title)),
         content: Text(
           applied
-              ? 'Ele está aplicado agora e será trocado pelo efeito padrão. '
-                    'O arquivo será apagado da biblioteca.'
-              : 'O arquivo será apagado da biblioteca.',
+              ? strings.explore.removeAppliedBody
+              : strings.explore.removeBody,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
+            child: Text(strings.common.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Remover'),
+            child: Text(strings.common.remove),
           ),
         ],
       ),
@@ -143,9 +160,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     try {
       await ref.read(installedEffectsProvider.notifier).remove(effect.id);
       _thumbs.remove(effect.id);
-      _tell('“${effect.title}” removido.');
+      _tell(strings.explore.effectRemoved(effect.title));
     } on Object catch (e) {
-      _tell('Não foi possível remover: $e', error: true);
+      _tell(strings.explore.removeFailed('$e'), error: true);
     }
   }
 
@@ -156,6 +173,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.strings;
+    final e = strings.explore;
     final installed = ref.watch(installedEffectsProvider);
     final cfg = ref.watch(lightingProvider);
     final all = installed.value ?? const <InstalledEffect>[];
@@ -172,14 +191,14 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Explore',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          Text(
+            e.title,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 2),
-          const Text(
-            'Biblioteca local de efeitos HTML/Canvas',
-            style: TextStyle(color: WeColors.muted, fontSize: 12.5),
+          Text(
+            e.subtitle,
+            style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
           ),
           const SizedBox(height: WeSizes.unit * 2),
           Expanded(child: _installedTab(installed, all, visible, cfg)),
@@ -193,117 +212,121 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
     List<InstalledEffect> all,
     List<InstalledEffect> visible,
     LightingConfig cfg,
-  ) => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Row(
-        children: [
-          if (_busy)
-            const Padding(
-              padding: EdgeInsets.only(right: 12),
-              child: SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            ),
-          const Spacer(),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              OutlinedButton.icon(
-                key: const Key('import-files'),
-                onPressed: _busy ? null : _importFiles,
-                icon: const Icon(Icons.insert_drive_file_outlined, size: 18),
-                label: const Text('Importar efeito…'),
-              ),
-              OutlinedButton.icon(
-                key: const Key('import-folder'),
-                onPressed: _busy ? null : _importFolder,
-                icon: const Icon(Icons.folder_open_outlined, size: 18),
-                label: const Text('Pasta…'),
-              ),
-              FilledButton.tonalIcon(
-                key: const Key('import-windows-cache'),
-                onPressed: _busy ? null : _importWindowsCache,
-                icon: const Icon(Icons.desktop_windows_outlined, size: 18),
-                label: const Text('Importar do Windows…'),
-              ),
-            ],
-          ),
-        ],
-      ),
-      const SizedBox(height: WeSizes.unit * 2),
-      _Filters(
-        controller: _query,
-        support: _support,
-        tag: _tag,
-        publisher: _publisher,
-        tags: availableTags(all),
-        publishers: availablePublishers(all),
-        onQuery: () => setState(() {}),
-        onSupport: (v) => setState(() => _support = v),
-        onTag: (v) => setState(() => _tag = v),
-        onPublisher: (v) => setState(() => _publisher = v),
-      ),
-      const SizedBox(height: WeSizes.unit * 2),
-      Expanded(
-        child: installed.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(
-            child: WeCard(
-              title: 'Não foi possível ler a biblioteca',
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('$e'),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () => ref.invalidate(installedEffectsProvider),
-                    child: const Text('Tentar de novo'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          data: (_) {
-            if (all.isEmpty) return const _EmptyState();
-            if (visible.isEmpty) {
-              return const Center(
-                child: Text(
-                  'Nenhum efeito corresponde aos filtros.',
-                  style: TextStyle(color: WeColors.muted),
+  ) {
+    final strings = context.strings;
+    final e = strings.explore;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            if (_busy)
+              const Padding(
+                padding: EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 ),
-              );
-            }
-            return GridView.builder(
-              key: const Key('explore-grid'),
-              padding: const EdgeInsets.only(bottom: 8),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 268,
-                mainAxisExtent: 312,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
               ),
-              itemCount: visible.length,
-              itemBuilder: (context, i) {
-                final effect = visible[i];
-                return _EffectCard(
-                  key: ValueKey('effect-card-${effect.id}'),
-                  effect: effect,
-                  applied: cfg.effectId == effect.effectId,
-                  thumbnail: effect.hasThumbnail ? _thumbnail(effect) : null,
-                  onApply: effect.canRun ? () => _apply(effect) : null,
-                  onRemove: () => _remove(effect),
-                );
-              },
-            );
-          },
+            const Spacer(),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('import-files'),
+                  onPressed: _busy ? null : _importFiles,
+                  icon: const Icon(Icons.insert_drive_file_outlined, size: 18),
+                  label: Text(e.importEffect),
+                ),
+                OutlinedButton.icon(
+                  key: const Key('import-folder'),
+                  onPressed: _busy ? null : _importFolder,
+                  icon: const Icon(Icons.folder_open_outlined, size: 18),
+                  label: Text(e.folder),
+                ),
+                FilledButton.tonalIcon(
+                  key: const Key('import-windows-cache'),
+                  onPressed: _busy ? null : _importWindowsCache,
+                  icon: const Icon(Icons.desktop_windows_outlined, size: 18),
+                  label: Text(e.importFromWindows),
+                ),
+              ],
+            ),
+          ],
         ),
-      ),
-    ],
-  );
+        const SizedBox(height: WeSizes.unit * 2),
+        _Filters(
+          controller: _query,
+          support: _support,
+          tag: _tag,
+          publisher: _publisher,
+          tags: availableTags(all),
+          publishers: availablePublishers(all),
+          onQuery: () => setState(() {}),
+          onSupport: (v) => setState(() => _support = v),
+          onTag: (v) => setState(() => _tag = v),
+          onPublisher: (v) => setState(() => _publisher = v),
+        ),
+        const SizedBox(height: WeSizes.unit * 2),
+        Expanded(
+          child: installed.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => Center(
+              child: WeCard(
+                title: e.libraryReadFailed,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('$err'),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: () => ref.invalidate(installedEffectsProvider),
+                      child: Text(strings.common.retry),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            data: (_) {
+              if (all.isEmpty) return const _EmptyState();
+              if (visible.isEmpty) {
+                return Center(
+                  child: Text(
+                    e.noMatch,
+                    style: const TextStyle(color: WeColors.muted),
+                  ),
+                );
+              }
+              return GridView.builder(
+                key: const Key('explore-grid'),
+                padding: const EdgeInsets.only(bottom: 8),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 268,
+                  mainAxisExtent: 312,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: visible.length,
+                itemBuilder: (context, i) {
+                  final effect = visible[i];
+                  return _EffectCard(
+                    key: ValueKey('effect-card-${effect.id}'),
+                    effect: effect,
+                    applied: cfg.effectId == effect.effectId,
+                    thumbnail: effect.hasThumbnail ? _thumbnail(effect) : null,
+                    onApply: effect.canRun ? () => _apply(effect) : null,
+                    onRemove: () => _remove(effect),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _Filters extends StatelessWidget {
@@ -331,6 +354,7 @@ class _Filters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final e = context.strings.explore;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -344,7 +368,7 @@ class _Filters extends StatelessWidget {
             onChanged: (_) => onQuery(),
             decoration: InputDecoration(
               isDense: true,
-              hintText: 'Buscar por nome, autor ou tag',
+              hintText: e.searchHint,
               prefixIcon: const Icon(Icons.search, size: 18),
               suffixIcon: controller.text.isEmpty
                   ? null
@@ -358,11 +382,11 @@ class _Filters extends StatelessWidget {
             ),
           ),
         ),
-        for (final option in const [
-          (SupportFilter.all, 'Todos'),
-          (SupportFilter.compatible, 'Compatíveis'),
-          (SupportFilter.partial, 'Parciais'),
-          (SupportFilter.unsupported, 'Não suportados'),
+        for (final option in [
+          (SupportFilter.all, e.filterAll),
+          (SupportFilter.compatible, e.filterCompatible),
+          (SupportFilter.partial, e.filterPartial),
+          (SupportFilter.unsupported, e.filterUnsupported),
         ])
           ChoiceChip(
             key: ValueKey('filter-${option.$1.name}'),
@@ -374,7 +398,7 @@ class _Filters extends StatelessWidget {
           _Dropdown(
             key: const Key('filter-tag'),
             value: tag,
-            hint: 'Todas as categorias',
+            hint: e.allCategories,
             values: tags,
             onChanged: onTag,
           ),
@@ -382,7 +406,7 @@ class _Filters extends StatelessWidget {
           _Dropdown(
             key: const Key('filter-publisher'),
             value: publisher,
-            hint: 'Todos os autores',
+            hint: e.allPublishers,
             values: publishers,
             onChanged: onPublisher,
           ),
@@ -447,6 +471,8 @@ class _EffectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.strings;
+    final e = strings.explore;
     final badgeColor = switch (effect.compatibility.support) {
       EffectSupport.compatible => WeColors.ok,
       EffectSupport.partial => WeColors.warn,
@@ -475,7 +501,11 @@ class _EffectCard extends StatelessWidget {
                   left: 8,
                   top: 8,
                   child: StatusPill(
-                    label: effect.compatibility.label,
+                    label: switch (effect.compatibility.support) {
+                      EffectSupport.compatible => e.compatible,
+                      EffectSupport.partial => e.partial,
+                      EffectSupport.unsupported => e.unsupported,
+                    },
                     color: badgeColor,
                     background: WeColors.bg.withValues(alpha: .82),
                   ),
@@ -485,7 +515,7 @@ class _EffectCard extends StatelessWidget {
                     right: 8,
                     top: 8,
                     child: StatusPill(
-                      label: 'Aplicado',
+                      label: e.appliedBadge,
                       color: WeColors.accent,
                       background: WeColors.bg.withValues(alpha: .82),
                     ),
@@ -510,7 +540,13 @@ class _EffectCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    effect.publisher ?? effectOriginLabel(effect.origin),
+                    effect.publisher ??
+                        switch (effect.origin) {
+                          EffectOrigin.file => e.originFile,
+                          EffectOrigin.folder => e.originFolder,
+                          EffectOrigin.zip => e.originZip,
+                          EffectOrigin.windowsCache => e.originWindowsCache,
+                        },
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: WeColors.muted, fontSize: 12),
@@ -532,7 +568,12 @@ class _EffectCard extends StatelessWidget {
                   if (!effect.canRun) ...[
                     const SizedBox(height: 4),
                     Text(
-                      'Requer ${effect.compatibility.issues.join(', ')}',
+                      e.requires(
+                        [
+                          for (final i in effect.compatibility.issues)
+                            strings.lighting.compatibilityIssue(i.index),
+                        ].join(', '),
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -552,19 +593,19 @@ class _EffectCard extends StatelessWidget {
                                   Icons.check_circle_outline,
                                   size: 16,
                                 ),
-                                label: const Text('Aplicado'),
+                                label: Text(e.applied),
                               )
                             : FilledButton.tonalIcon(
                                 onPressed: onApply,
                                 icon: const Icon(Icons.play_arrow, size: 18),
-                                label: const Text('Aplicar'),
+                                label: Text(e.apply),
                               ),
                       ),
                       const SizedBox(width: 4),
                       IconButton(
                         key: ValueKey('remove-${effect.id}'),
                         onPressed: onRemove,
-                        tooltip: 'Remover da biblioteca',
+                        tooltip: e.removeFromLibrary,
                         icon: const Icon(
                           Icons.delete_outline,
                           size: 18,
@@ -665,32 +706,33 @@ class _EmptyState extends StatelessWidget {
   const _EmptyState();
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(
-          Icons.auto_awesome_outlined,
-          size: 42,
-          color: WeColors.muted,
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Nenhum efeito instalado',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        const SizedBox(
-          width: 430,
-          child: Text(
-            'Importe um arquivo .html, uma pasta com effect.html, um ZIP ou a '
-            'pasta cache de efeitos do Windows (efeitos pagos não são '
-            'importados). Os efeitos ficam em ~/.local/share/lumivent/effects.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: WeColors.muted, fontSize: 12.5),
+  Widget build(BuildContext context) {
+    final e = context.strings.explore;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.auto_awesome_outlined,
+            size: 42,
+            color: WeColors.muted,
           ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 12),
+          Text(
+            e.noEffectsTitle,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: 430,
+            child: Text(
+              e.noEffectsBody,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

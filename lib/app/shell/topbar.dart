@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/app_strings_scope.dart';
 import '../../core/ui/theme.dart';
 import '../../features/lighting/lighting.dart';
 import '../../features/monitoring/monitoring.dart';
@@ -12,6 +13,7 @@ class TopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final route = ref.watch(routeProvider);
+    final s = context.strings.shell;
     return Container(
       height: WeSizes.topbarHeight,
       padding: const EdgeInsets.symmetric(horizontal: WeSizes.unit * 3),
@@ -27,7 +29,7 @@ class TopBar extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  route.label,
+                  route.label(context.strings),
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -35,7 +37,7 @@ class TopBar extends ConsumerWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  route.subtitle,
+                  route.subtitle(context.strings),
                   style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
                 ),
               ],
@@ -46,7 +48,7 @@ class TopBar extends ConsumerWidget {
           const ArgbToggle(),
           const SizedBox(width: WeSizes.unit),
           IconButton(
-            tooltip: 'Configurações',
+            tooltip: s.settingsTooltip,
             icon: const Icon(Icons.settings_outlined),
             color: route == AppRoute.settings
                 ? WeColors.accentHover

@@ -53,7 +53,7 @@ class GpuController {
     final path = findI2cBusByName(gpuI2cBusName, sysfsRoot: sysfsRoot);
     if (path == null) {
       throw const GpuException(
-        'adaptador "$gpuI2cBusName" ausente: o amdgpu não expôs o OEM',
+        'adapter "$gpuI2cBusName" missing: amdgpu did not expose the OEM',
       );
     }
     try {
@@ -62,8 +62,8 @@ class GpuController {
     } on RawI2cException catch (e) {
       throw GpuException(
         e.permissionDenied
-            ? 'sem permissão em $path (regra udev do OEM do amdgpu)'
-            : 'não foi possível abrir $path: $e',
+            ? 'no permission on $path (amdgpu OEM udev rule)'
+            : 'could not open $path: $e',
         permissionDenied: e.permissionDenied,
       );
     }
@@ -98,7 +98,7 @@ class GpuController {
   /// safe to call again on the retry timer.
   bool init() {
     if (_closed) {
-      _disabledReason = 'controlador da GPU já foi fechado';
+      _disabledReason = 'GPU controller is already closed';
       return false;
     }
     _ssidValidated = false;
@@ -130,7 +130,7 @@ class GpuController {
     if (ssid != gpuSsid) {
       _disabledReason =
           'SSID 0x${ssid.toRadixString(16).padLeft(4, '0').toUpperCase()} '
-          'difere de 0x2429: modelo não validado';
+          'differs from 0x2429: model not validated';
       return false;
     }
     _ssidValidated = true;
@@ -150,12 +150,11 @@ class GpuController {
     List<GpuRgb> colors = const [],
   }) {
     if (_closed) {
-      _disabledReason = 'controlador da GPU já foi fechado';
+      _disabledReason = 'GPU controller is already closed';
       return false;
     }
     if (!_ssidValidated) {
-      _disabledReason ??=
-          'SSID 0x2429 não confirmado: o efeito 0x12 não é enviado';
+      _disabledReason ??= 'SSID 0x2429 not confirmed: effect 0x12 is not sent';
       return false;
     }
     final packet = buildGpuEffectPacket(

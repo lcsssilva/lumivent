@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/app_strings_scope.dart';
 import '../../core/ui/theme.dart';
 import '../../features/devices/devices.dart';
 import '../navigation/app_route.dart';
@@ -119,7 +120,7 @@ class _NavItem extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    route.label,
+                    route.label(context.strings),
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: fg,

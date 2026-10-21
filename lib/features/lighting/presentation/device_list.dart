@@ -6,6 +6,8 @@ import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings.dart';
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../application/lighting_controller.dart';
@@ -103,6 +105,8 @@ class _DeviceListState extends State<DeviceList> {
   @override
   Widget build(BuildContext context) {
     final ids = LightDeviceId.values;
+    final strings = context.strings;
+    final l = strings.lighting;
 
     Widget arrow(IconData icon, String tooltip, bool enabled, int direction) =>
         IconButton(
@@ -114,13 +118,13 @@ class _DeviceListState extends State<DeviceList> {
         );
 
     return WeCard(
-      title: 'Dispositivos',
+      title: l.devices,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          arrow(Icons.chevron_left, 'Dispositivos anteriores', _canBack, -1),
-          arrow(Icons.chevron_right, 'Próximos dispositivos', _canNext, 1),
+          arrow(Icons.chevron_left, l.previousDevices, _canBack, -1),
+          arrow(Icons.chevron_right, l.nextDevices, _canNext, 1),
         ],
       ),
       child: ScrollConfiguration(
@@ -194,19 +198,21 @@ class DeviceItem extends ConsumerWidget {
     );
     final controller = ref.read(lightingProvider.notifier);
     final supported = id.isSupported;
+    final strings = context.strings;
+    final l = strings.lighting;
 
     final (Color dot, String tip) = !supported
-        ? (WeColors.muted, 'Não suportado')
+        ? (WeColors.muted, l.unsupported)
         : switch (status?.state) {
-            null => (WeColors.muted, 'Aguardando status do dispositivo'),
-            LightOutputState.ok => (WeColors.ok, 'Funcionando'),
+            null => (WeColors.muted, l.waitingStatus),
+            LightOutputState.ok => (WeColors.ok, l.working),
             LightOutputState.unavailable => (
               WeColors.danger,
-              status!.detail ?? 'Dispositivo indisponível',
+              _outputDetail(strings, status!),
             ),
             LightOutputState.unsupported => (
               WeColors.muted,
-              status!.detail ?? 'Não suportado',
+              _outputDetail(strings, status!),
             ),
           };
 
@@ -244,7 +250,11 @@ class DeviceItem extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        deviceLabel(id, ref.watch(fanGroupNamesProvider)),
+                        deviceLabel(
+                          strings,
+                          id,
+                          ref.watch(fanGroupNamesProvider),
+                        ),
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
@@ -263,11 +273,14 @@ class DeviceItem extends ConsumerWidget {
                   ],
                 ),
                 if (!supported)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 24),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 24),
                     child: Text(
-                      'Não suportado',
-                      style: TextStyle(color: WeColors.muted, fontSize: 12),
+                      l.unsupported,
+                      style: const TextStyle(
+                        color: WeColors.muted,
+                        fontSize: 12,
+                      ),
                     ),
                   )
                 else ...[
@@ -275,7 +288,7 @@ class DeviceItem extends ConsumerWidget {
                     Padding(
                       padding: const EdgeInsets.only(left: 24, bottom: 2),
                       child: Text(
-                        'Indisponível',
+                        l.unavailable,
                         style: const TextStyle(
                           color: WeColors.danger,
                           fontSize: 12,
@@ -283,12 +296,15 @@ class DeviceItem extends ConsumerWidget {
                       ),
                     ),
                   if (auto)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 24, bottom: 2),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 24, bottom: 2),
                       child: Text(
-                        'Hardware (auto)',
-                        key: Key('auto-badge'),
-                        style: TextStyle(color: WeColors.muted, fontSize: 12),
+                        l.autoHardware,
+                        key: const Key('auto-badge'),
+                        style: const TextStyle(
+                          color: WeColors.muted,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   const SizedBox(height: 2),
@@ -301,7 +317,7 @@ class DeviceItem extends ConsumerWidget {
                       for (final m in LightMode.values)
                         if (id.accepts(m)) m,
                     ],
-                    labelOf: modeLabel,
+                    labelOf: (m) => modeLabel(strings, m),
                     onChanged: (m) {
                       controller.update(
                         (c) => c.withDevice(id, cfg.copyWith(mode: m)),
@@ -317,4 +333,14 @@ class DeviceItem extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _outputDetail(AppStrings strings, LightOutputStatus status) {
+  final issue = status.issue;
+  if (issue == null) {
+    return status.state == LightOutputState.unsupported
+        ? strings.lighting.unsupported
+        : strings.lighting.unavailable;
+  }
+  return strings.lighting.outputIssue(issue.index, status.args);
 }

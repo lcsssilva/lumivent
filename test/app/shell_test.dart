@@ -7,6 +7,9 @@ import 'package:lumivent/app/app.dart';
 import 'package:lumivent/app/desktop/desktop_actions.dart';
 import 'package:lumivent/app/navigation/app_route.dart';
 import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/i18n/app_strings.dart';
+import 'package:lumivent/core/i18n/strings_provider.dart';
+import 'package:lumivent/core/i18n/ui_language.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/devices/devices.dart';
 import 'package:lumivent/features/fans/fans.dart';
@@ -51,7 +54,7 @@ final _snapshot = DeviceSnapshot(
     DeviceInfo(
       id: 'alv2',
       kind: DeviceKind.fans,
-      name: 'Fans AL V2',
+      label: DeviceLabel.alv2Fans,
       model: 'Lian Li UNI FAN AL V2',
       status: DeviceStatus.ok,
       detail: 'firmware v0.4 · /dev/hidraw8',
@@ -59,15 +62,16 @@ final _snapshot = DeviceSnapshot(
     DeviceInfo(
       id: 'fury-1',
       kind: DeviceKind.memory,
-      name: 'Memória 1',
+      label: DeviceLabel.memoryModule,
+      slot: 1,
       model: 'Kingston Fury DDR5',
       status: DeviceStatus.noPermission,
-      hint: 'Instale as regras udev.',
+      issue: DeviceIssue.udevRules,
     ),
     DeviceInfo(
       id: 'gpu',
       kind: DeviceKind.gpu,
-      name: 'Placa de vídeo',
+      label: DeviceLabel.graphicsCard,
       model: 'Gigabyte RX 9060 XT',
       status: DeviceStatus.unsupported,
     ),
@@ -86,6 +90,12 @@ void main() {
   setUp(() async {
     tmp = Directory.systemTemp.createTempSync('lumivent-shell-');
     store = await ConfigStore.open(tmp);
+    // The historical shell tests assert Portuguese text; English is covered by
+    // the language-switch test below.
+    await store.saveSection(
+      'preferences',
+      const Preferences(language: AppLanguage.pt).toJson(),
+    );
     engine = FakeEngine();
     autostart = FakeAutostart();
     container = ProviderContainer(
@@ -95,6 +105,14 @@ void main() {
         ...PreferencesModule.overrides(store),
         ...LightingModule.overrides(store),
         ...FansModule.overrides(store),
+        uiLanguageProvider.overrideWith(
+          (ref) => switch (ref.watch(
+            preferencesProvider.select((p) => p.language),
+          )) {
+            AppLanguage.en => UiLanguage.en,
+            AppLanguage.pt => UiLanguage.pt,
+          },
+        ),
         autostartServiceProvider.overrideWithValue(autostart),
         environmentDiagnosticsProvider.overrideWithValue(NoDiagnostics()),
         desktopActionsProvider.overrideWithValue(FakeDesktop()),
@@ -188,5 +206,49 @@ void main() {
     await tester.tap(sw);
     await tester.pumpAndSettle();
     expect(autostart.enabled, isTrue);
+  });
+
+  testWidgets('language switch applies immediately and persists', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    container.read(routeProvider.notifier).go(AppRoute.settings);
+    await tester.pumpAndSettle();
+    expect(find.text('Idioma'), findsOneWidget);
+
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+    expect(find.text('Language'), findsOneWidget);
+    expect(container.read(preferencesProvider).language, AppLanguage.en);
+    expect(store.section('preferences')['language'], 'en');
+
+    await tester.tap(find.text('Português'));
+    await tester.pumpAndSettle();
+    expect(find.text('Idioma'), findsOneWidget);
+    expect(container.read(preferencesProvider).language, AppLanguage.pt);
+  });
+
+  testWidgets('English catalog renders every route', (tester) async {
+    container
+        .read(preferencesProvider.notifier)
+        .change((p) => p.copyWith(language: AppLanguage.en));
+    await pumpApp(tester);
+
+    for (final route in AppRoute.values) {
+      container.read(routeProvider.notifier).go(route);
+      // Some pages animate continuously; a single frame is enough to check the
+      // shell labels without waiting for the page to settle.
+      await tester.pump();
+      expect(
+        find.text(route.label(AppStrings.en)),
+        findsWidgets,
+        reason: 'label ${route.name}',
+      );
+      expect(
+        find.text(route.subtitle(AppStrings.en)),
+        findsOneWidget,
+        reason: 'subtitle ${route.name}',
+      );
+    }
   });
 }

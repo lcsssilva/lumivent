@@ -19,13 +19,6 @@ String? htmlEffectSlugOf(String effectId) =>
 /// Where an installed effect came from (shown in the Explore page).
 enum EffectOrigin { file, folder, zip, windowsCache }
 
-String effectOriginLabel(EffectOrigin origin) => switch (origin) {
-  EffectOrigin.file => 'Arquivo HTML',
-  EffectOrigin.folder => 'Pasta',
-  EffectOrigin.zip => 'ZIP',
-  EffectOrigin.windowsCache => 'Windows',
-};
-
 class InstalledEffect {
   const InstalledEffect({
     required this.id,

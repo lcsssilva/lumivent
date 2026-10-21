@@ -42,13 +42,6 @@ RestartSec=5
 WantedBy=graphical-session.target
 ''';
 
-class AutostartException implements Exception {
-  AutostartException(this.message);
-  final String message;
-  @override
-  String toString() => message;
-}
-
 class SystemdAutostart implements AutostartService {
   SystemdAutostart({
     required this.executable,
@@ -118,7 +111,9 @@ class SystemdAutostart implements AutostartService {
     final r = await _runner('systemctl', ['--user', ...args]);
     if (r.exitCode != 0) {
       throw AutostartException(
-        'systemctl --user ${args.join(' ')}: ${(r.stderr as String).trim()}',
+        AutostartError.systemctlFailed,
+        command: 'systemctl --user ${args.join(' ')}',
+        stderr: (r.stderr as String).trim(),
       );
     }
   }

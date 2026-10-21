@@ -24,6 +24,34 @@ abstract interface class EffectLibrary {
   Future<Uint8List?> thumbnail(String id);
 }
 
+/// Why a path or entry could not be imported. Stable ids translated by the
+/// presentation layer.
+enum ImportIssueKind {
+  notHtmlOrZip,
+  notFound,
+  folderNotFound,
+  chooseWindowsCache,
+  catalogMissing,
+  noEffectHtml,
+  invalidZip,
+  noHtmlInZip,
+  unknown,
+}
+
+/// One import failure: [path] is the original user path or ZIP entry, [detail]
+/// the technical error (never shown untranslated).
+class ImportIssue {
+  const ImportIssue(this.kind, {this.path, this.detail});
+
+  final ImportIssueKind kind;
+  final String? path;
+  final String? detail;
+
+  @override
+  String toString() =>
+      'ImportIssue(${kind.name}${path == null ? '' : ': $path'})';
+}
+
 /// What an import did, for the message shown to the user.
 class ImportReport {
   ImportReport({
@@ -31,9 +59,9 @@ class ImportReport {
     this.replaced = 0,
     this.skipped = 0,
     this.paidSkipped = 0,
-    List<String>? errors,
+    List<ImportIssue>? issues,
     this.catalogFound = false,
-  }) : errors = errors ?? [];
+  }) : issues = issues ?? [];
 
   int imported;
   int replaced;
@@ -41,52 +69,36 @@ class ImportReport {
 
   /// Windows cache import: paid effects left out (subscription or purchase).
   int paidSkipped;
-  final List<String> errors;
+  final List<ImportIssue> issues;
 
   /// Windows cache import: `catalog_en.json` was found (names and tags).
   bool catalogFound;
 
   int get total => imported + replaced;
 
-  bool get isEmpty => total == 0 && paidSkipped == 0 && errors.isEmpty;
+  bool get isEmpty => total == 0 && paidSkipped == 0 && issues.isEmpty;
 
   void add(ImportReport other) {
     imported += other.imported;
     replaced += other.replaced;
     skipped += other.skipped;
     paidSkipped += other.paidSkipped;
-    errors.addAll(other.errors);
+    issues.addAll(other.issues);
     catalogFound = catalogFound || other.catalogFound;
   }
 
-  String get summary {
-    final parts = <String>[];
-    if (imported > 0) {
-      parts.add('$imported importado${imported == 1 ? '' : 's'}');
-    }
-    if (replaced > 0) {
-      parts.add('$replaced substituído${replaced == 1 ? '' : 's'}');
-    }
-    if (skipped > 0) parts.add('$skipped ignorado${skipped == 1 ? '' : 's'}');
-    if (paidSkipped > 0) {
-      final s = paidSkipped == 1 ? '' : 's';
-      parts.add('$paidSkipped pago$s não importado$s');
-    }
-    if (errors.isNotEmpty) {
-      parts.add('${errors.length} erro${errors.length == 1 ? '' : 's'}');
-    }
-    return parts.isEmpty ? 'Nada para importar.' : parts.join(', ');
-  }
-
   @override
-  String toString() => 'ImportReport($summary)';
+  String toString() =>
+      'ImportReport(imported: $imported, replaced: $replaced, '
+      'skipped: $skipped, paidSkipped: $paidSkipped, '
+      'issues: ${issues.length})';
 }
 
 /// Imports effect files from the paths the user picked.
 abstract interface class EffectImporter {
   /// Accepts `.html` files, folders (with `effect.html` or one folder per
   /// effect) and `.zip` files. Invalid paths become entries in
-  /// [ImportReport.errors].
+  /// [ImportReport.issues].
   Future<ImportReport> importPaths(List<String> paths);
 
   /// Reads an effects folder of a Windows installation: `<cache>` or its

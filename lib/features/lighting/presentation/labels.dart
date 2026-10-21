@@ -1,85 +1,53 @@
-// User-facing (pt-BR) names for the lighting screen. The domain keeps its own
-// labels, but they are not guaranteed to be Portuguese, so the page owns these.
+// User-facing names for the lighting screen. The catalogs own the text; this
+// file only maps domain values to the matching catalog entry.
 
+import '../../../core/i18n/app_strings.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 
 /// [fanNames]: names of the hub groups 0–3 (`fanGroupNamesProvider`).
-String deviceLabel(LightDeviceId id, [List<String> fanNames = const []]) =>
-    switch (id) {
-      _ when id.isFan => 'Fans · ${fanGroupName(id.hubGroup!, fanNames)}',
-      LightDeviceId.chassis => 'Gabinete',
-      LightDeviceId.motherboard => 'Placa-mãe',
-      LightDeviceId.ram1 => 'Memória 1',
-      LightDeviceId.ram2 => 'Memória 2',
-      LightDeviceId.gpu => 'Placa de vídeo',
-      _ => id.label,
-    };
+String deviceLabel(
+  AppStrings strings,
+  LightDeviceId id, [
+  List<String> fanNames = const [],
+]) => switch (id) {
+  _ when id.isFan => strings.lighting.fansGroup(
+    fanGroupName(strings, id.hubGroup!, fanNames),
+  ),
+  LightDeviceId.chassis => strings.lighting.chassis,
+  LightDeviceId.motherboard => strings.lighting.motherboard,
+  LightDeviceId.ram1 => strings.lighting.memory1,
+  LightDeviceId.ram2 => strings.lighting.memory2,
+  LightDeviceId.gpu => strings.lighting.graphicsCard,
+  _ => id.name,
+};
 
-/// Name of hub group [group] (0–3), "Grupo N" when unnamed.
-String fanGroupName(int group, List<String> fanNames) {
+/// Name of hub group [group] (0–3), the catalog's default when unnamed.
+String fanGroupName(AppStrings strings, int group, List<String> fanNames) {
   final name = group < fanNames.length ? fanNames[group].trim() : '';
-  return name.isEmpty ? 'Grupo $group' : name;
+  return name.isEmpty ? strings.common.groupName(group) : name;
 }
 
-String modeLabel(LightMode m) => switch (m) {
-  LightMode.canvas => 'Canvas',
-  LightMode.hardware => 'Hardware',
-  LightMode.fixed => 'Cor fixa',
+String modeLabel(AppStrings strings, LightMode m) => switch (m) {
+  LightMode.canvas => strings.lighting.modeCanvas,
+  LightMode.hardware => strings.lighting.modeHardware,
+  LightMode.fixed => strings.lighting.modeFixed,
 };
 
-String effectLabel(String id, String fallback) => switch (id) {
-  'solid' => 'Cor sólida',
-  'spectrum' => 'Ciclo de cores',
-  'rainbowWave' => 'Onda arco-íris',
-  'breathing' => 'Respiração',
-  'colorWave' => 'Onda de duas cores',
-  'scanner' => 'Varredura',
-  _ => fallback,
-};
+String effectLabel(AppStrings strings, String id, String fallback) =>
+    strings.lighting.effectLabel(id, fallback);
 
-String paramLabel(String id, String fallback) => switch (id) {
-  'speed' => 'Velocidade',
-  'size' => 'Tamanho da onda',
-  'direction' => 'Direção',
-  'color' => 'Cor',
-  'color2' => 'Cor 2',
-  'background' => 'Fundo',
-  'width' => 'Largura',
-  _ => fallback,
-};
+String paramLabel(AppStrings strings, String id, String fallback) =>
+    strings.lighting.paramLabel(id, fallback);
 
-String boardModeLabel(BoardEffectMode m) => switch (m) {
-  BoardEffectMode.static => 'Estático',
-  BoardEffectMode.pulse => 'Pulsar',
-  BoardEffectMode.flash => 'Piscar',
-  BoardEffectMode.doubleFlash => 'Piscar duplo',
-  BoardEffectMode.colorCycle => 'Ciclo de cores',
-  BoardEffectMode.wave => 'Onda',
-};
+String boardModeLabel(AppStrings strings, BoardEffectMode m) =>
+    strings.lighting.boardMode(m.index);
 
-String boardZoneLabel(int zone) => switch (zone) {
-  0x20 => 'IO Shield 1',
-  0x22 => 'LED da CPU',
-  0x23 => 'IO Shield 2',
-  _ => 'Zona $zone',
-};
+String boardZoneLabel(AppStrings strings, int zone) =>
+    strings.lighting.boardZone(zone);
 
-String gpuEffectLabel(GpuEffect effect) => switch (effect) {
-  GpuEffect.off => 'Desligado',
-  GpuEffect.staticColor => 'Estático',
-  GpuEffect.pulse => 'Respiração',
-  GpuEffect.flash => 'Flash',
-  GpuEffect.doubleFlash => 'Flash duplo',
-  GpuEffect.cycle => 'Ciclo de cores',
-  GpuEffect.wave => 'Onda',
-  GpuEffect.gradient => 'Gradiente',
-  GpuEffect.colorShift => 'Troca de cores',
-  GpuEffect.rainbow => 'Arco-íris',
-  GpuEffect.tricolor => 'Três cores',
-  GpuEffect.claws => 'Garras',
-  GpuEffect.dazzle => 'Ofuscante',
-};
+String gpuEffectLabel(AppStrings strings, GpuEffect effect) =>
+    strings.lighting.gpuEffect(effect.index);
 
 /// Readable firmware mode name: `RainbowMorph_Inner` -> `Rainbow Morph`.
 String firmwareModeLabel(String name) {

@@ -58,7 +58,8 @@ merged.
 - A new driver needs tests for the exact bytes it sends, for its safety checks
   and for missing devices and permissions — using a fake transport, never real
   hardware.
-- Widget tests match the Portuguese interface text (`find.text`).
+- Widget tests match the Portuguese catalog (`find.text`); new pages also get
+  an English smoke test.
 - Tests must not depend on the network, real `/dev` nodes or global state shared
   between tests.
 - The bench tools in `tool/` drive real hardware and require the app to be
@@ -67,7 +68,9 @@ merged.
 ## Code style
 
 - Code, comments, identifiers and test names in **English**.
-- Interface text and user-facing messages in **Portuguese**.
+- Interface text and user-facing messages go in the English and Portuguese
+  catalogs under `lib/core/i18n/catalogs/`; English is the default. Never write
+  UI text directly in a widget.
 - Documentation (the root `.md` files) in **English**.
 - Follow `dart format` and the lints in `analysis_options.yaml`.
 - Prefer explicit types at public boundaries.

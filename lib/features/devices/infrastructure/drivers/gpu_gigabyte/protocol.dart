@@ -145,12 +145,12 @@ void checkGpuPacket(
 }) {
   if (!busValidated) {
     throw const GpuGuardException(
-      'barramento não validado: o RGB da GPU só usa o OEM do amdgpu',
+      'unvalidated bus: GPU RGB only uses the amdgpu OEM',
     );
   }
   if (address != gpuI2cAddress) {
     throw GpuGuardException(
-      'endereço 0x${address.toRadixString(16)} não é o controlador da GPU '
+      'address 0x${address.toRadixString(16)} is not the GPU controller '
       '(0x${gpuI2cAddress.toRadixString(16)})',
     );
   }
@@ -162,14 +162,14 @@ void checkGpuPacket(
   final command = packet[0];
   if (_isBlockedCommand(command)) {
     throw GpuGuardException(
-      'comando 0x${command.toRadixString(16)} bloqueado por segurança '
-      '(save/sync não são usados pelo app)',
+      'command 0x${command.toRadixString(16)} blocked for safety '
+      '(save/sync are not used by the app)',
     );
   }
   if (!_isAllowedCommand(command)) {
     throw GpuGuardException(
-      'comando 0x${command.toRadixString(16)} não permitido; '
-      'só 0x10, 0x11 e 0x12',
+      'command 0x${command.toRadixString(16)} not allowed; '
+      'only 0x10, 0x11 and 0x12',
     );
   }
   if (packet[1] != 0x01) {
@@ -182,7 +182,7 @@ void checkGpuPacket(
     for (var i = 2; i < gpuPacketLength; i++) {
       if (packet[i] != 0) {
         throw GpuGuardException(
-          'comando de identificação com lixo em [$i]; esperado zero',
+          'identification command with garbage at [$i]; expected zero',
         );
       }
     }
@@ -192,7 +192,7 @@ void checkGpuPacket(
   // 0x12: effect packet.
   if (!ssidValidated) {
     throw const GpuGuardException(
-      'SSID 0x2429 ainda não confirmado; nenhum efeito 0x12 é enviado',
+      'SSID 0x2429 not confirmed yet; no 0x12 effect is sent',
     );
   }
   final effect = GpuEffectCode.byCode(packet[2]);
@@ -208,20 +208,20 @@ void checkGpuPacket(
     throw GpuGuardException('brilho ${packet[4]} fora de 0–$gpuBrightnessMax');
   }
   if (packet[9] != 0) {
-    throw GpuGuardException('índice de zona ${packet[9]}; esta placa usa 0');
+    throw GpuGuardException('zone index ${packet[9]}; this board uses 0');
   }
 
   final count = packet[10];
   if (effect.colors == 0) {
     if (count != 0) {
       throw GpuGuardException(
-        '${effect.styleName} não usa paleta, mas o pacote declara $count cores',
+        '${effect.styleName} has no palette, but the packet declares $count colors',
       );
     }
     for (var i = 10; i < gpuPacketLength; i++) {
       if (packet[i] != 0) {
         throw GpuGuardException(
-          '${effect.styleName} com paleta em [$i], mas ele usa só a cor única',
+          '${effect.styleName} has a palette at [$i], but it uses only the single color',
         );
       }
     }

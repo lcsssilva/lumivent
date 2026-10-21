@@ -95,11 +95,11 @@ class FileEffectLibrary implements EffectLibrary {
   @override
   Future<String> readHtml(String id) async {
     if (!isSafeEffectId(id)) {
-      throw const FormatException('Efeito inválido.');
+      throw const FormatException('Invalid effect.');
     }
     final f = _html(id);
     if (!f.existsSync()) {
-      throw FormatException('Efeito $id não está instalado.');
+      throw FormatException('Effect $id is not installed.');
     }
     return f.readAsString();
   }
@@ -150,7 +150,7 @@ class FileEffectLibrary implements EffectLibrary {
     _cache = null;
     final effect = _load(safe);
     if (effect == null) {
-      throw FormatException('O arquivo de $safe não é um efeito válido.');
+      throw FormatException('$safe is not a valid effect file.');
     }
     return effect;
   }

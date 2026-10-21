@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/app_strings_scope.dart';
 import '../../core/persistence/config_store.dart';
 import '../../core/ui/widgets.dart';
 import '../../features/fans/fans.dart';
@@ -30,37 +31,41 @@ class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard> {
   }
 
   Future<void> _run(Future<void> Function() job) async {
+    final strings = context.strings;
     setState(() => _busy = true);
     try {
       await job();
     } on Object catch (e) {
-      _tell(e is FormatException ? e.message : 'Falhou: $e');
+      _tell(e is FormatException ? e.message : strings.shell.failed('$e'));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _export() => _run(() async {
+    final s = context.strings.shell;
     final text = exportConfig(ref.read(configStoreProvider));
     final saved = await FilePicker.saveFile(
-      dialogTitle: 'Exportar configuração',
+      dialogTitle: s.exportDialogTitle,
       fileName: exportFileName,
       bytes: utf8.encode(text),
       mimeType: 'application/json',
     );
-    if (saved != null) _tell('Configuração exportada para ${saved.path}.');
+    if (saved != null) _tell(s.exportedTo(saved.path));
   });
 
   Future<void> _import() => _run(() async {
+    final strings = context.strings;
+    final s = strings.shell;
     final file = await FilePicker.pickFile(
-      dialogTitle: 'Importar configuração',
+      dialogTitle: s.importDialogTitle,
       type: FileType.custom,
       allowedExtensions: const ['json'],
     );
     if (file == null) return;
     final text = utf8.decode(await file.readAsBytes());
     final store = ref.read(configStoreProvider);
-    final sections = await importConfig(store, text);
+    final sections = await importConfig(store, text, strings: strings);
     if (sections.contains('preferences')) {
       ref.read(preferencesProvider.notifier).reload();
     }
@@ -68,35 +73,32 @@ class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard> {
       ref.read(lightingProvider.notifier).reload();
     }
     if (sections.contains('fans')) ref.read(fansProvider.notifier).reload();
-    _tell(
-      'Configuração importada e aplicada. A anterior ficou em '
-      '${store.file.path}.$importBackupSuffix.',
-    );
+    _tell(s.importedBackupAt('${store.file.path}.$importBackupSuffix'));
   });
 
   @override
-  Widget build(BuildContext context) => WeCard(
-    title: 'Configuração',
-    child: SettingRow(
-      title: 'Exportar ou importar',
-      subtitle: const Text(
-        'Preferências, iluminação e fans num arquivo JSON. Importar aplica na '
-        'hora e guarda uma cópia da configuração atual.',
+  Widget build(BuildContext context) {
+    final s = context.strings.shell;
+    return WeCard(
+      title: s.configuration,
+      child: SettingRow(
+        title: s.exportOrImport,
+        subtitle: Text(s.exportOrImportDescription),
+        control: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            OutlinedButton(
+              onPressed: _busy ? null : _export,
+              child: Text(s.export),
+            ),
+            const SizedBox(width: 8),
+            OutlinedButton(
+              onPressed: _busy ? null : _import,
+              child: Text(s.import),
+            ),
+          ],
+        ),
       ),
-      control: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          OutlinedButton(
-            onPressed: _busy ? null : _export,
-            child: const Text('Exportar…'),
-          ),
-          const SizedBox(width: 8),
-          OutlinedButton(
-            onPressed: _busy ? null : _import,
-            child: const Text('Importar…'),
-          ),
-        ],
-      ),
-    ),
-  );
+    );
+  }
 }

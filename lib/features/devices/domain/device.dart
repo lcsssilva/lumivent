@@ -30,44 +30,83 @@ enum DeviceStatus {
 
 enum DeviceKind { fans, motherboard, memory, gpu }
 
+/// Generic device name. Hardware models and user-chosen names stay as data.
+enum DeviceLabel {
+  alv2Fans,
+  boardAndCase,
+  memoryModules,
+  memoryModule,
+  graphicsCard,
+}
+
+/// What the user can do about an unhealthy status. The presentation composes
+/// the sentence; the engine never generates UI text (plan D5).
+enum DeviceIssue {
+  udevRules,
+  fanUsbCable,
+  motherboardRgb,
+  memoryBus,
+  gpuSsid,
+  unsafeAddress,
+  noResponse,
+}
+
 /// Immutable device snapshot, safe to send between isolates.
 class DeviceInfo {
   const DeviceInfo({
     required this.id,
     required this.kind,
-    required this.name,
+    required this.label,
     required this.model,
     required this.status,
+    this.slot,
     this.detail,
-    this.hint,
+    this.issue,
+    this.issueArg,
   });
 
   /// Stable between runs (used by configuration in future phases).
   final String id;
   final DeviceKind kind;
-  final String name;
+  final DeviceLabel label;
+
+  /// Memory slot for [DeviceLabel.memoryModule] (1-based).
+  final int? slot;
   final String model;
   final DeviceStatus status;
 
-  /// Firmware, node path, or error message.
+  /// Firmware, node path, or a neutral technical error.
   final String? detail;
 
-  /// What the user can do to resolve an unhealthy status.
-  final String? hint;
+  /// Actionable issue and its data (for example the bus that did not respond).
+  final DeviceIssue? issue;
+  final String? issueArg;
 
   @override
   bool operator ==(Object other) =>
       other is DeviceInfo &&
       other.id == id &&
       other.kind == kind &&
-      other.name == name &&
+      other.label == label &&
+      other.slot == slot &&
       other.model == model &&
       other.status == status &&
       other.detail == detail &&
-      other.hint == hint;
+      other.issue == issue &&
+      other.issueArg == issueArg;
 
   @override
-  int get hashCode => Object.hash(id, kind, name, model, status, detail, hint);
+  int get hashCode => Object.hash(
+    id,
+    kind,
+    label,
+    slot,
+    model,
+    status,
+    detail,
+    issue,
+    issueArg,
+  );
 
   @override
   String toString() =>

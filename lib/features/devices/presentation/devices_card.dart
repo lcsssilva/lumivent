@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../application/devices_controller.dart';
@@ -14,19 +15,21 @@ class DevicesCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snap = ref.watch(devicesProvider);
+    final strings = context.strings;
+    final s = strings.devices;
     return WeCard(
-      title: 'Dispositivos',
+      title: s.devices,
       trailing: OutlinedButton.icon(
         icon: const Icon(Icons.refresh, size: 18),
-        label: const Text('Detectar novamente'),
+        label: Text(s.detectAgain),
         onPressed: () => ref.read(devicesProvider.notifier).rescan(),
       ),
       child: snap == null
-          ? const Padding(
-              padding: EdgeInsets.all(WeSizes.unit * 2),
+          ? Padding(
+              padding: const EdgeInsets.all(WeSizes.unit * 2),
               child: Text(
-                'Detectando dispositivos…',
-                style: TextStyle(color: WeColors.muted),
+                s.detectingDevices,
+                style: const TextStyle(color: WeColors.muted),
               ),
             )
           : Column(
@@ -48,27 +51,36 @@ class _ConflictBanner extends StatelessWidget {
   final List<String> programs;
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: WeSizes.unit * 1.5),
-    padding: const EdgeInsets.all(WeSizes.unit * 1.5),
-    decoration: BoxDecoration(
-      color: WeColors.warn.withValues(alpha: .1),
-      border: Border.all(color: WeColors.warn.withValues(alpha: .4)),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.warning_amber_rounded, color: WeColors.warn, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            '${programs.join(', ')} ${programs.length > 1 ? 'estão rodando e' : 'está rodando e'} '
-            'podem disputar os mesmos dispositivos. Feche-os antes de usar iluminação e fans.',
+  Widget build(BuildContext context) {
+    final s = context.strings.devices;
+    return Container(
+      margin: const EdgeInsets.only(bottom: WeSizes.unit * 1.5),
+      padding: const EdgeInsets.all(WeSizes.unit * 1.5),
+      decoration: BoxDecoration(
+        color: WeColors.warn.withValues(alpha: .1),
+        border: Border.all(color: WeColors.warn.withValues(alpha: .4)),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: WeColors.warn,
+            size: 20,
           ),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              s.conflicts(
+                programs.join(s.joinedBy),
+                plural: programs.length > 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DeviceRow extends StatelessWidget {
@@ -78,6 +90,8 @@ class _DeviceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final d = device;
+    final strings = context.strings;
+    final issue = deviceIssue(d, strings);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: WeSizes.unit * 1.5),
       child: Row(
@@ -90,7 +104,7 @@ class _DeviceRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  d.name,
+                  deviceName(d, strings),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 2),
@@ -107,11 +121,11 @@ class _DeviceRow extends StatelessWidget {
                       fontFamily: 'monospace',
                     ),
                   ),
-                if (d.hint != null && d.status != DeviceStatus.ok)
+                if (issue != null && d.status != DeviceStatus.ok)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      d.hint!,
+                      issue,
                       style: TextStyle(color: d.status.color, fontSize: 12.5),
                     ),
                   ),
@@ -119,7 +133,7 @@ class _DeviceRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: WeSizes.unit * 2),
-          StatusPill(label: d.status.label, color: d.status.color),
+          StatusPill(label: d.status.label(strings), color: d.status.color),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/widgets.dart';
 import '../application/preferences_controller.dart';
 import '../domain/preferences.dart';
@@ -15,16 +16,33 @@ class PreferencesCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(preferencesProvider);
     final ctrl = ref.read(preferencesProvider.notifier);
+    final s = context.strings.settings;
     return WeCard(
-      title: 'Preferências',
+      title: s.preferences,
       child: Column(
         children: [
           SettingRow(
-            title: 'Manter na bandeja ao fechar',
+            title: s.language,
+            subtitle: Text(s.languageHint),
+            control: SegmentedButton<AppLanguage>(
+              key: const ValueKey('language'),
+              showSelectedIcon: false,
+              // Endonyms: someone who landed in the wrong language can find the
+              // way back without reading the current one.
+              segments: const [
+                ButtonSegment(value: AppLanguage.en, label: Text('English')),
+                ButtonSegment(value: AppLanguage.pt, label: Text('Português')),
+              ],
+              selected: {prefs.language},
+              onSelectionChanged: (v) =>
+                  ctrl.change((p) => p.copyWith(language: v.first)),
+            ),
+          ),
+          const Divider(height: 16),
+          SettingRow(
+            title: s.keepInTray,
             subtitle: Text(
-              trayAvailable
-                  ? 'Fechar a janela apenas a oculta; curvas e efeitos continuam rodando.'
-                  : 'A bandeja do sistema não está disponível: fechar a janela encerra o app.',
+              trayAvailable ? s.keepInTrayHint : s.keepInTrayUnavailable,
             ),
             control: Switch(
               value: prefs.closeToTray && trayAvailable,
@@ -35,7 +53,7 @@ class PreferencesCard extends ConsumerWidget {
           ),
           const Divider(height: 16),
           SettingRow(
-            title: 'Unidade de temperatura',
+            title: s.temperatureUnit,
             control: SegmentedButton<TemperatureUnit>(
               showSelectedIcon: false,
               segments: const [
@@ -55,10 +73,8 @@ class PreferencesCard extends ConsumerWidget {
           ),
           const Divider(height: 16),
           SettingRow(
-            title: 'Quadros por segundo dos efeitos',
-            subtitle: const Text(
-              'O hub AL V2 aceita no máximo ~15 quadros por segundo.',
-            ),
+            title: s.effectsFps,
+            subtitle: Text(s.effectsFpsHint),
             control: SegmentedButton<int>(
               showSelectedIcon: false,
               segments: [

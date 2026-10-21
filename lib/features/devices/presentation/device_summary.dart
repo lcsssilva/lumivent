@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../application/devices_controller.dart';
@@ -14,9 +15,11 @@ class DeviceSummary extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snap = ref.watch(devicesProvider);
+    final strings = context.strings;
+    final s = strings.devices;
     final rows = <(String, DeviceStatus?)>[];
     if (snap == null) {
-      rows.add(('Detectando…', null));
+      rows.add((strings.shell.detecting, null));
     } else {
       for (final kind in DeviceKind.values) {
         final list = snap.ofKind(kind).toList();
@@ -30,11 +33,11 @@ class DeviceSummary extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(12, 0, 12, 8),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
           child: Text(
-            'DISPOSITIVOS',
-            style: TextStyle(
+            s.devicesHeader,
+            style: const TextStyle(
               color: WeColors.muted,
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -44,7 +47,7 @@ class DeviceSummary extends ConsumerWidget {
         ),
         for (final (label, status) in rows)
           Tooltip(
-            message: status?.label ?? '',
+            message: status?.label(strings) ?? '',
             waitDuration: const Duration(milliseconds: 400),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),

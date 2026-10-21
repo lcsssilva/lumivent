@@ -98,7 +98,6 @@ void main() {
       expect(c.support, EffectSupport.compatible);
       expect(c.issues, isEmpty);
       expect(c.canRun, isTrue);
-      expect(c.label, 'Compatível');
     });
 
     test('partial for audio, deduplicated with the Audio property', () {
@@ -111,20 +110,19 @@ void main() {
         ),
       );
       expect(c.support, EffectSupport.partial);
-      expect(c.issues, ['áudio (silêncio)']);
+      expect(c.issues, [EffectIssue.audio]);
       expect(c.canRun, isTrue);
-      expect(c.label, 'Parcial');
     });
 
     test('unsupported for screen capture or pixel reads', () {
       final zone = analyzeEffect(source(script: 'engine.zone.hue[0]'));
       expect(zone.support, EffectSupport.unsupported);
-      expect(zone.issues, ['captura de tela']);
+      expect(zone.issues, [EffectIssue.capture]);
       expect(zone.canRun, isFalse);
 
       final pixels = analyzeEffect(source(script: 'ctx.getImageData(0,0,1,1)'));
       expect(pixels.support, EffectSupport.unsupported);
-      expect(pixels.issues, ['leitura de pixels']);
+      expect(pixels.issues, [EffectIssue.pixels]);
     });
 
     test('blocking issue wins over a partial one', () {
@@ -132,7 +130,7 @@ void main() {
         source(script: 'engine.audio.level + engine.zone.hue[0]'),
       );
       expect(c.support, EffectSupport.unsupported);
-      expect(c.issues, containsAll(['áudio (silêncio)', 'captura de tela']));
+      expect(c.issues, containsAll([EffectIssue.audio, EffectIssue.capture]));
     });
   });
 
@@ -232,7 +230,7 @@ void main() {
         publisher: 'Autor X',
         tags: const ['Audio'],
         compatibility: const EffectCompatibility(EffectSupport.partial, [
-          'áudio (silêncio)',
+          EffectIssue.audio,
         ]),
       ),
     ];

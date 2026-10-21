@@ -2,19 +2,16 @@
 
 /// Devices controlled by the lighting screen.
 enum LightDeviceId {
-  alv2Group1('Fans · Grupo 1', 1),
-  alv2Group2('Fans · Grupo 2', 2),
-  alv2Group3('Fans · Grupo 3', 3),
-  chassis('Gabinete'),
-  motherboard('Placa-mãe'),
-  ram1('Memória 1'),
-  ram2('Memória 2'),
-  gpu('Placa de vídeo');
+  alv2Group1(1),
+  alv2Group2(2),
+  alv2Group3(3),
+  chassis,
+  motherboard,
+  ram1,
+  ram2,
+  gpu;
 
-  const LightDeviceId(this.label, [this.hubGroup]);
-
-  /// Name for the UI.
-  final String label;
+  const LightDeviceId([this.hubGroup]);
 
   /// Group (port) of the AL V2 hub, 1–3; `null` outside fans. Group 0 of the hub
   /// is empty and always off (AL-V2 §8).
@@ -45,14 +42,11 @@ enum LightDeviceId {
 /// Who decides the device color.
 enum LightMode {
   /// Follows the global effect, sampled at the LEDs' canvas positions.
-  canvas('Canvas'),
+  canvas,
 
   /// Device-owned modes (firmware modes on fans, motherboard effects).
-  hardware('Hardware'),
+  hardware,
 
   /// A single color.
-  fixed('Cor fixa');
-
-  const LightMode(this.label);
-  final String label;
+  fixed,
 }

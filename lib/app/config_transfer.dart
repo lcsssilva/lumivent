@@ -6,6 +6,7 @@
 // change applies without restarting the app.
 import 'dart:convert';
 
+import '../core/i18n/app_strings.dart';
 import '../core/persistence/config_store.dart';
 
 /// Module sections an import may replace.
@@ -23,41 +24,40 @@ String exportConfig(ConfigStore store) =>
 
 /// Module sections of an exported file.
 ///
-/// Throws [FormatException] (message in Portuguese, shown to the user) when
-/// [text] is not a JSON object, comes from a newer schema, or carries no
-/// known section.
-JsonMap importableSections(String text) {
+/// Throws [FormatException] (message in [strings]) when [text] is not a JSON
+/// object, comes from a newer schema, or carries no known section.
+JsonMap importableSections(String text, {AppStrings strings = AppStrings.en}) {
   final Object? json;
   try {
     json = jsonDecode(text);
   } on FormatException {
-    throw const FormatException('O arquivo não é um JSON válido.');
+    throw FormatException(strings.shell.invalidJson);
   }
   if (json is! JsonMap) {
-    throw const FormatException('O arquivo não é uma configuração do app.');
+    throw FormatException(strings.shell.notAppConfig);
   }
   final version = json['version'];
   if (version is num && version > ConfigStore.schemaVersion) {
-    throw const FormatException(
-      'O arquivo veio de uma versão mais nova do app.',
-    );
+    throw FormatException(strings.shell.newerVersion);
   }
   final sections = <String, Object?>{
     for (final name in transferableSections)
       if (json[name] is JsonMap) name: json[name],
   };
   if (sections.isEmpty) {
-    throw const FormatException(
-      'O arquivo não tem preferências, iluminação nem fans.',
-    );
+    throw FormatException(strings.shell.noKnownSections);
   }
   return sections;
 }
 
 /// Imports [text] into [store] (backup first). Returns the imported section
 /// names; the caller reloads those modules.
-Future<List<String>> importConfig(ConfigStore store, String text) async {
-  final sections = importableSections(text);
+Future<List<String>> importConfig(
+  ConfigStore store,
+  String text, {
+  AppStrings strings = AppStrings.en,
+}) async {
+  final sections = importableSections(text, strings: strings);
   await store.replaceSections(sections, backupSuffix: importBackupSuffix);
   return sections.keys.toList();
 }

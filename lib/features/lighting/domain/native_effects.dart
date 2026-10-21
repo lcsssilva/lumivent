@@ -84,7 +84,8 @@ class EffectParam {
         if (raw is num) return raw != 0;
         return defaultValue;
       case EffectParamType.combobox:
-        return raw is String && options.contains(raw) ? raw : defaultValue;
+        final value = raw is String ? (_legacyOptions[raw] ?? raw) : null;
+        return value != null && options.contains(value) ? value : defaultValue;
     }
   }
 }
@@ -125,49 +126,57 @@ class NativeEffect {
       EffectValues(params, raw);
 }
 
-const _directionOptions = ['Esquerda', 'Direita', 'Cima', 'Baixo'];
+const _directionOptions = ['Left', 'Right', 'Up', 'Down'];
+
+/// Values saved by older versions, when the option text was Portuguese.
+const _legacyOptions = {
+  'Esquerda': 'Left',
+  'Direita': 'Right',
+  'Cima': 'Up',
+  'Baixo': 'Down',
+};
 
 const _speed = EffectParam.number(
   'speed',
-  'Velocidade',
+  'Speed',
   min: 1,
   max: 100,
   defaultValue: 30,
 );
 const _waveSize = EffectParam.number(
   'size',
-  'Tamanho da onda',
+  'Wave size',
   min: 20,
   max: 640,
   defaultValue: 160,
 );
 const _direction = EffectParam.combobox(
   'direction',
-  'Direção',
+  'Direction',
   options: _directionOptions,
-  defaultValue: 'Direita',
+  defaultValue: 'Right',
 );
 
 /// Distance along the movement direction.
 double _along(String dir, double x, double y) => switch (dir) {
-  'Esquerda' => -x,
-  'Cima' => -y,
-  'Baixo' => y,
+  'Left' => -x,
+  'Up' => -y,
+  'Down' => y,
   _ => x,
 };
 
 double _cos2pi(double u) => math.cos(2 * math.pi * u);
 
 final nativeEffects = List<NativeEffect>.unmodifiable([
-  NativeEffect('solid', 'Cor sólida', const [
-    EffectParam.color('color', 'Cor', defaultValue: '#FF0000'),
+  NativeEffect('solid', 'Solid color', const [
+    EffectParam.color('color', 'Color', defaultValue: '#FF0000'),
   ], (x, y, t, v) => v.color('color')),
-  NativeEffect('spectrum', 'Ciclo de cores', const [
+  NativeEffect('spectrum', 'Color cycle', const [
     _speed,
   ], (x, y, t, v) => Rgb.fromHsv(t * v.number('speed') * 3.6, 1, 1)),
   NativeEffect(
     'rainbowWave',
-    'Onda arco-íris',
+    'Rainbow wave',
     const [_speed, _direction, _waveSize],
     (x, y, t, v) {
       final d = _along(v.option('direction'), x, y);
@@ -177,8 +186,11 @@ final nativeEffects = List<NativeEffect>.unmodifiable([
   ),
   NativeEffect(
     'breathing',
-    'Respiração',
-    const [EffectParam.color('color', 'Cor', defaultValue: '#00BFFF'), _speed],
+    'Breathing',
+    const [
+      EffectParam.color('color', 'Color', defaultValue: '#00BFFF'),
+      _speed,
+    ],
     (x, y, t, v) {
       // Same period as the firmware `Breathing` of the chosen speed, so the
       // case, board and RAM breathe with the fans (phase comes from the
@@ -191,10 +203,10 @@ final nativeEffects = List<NativeEffect>.unmodifiable([
   ),
   NativeEffect(
     'colorWave',
-    'Onda de duas cores',
+    'Two-color wave',
     const [
-      EffectParam.color('color', 'Cor 1', defaultValue: '#FF0080'),
-      EffectParam.color('color2', 'Cor 2', defaultValue: '#0080FF'),
+      EffectParam.color('color', 'Color 1', defaultValue: '#FF0080'),
+      EffectParam.color('color2', 'Color 2', defaultValue: '#0080FF'),
       _speed,
       _direction,
       _waveSize,
@@ -211,18 +223,12 @@ final nativeEffects = List<NativeEffect>.unmodifiable([
   ),
   NativeEffect(
     'scanner',
-    'Varredura',
+    'Scanner',
     const [
-      EffectParam.color('color', 'Cor', defaultValue: '#FF0000'),
-      EffectParam.color('background', 'Fundo', defaultValue: '#000000'),
+      EffectParam.color('color', 'Color', defaultValue: '#FF0000'),
+      EffectParam.color('background', 'Background', defaultValue: '#000000'),
       _speed,
-      EffectParam.number(
-        'width',
-        'Largura',
-        min: 5,
-        max: 320,
-        defaultValue: 60,
-      ),
+      EffectParam.number('width', 'Width', min: 5, max: 320, defaultValue: 60),
     ],
     (x, y, t, v) {
       // Triangle back and forth: 2-second period at speed 50.

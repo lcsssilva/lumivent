@@ -49,10 +49,11 @@ void main() {
     final err = parseHelperLine(
       '{"ctrl":"nvme1","error":"open: Permission denied"}',
     )!;
-    expect((err.log, err.error), (null, 'open: Permission denied'));
+    expect((err.log, err.error?.kind), (null, SsdErrorKind.device));
+    expect(err.error?.message, 'open: Permission denied');
     expect(
-      parseHelperLine('{"ctrl":"nvme0","log":"zz"}')!.error,
-      'resposta inválida do helper',
+      parseHelperLine('{"ctrl":"nvme0","log":"zz"}')!.error?.kind,
+      SsdErrorKind.invalidResponse,
     );
     expect(parseHelperLine('not json'), isNull);
     expect(parseHelperLine('{"x":1}'), isNull);
@@ -118,7 +119,8 @@ echo '{"ctrl":"nvme10","error":"open: No such device"}'
         expect(a.smart!.health, SsdHealth.good);
         expect(a.smartError, isNull);
         expect(ssds[1].smart, isNull);
-        expect(ssds[1].smartError, 'ioctl: Operation not permitted');
+        expect(ssds[1].smartError?.kind, SsdErrorKind.device);
+        expect(ssds[1].smartError?.message, 'ioctl: Operation not permitted');
         expect(ssds[1].capacityBytes, isNull);
       },
     );
@@ -130,7 +132,7 @@ echo '{"ctrl":"nvme10","error":"open: No such device"}'
       ).read();
       expect(ssds, hasLength(3));
       expect(ssds.first.smart, isNull);
-      expect(ssds.first.smartError, startsWith('falha ao executar o helper'));
+      expect(ssds.first.smartError?.kind, SsdErrorKind.helperFailed);
     });
 
     test('helper failure with no output', () async {
@@ -139,7 +141,9 @@ echo '{"ctrl":"nvme10","error":"open: No such device"}'
         sysfsRoot: root.path,
         helper: helper,
       ).read();
-      expect(ssds.first.smartError, 'o helper saiu com 2: uso: ...');
+      expect(ssds.first.smartError?.kind, SsdErrorKind.helperExit);
+      expect(ssds.first.smartError?.exitCode, 2);
+      expect(ssds.first.smartError?.stderr, 'uso: ...');
     });
   });
 }

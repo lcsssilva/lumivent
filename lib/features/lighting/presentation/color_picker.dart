@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../domain/rgb.dart';
 
@@ -47,20 +48,23 @@ Future<void> showColorPickerDialog(
   ValueChanged<Rgb> onChanged,
 ) => showDialog<void>(
   context: context,
-  builder: (ctx) => AlertDialog(
-    backgroundColor: WeColors.surface,
-    title: const Text('Escolher cor'),
-    content: SizedBox(
-      width: 280,
-      child: ColorPicker(color: initial, onChanged: onChanged),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(ctx).pop(),
-        child: const Text('Fechar'),
+  builder: (ctx) {
+    final strings = ctx.strings;
+    return AlertDialog(
+      backgroundColor: WeColors.surface,
+      title: Text(strings.lighting.chooseColor),
+      content: SizedBox(
+        width: 280,
+        child: ColorPicker(color: initial, onChanged: onChanged),
       ),
-    ],
-  ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: Text(strings.common.close),
+        ),
+      ],
+    );
+  },
 );
 
 class ColorPicker extends StatefulWidget {
@@ -129,6 +133,7 @@ class _ColorPickerState extends State<ColorPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.strings;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -177,11 +182,11 @@ class _ColorPickerState extends State<ColorPicker> {
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp('[#0-9a-fA-F]')),
                 ],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
                   counterText: '',
-                  labelText: 'Hexadecimal',
-                  border: OutlineInputBorder(),
+                  labelText: strings.lighting.hexadecimal,
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (t) {
                   final c = Rgb.parse(t);

@@ -7,6 +7,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings.dart';
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../application/effects_controller.dart';
@@ -34,13 +36,11 @@ class EffectPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cfg = ref.watch(lightingProvider);
     final effect = nativeEffectById(cfg.effectId);
+    final strings = context.strings;
+    final l = strings.lighting;
     if (effect == null) {
       if (htmlEffectSlugOf(cfg.effectId) == null) {
-        return const WeCard(
-          flat: true,
-          title: 'Efeito',
-          child: Text('Este efeito não tem controles disponíveis.'),
-        );
+        return WeCard(flat: true, title: l.effect, child: Text(l.noControls));
       }
       return _HtmlEffectPanel(effectId: cfg.effectId);
     }
@@ -52,7 +52,7 @@ class EffectPanel extends ConsumerWidget {
 
     return WeCard(
       flat: true,
-      title: 'Efeito: ${effectLabel(effect.id, effect.name)}',
+      title: l.effectTitle(effectLabel(strings, effect.id, effect.name)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -68,10 +68,10 @@ class EffectPanel extends ConsumerWidget {
               ),
             ),
           if (fixedSpeed)
-            const Text(
-              'Velocidade fixa nas fans (modo do firmware).',
-              key: Key('fixed-speed-notice'),
-              style: TextStyle(color: WeColors.muted, fontSize: 12),
+            Text(
+              l.fixedSpeedNotice,
+              key: const Key('fixed-speed-notice'),
+              style: const TextStyle(color: WeColors.muted, fontSize: 12),
             ),
         ],
       ),
@@ -90,39 +90,36 @@ class _HtmlEffectPanel extends ConsumerWidget {
     final installed = ref.watch(installedEffectsProvider);
     final status = ref.watch(htmlEffectRunnerProvider);
     final slug = htmlEffectSlugOf(effectId);
+    final strings = context.strings;
+    final l = strings.lighting;
     return installed.when(
-      loading: () => const WeCard(
-        flat: true,
-        title: 'Efeito',
-        child: Text('Carregando efeitos instalados…'),
-      ),
+      loading: () =>
+          WeCard(flat: true, title: l.effect, child: Text(l.loadingEffects)),
       error: (e, _) => WeCard(
         flat: true,
-        title: 'Efeito',
-        child: Text('Não foi possível ler a biblioteca: $e'),
+        title: l.effect,
+        child: Text(l.libraryError('$e')),
       ),
       data: (effects) {
         final effect = effects.where((e) => e.id == slug).firstOrNull;
         if (effect == null) {
-          return const WeCard(
+          return WeCard(
             flat: true,
-            title: 'Efeito',
-            child: Text(
-              'Este efeito não está instalado. Importe-o na aba Explore.',
-            ),
+            title: l.effect,
+            child: Text(l.effectNotInstalled),
           );
         }
         return WeCard(
           flat: true,
-          title: 'Efeito: ${effect.title}',
+          title: l.effectTitle(effect.title),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _SupportLine(effect: effect),
-              if (status.effectId == effectId && status.error != null) ...[
+              if (status.effectId == effectId && status.issue != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  status.error!,
+                  _htmlIssue(strings, status),
                   key: const ValueKey('html-effect-status'),
                   style: const TextStyle(color: WeColors.warn, fontSize: 12),
                 ),
@@ -130,8 +127,10 @@ class _HtmlEffectPanel extends ConsumerWidget {
               if (status.effectId == effectId && status.running) ...[
                 const SizedBox(height: 8),
                 Text(
-                  '${status.fps.toStringAsFixed(0)} fps · '
-                  '${status.frameMs.toStringAsFixed(1)} ms/quadro',
+                  l.htmlStats(
+                    strings.decimal(status.fps, 0),
+                    strings.decimal(status.frameMs, 1),
+                  ),
                   style: const TextStyle(color: WeColors.muted, fontSize: 12),
                 ),
               ],
@@ -156,6 +155,17 @@ class _SupportLine extends StatelessWidget {
       EffectSupport.partial => WeColors.warn,
       EffectSupport.unsupported => WeColors.danger,
     };
+    final strings = context.strings;
+    final l = strings.lighting;
+    final label = switch (effect.compatibility.support) {
+      EffectSupport.compatible => l.compatible,
+      EffectSupport.partial => l.partial,
+      EffectSupport.unsupported => l.unsupportedEffect,
+    };
+    final issues = [
+      for (final i in effect.compatibility.issues)
+        l.compatibilityIssue(i.index),
+    ];
     return Row(
       children: [
         Container(
@@ -166,10 +176,7 @@ class _SupportLine extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            effect.compatibility.issues.isEmpty
-                ? effect.compatibility.label
-                : '${effect.compatibility.label}: '
-                      '${effect.compatibility.issues.join(', ')}',
+            issues.isEmpty ? label : '$label: ${issues.join(', ')}',
             style: TextStyle(color: color, fontSize: 12),
           ),
         ),
@@ -295,7 +302,8 @@ class _ParamControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = param;
-    final label = paramLabel(p.id, p.label);
+    final strings = context.strings;
+    final label = paramLabel(strings, p.id, p.label);
     switch (p.type) {
       case EffectParamType.number:
         final v = values.number(p.id);
@@ -338,7 +346,7 @@ class _ParamControl extends StatelessWidget {
           control: PanelDropdown<String>(
             value: values.option(p.id),
             items: p.options,
-            labelOf: (s) => s,
+            labelOf: (s) => strings.lighting.optionLabel(s),
             onChanged: onChanged,
           ),
         );
@@ -354,9 +362,12 @@ class FixedColorPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cfg = ref.watch(lightingProvider.select((c) => c.device(id)));
+    final strings = context.strings;
     return WeCard(
       flat: true,
-      title: 'Cor fixa · ${deviceLabel(id, ref.watch(fanGroupNamesProvider))}',
+      title: strings.lighting.fixedColorTitle(
+        deviceLabel(strings, id, ref.watch(fanGroupNamesProvider)),
+      ),
       child: ColorPicker(
         color: cfg.fixedColor,
         onChanged: (c) => ref
@@ -367,4 +378,18 @@ class FixedColorPanel extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _htmlIssue(AppStrings strings, HtmlEffectStatus status) {
+  final l = strings.lighting;
+  return switch (status.issue) {
+    HtmlEffectIssue.loadFailed => l.effectLoadFailed(status.error ?? ''),
+    HtmlEffectIssue.paused => l.effectPaused(
+      int.tryParse(status.issueArgs.isEmpty ? '' : status.issueArgs.first) ?? 0,
+    ),
+    HtmlEffectIssue.unsupported => l.effectUnsupported(
+      status.issueArgs.join(', '),
+    ),
+    null => '',
+  };
 }

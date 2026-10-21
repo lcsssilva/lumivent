@@ -457,7 +457,7 @@ class _WorkerConnection {
           handshake.complete(message);
         } else {
           handshake.completeError(
-            const EffectScriptException('handshake inválido do efeito'),
+            const EffectScriptException('invalid effect handshake'),
           );
         }
         return;
@@ -575,7 +575,7 @@ void _workerMain(SendPort main) {
           pendingError = null;
           if (error != null) throw EffectScriptException('$error');
           final js = runtime;
-          if (js == null) throw const EffectScriptException('sem efeito');
+          if (js == null) throw const EffectScriptException('no effect');
           final bytes = js.renderOps((message[2] as num).toDouble());
           final logs = js.drainLog();
           reply(id, true, [

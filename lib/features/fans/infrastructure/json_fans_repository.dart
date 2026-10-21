@@ -60,7 +60,9 @@ class JsonFansRepository implements FansRepository {
     final fixed = raw['fixedPercent'];
     final startStop = raw['startStop'];
     return d.copyWith(
-      name: name is String && name.isNotEmpty ? name : null,
+      name: name is String && name.trim().isNotEmpty
+          ? _normalizeName(name, d.group)
+          : null,
       size: _enum(FanSize.values, raw['size']),
       preset: _enum(FanPreset.values, raw['preset']),
       customPoints: _points(raw['customPoints']),
@@ -76,6 +78,15 @@ class JsonFansRepository implements FansRepository {
 
   static T? _enum<T extends Enum>(List<T> values, Object? name) =>
       name is String ? values.where((v) => v.name == name).firstOrNull : null;
+
+  /// Older versions stored the default group names ("Grupo N"/"Group N") as if
+  /// the user had chosen them. They become empty so the UI uses the catalog.
+  static String _normalizeName(String name, int group) {
+    final trimmed = name.trim();
+    return trimmed == 'Grupo $group' || trimmed == 'Group $group'
+        ? ''
+        : trimmed;
+  }
 
   /// `[[temp, percent], ...]`; `null` if the list or any point is invalid.
   static List<FanPoint>? _points(Object? raw) {

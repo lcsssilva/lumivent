@@ -13,12 +13,19 @@ void main() {
       'colorWave',
       'scanner',
     ]);
-    expect(nativeEffectById('scanner')!.name, 'Varredura');
+    expect(nativeEffectById('scanner')!.name, 'Scanner');
     expect(nativeEffectById('nada'), isNull);
     final dir = nativeEffectById('rainbowWave')!.params
         .firstWhere((p) => p.id == 'direction');
     expect(dir.type, EffectParamType.combobox);
-    expect(dir.options, ['Esquerda', 'Direita', 'Cima', 'Baixo']);
+    expect(dir.options, ['Left', 'Right', 'Up', 'Down']);
+    // Legacy Portuguese values saved by older versions keep working.
+    expect(
+      nativeEffectById('rainbowWave')!
+          .valuesFrom({'direction': 'Esquerda'})
+          .option('direction'),
+      'Left',
+    );
   });
 
   test('deterministic effects', () {
@@ -97,7 +104,7 @@ void main() {
     });
     expect(v.number('speed'), 100);
     expect(v.number('size'), 20);
-    expect(v.option('direction'), 'Direita');
+    expect(v.option('direction'), 'Right');
     final s = EffectValues(nativeEffectById('solid')!.params, {
       'color': 'lixo',
     });

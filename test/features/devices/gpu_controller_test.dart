@@ -114,7 +114,7 @@ void main() {
           isA<GpuGuardException>().having(
             (e) => e.message,
             'message',
-            contains('barramento não validado'),
+            contains('unvalidated bus'),
           ),
         ),
       );
@@ -163,7 +163,7 @@ void main() {
             isA<GpuGuardException>().having(
               (e) => e.message,
               'message',
-              contains('bloqueado por segurança'),
+              contains('blocked for safety'),
             ),
           ),
           reason: '0x${command.toRadixString(16)}',
@@ -184,7 +184,7 @@ void main() {
             isA<GpuGuardException>().having(
               (e) => e.message,
               'message',
-              contains('não permitido'),
+              contains('not allowed'),
             ),
           ),
           reason: '0x${command.toRadixString(16)}',
@@ -641,7 +641,7 @@ void main() {
       c.close();
       expect(transport.closed, isTrue);
       expect(c.init(), isFalse);
-      expect(c.disabledReason, contains('fechado'));
+      expect(c.disabledReason, contains('closed'));
     });
   });
 }

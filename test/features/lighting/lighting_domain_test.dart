@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/features/lighting/domain/frame_composer.dart';
 import 'package:lumivent/features/lighting/domain/led_layout.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
+import 'package:lumivent/features/lighting/presentation/labels.dart';
 
 void main() {
   group('Rgb', () {
@@ -54,7 +56,10 @@ void main() {
       });
       expect(LightDeviceId.alv2Group3.hubGroup, 3);
       expect(LightDeviceId.chassis.hubGroup, isNull);
-      expect(LightDeviceId.alv2Group2.label, 'Fans · Grupo 2');
+      expect(
+        deviceLabel(AppStrings.pt, LightDeviceId.alv2Group2),
+        'Fans · Grupo 2',
+      );
     });
   });
 

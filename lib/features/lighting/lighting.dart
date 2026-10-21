@@ -24,6 +24,7 @@ export 'application/lighting_messages.dart'
     show
         ArgbStateChanged,
         IdentifyFanGroup,
+        LightOutputIssue,
         LightOutputState,
         LightOutputStatus,
         LightingStatus,
@@ -32,19 +33,19 @@ export 'application/lighting_messages.dart'
         SetArgbOff,
         SetLightingConfig;
 export 'application/html_effect_runner.dart'
-    show HtmlEffectRunner, HtmlEffectStatus, htmlEffectRunnerProvider;
+    show
+        HtmlEffectIssue,
+        HtmlEffectRunner,
+        HtmlEffectStatus,
+        htmlEffectRunnerProvider;
 export 'domain/effect_compat.dart'
-    show EffectCompatibility, EffectSupport, analyzeEffect;
-export 'domain/effect_library.dart' show ImportReport;
+    show EffectCompatibility, EffectIssue, EffectSupport, analyzeEffect;
+export 'domain/effect_library.dart'
+    show ImportIssue, ImportIssueKind, ImportReport;
 export 'domain/effect_meta.dart' show EffectProperty, EffectSource, parseEffect;
 export 'domain/effect_runtime.dart' show EffectFrame;
 export 'domain/installed_effect.dart'
-    show
-        EffectOrigin,
-        InstalledEffect,
-        effectOriginLabel,
-        htmlEffectId,
-        htmlEffectSlugOf;
+    show EffectOrigin, InstalledEffect, htmlEffectId, htmlEffectSlugOf;
 export 'domain/led_layout.dart';
 export 'domain/light_device.dart';
 export 'domain/lighting_config.dart';

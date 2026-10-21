@@ -88,7 +88,7 @@ void main() {
           model: 'KINGSTON SNV3S1000G',
           serial: 'S2',
           firmware: 'ERFK1N.3',
-          smartError: 'O helper lumivent-nvme-smart não está instalado. Instale o pacote lumivent (helper em /usr/lib/lumivent).',
+          smartError: SsdSmartError(SsdErrorKind.helperMissing),
         ),
       ], DateTime(2026)),
     );

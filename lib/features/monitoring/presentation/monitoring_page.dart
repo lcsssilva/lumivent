@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings.dart';
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../preferences/preferences.dart';
 import '../application/monitoring_controller.dart';
@@ -19,7 +21,8 @@ class MonitoringPage extends ConsumerWidget {
     final unit = ref.watch(
       preferencesProvider.select((p) => p.temperatureUnit),
     );
-    final v = _View(h, unit);
+    final strings = context.strings;
+    final v = _View(h, unit, strings);
     return LayoutBuilder(
       builder: (context, box) {
         final cols = box.maxWidth >= 1100
@@ -85,31 +88,35 @@ class MonitoringPage extends ConsumerWidget {
     ];
   }
 
-  Widget _cpu(_View v) => MetricCard(
-    title: 'CPU',
-    icon: Icons.memory_outlined,
-    headline: v.temp(Metrics.cpuTctl),
-    caption: 'Tctl',
-    series: v.h.series(Metrics.cpuTctl),
-    seriesLabel: v.tempLabel,
-    color: WeColors.accent,
-    stats: [
-      StatTile(label: 'CCD 1', value: v.temp(Metrics.cpuTccd1)),
-      StatTile(
-        label: 'Clock médio',
-        value: v.fmt(Metrics.cpuClock, MetricUnit.megahertz),
-      ),
-      StatTile(
-        label: 'Uso',
-        value: v.fmt(Metrics.cpuUsage, MetricUnit.percent),
-        series: v.h.series(Metrics.cpuUsage),
-        min: 0,
-        max: 100,
-      ),
-    ],
-  );
+  Widget _cpu(_View v) {
+    final s = v.strings.monitoring;
+    return MetricCard(
+      title: 'CPU',
+      icon: Icons.memory_outlined,
+      headline: v.temp(Metrics.cpuTctl),
+      caption: 'Tctl',
+      series: v.h.series(Metrics.cpuTctl),
+      seriesLabel: v.tempLabel,
+      color: WeColors.accent,
+      stats: [
+        StatTile(label: 'CCD 1', value: v.temp(Metrics.cpuTccd1)),
+        StatTile(
+          label: s.averageClock,
+          value: v.fmt(Metrics.cpuClock, MetricUnit.megahertz),
+        ),
+        StatTile(
+          label: s.usage,
+          value: v.fmt(Metrics.cpuUsage, MetricUnit.percent),
+          series: v.h.series(Metrics.cpuUsage),
+          min: 0,
+          max: 100,
+        ),
+      ],
+    );
+  }
 
   Widget _gpu(_View v) {
+    final s = v.strings.monitoring;
     final used = v.now(Metrics.gpuVramUsed),
         total = v.now(Metrics.gpuVramTotal);
     final fan = gpuFanState(
@@ -119,29 +126,29 @@ class MonitoringPage extends ConsumerWidget {
     // The fan controller follows the junction (hotspot), not the edge
     // (`docs/hardware.md`), so the junction is the headline.
     return MetricCard(
-      title: 'GPU',
+      title: s.gpu,
       icon: Icons.videogame_asset_outlined,
       headline: v.temp(Metrics.gpuJunction),
-      caption: 'junction',
+      caption: s.junction,
       series: v.h.series(Metrics.gpuJunction),
       seriesLabel: v.tempLabel,
       color: WeColors.ok,
       stats: [
         StatTile(
-          label: 'Fan',
+          label: s.fan,
           value: switch (fan) {
-            GpuFanState.zeroFan => 'parado (zero-fan)',
-            GpuFanState.stoppedHot => 'parado (GPU quente!)',
+            GpuFanState.zeroFan => s.fanStoppedZeroFan,
+            GpuFanState.stoppedHot => s.fanStoppedHot,
             _ => v.fmt(Metrics.gpuFan, MetricUnit.rpm),
           },
           series: v.h.series(Metrics.gpuFan),
           min: 0,
           color: fan == GpuFanState.stoppedHot ? WeColors.danger : WeColors.ok,
         ),
-        StatTile(label: 'Edge', value: v.temp(Metrics.gpuEdge)),
-        StatTile(label: 'Memória', value: v.temp(Metrics.gpuMem)),
+        StatTile(label: s.edge, value: v.temp(Metrics.gpuEdge)),
+        StatTile(label: s.memoryLabel, value: v.temp(Metrics.gpuMem)),
         StatTile(
-          label: 'Uso',
+          label: s.usage,
           value: v.fmt(Metrics.gpuUsage, MetricUnit.percent),
           series: v.h.series(Metrics.gpuUsage),
           min: 0,
@@ -149,11 +156,11 @@ class MonitoringPage extends ConsumerWidget {
           color: WeColors.ok,
         ),
         StatTile(
-          label: 'Clock',
+          label: s.clock,
           value: v.fmt(Metrics.gpuClock, MetricUnit.megahertz),
         ),
         StatTile(
-          label: 'Potência',
+          label: s.power,
           value: v.fmt(Metrics.gpuPower, MetricUnit.watts),
           series: v.h.series(Metrics.gpuPower),
           min: 0,
@@ -161,14 +168,17 @@ class MonitoringPage extends ConsumerWidget {
         ),
         if (used != null && total != null)
           StatTile(
-            label: 'VRAM',
-            value: '${decimal(used / (1 << 30), 1)} / ${formatGiB(total)}',
+            label: s.vram,
+            value:
+                '${v.strings.decimal(used / (1 << 30), 1)} / '
+                '${formatGiB(total, v.strings)}',
           ),
       ],
     );
   }
 
   Widget _memory(_View v) {
+    final s = v.strings.monitoring;
     final used = v.now(Metrics.memUsed), total = v.now(Metrics.memTotal);
     final percent = [
       for (final s in v.h.samples)
@@ -179,12 +189,15 @@ class MonitoringPage extends ConsumerWidget {
           null,
     ];
     return MetricCard(
-      title: 'Memória',
+      title: s.memory,
       icon: Icons.storage_outlined,
-      headline: used == null ? dash : formatGiB(used),
+      headline: used == null ? dash : formatGiB(used, v.strings),
       caption: total == null || used == null
           ? null
-          : 'de ${formatGiB(total)} · ${(used / total * 100).round()} %',
+          : s.memoryOf(
+              formatGiB(total, v.strings),
+              (used / total * 100).round(),
+            ),
       series: percent,
       seriesMin: 0,
       seriesMax: 100,
@@ -194,7 +207,7 @@ class MonitoringPage extends ConsumerWidget {
       stats: [
         for (var slot = 1; slot <= 2; slot++)
           StatTile(
-            label: 'Pente $slot',
+            label: s.memoryStick(slot),
             value: v.temp(Metrics.dimmTemp(slot)),
             series: v.h.seen(Metrics.dimmTemp(slot))
                 ? v.h.series(Metrics.dimmTemp(slot))
@@ -206,29 +219,28 @@ class MonitoringPage extends ConsumerWidget {
   }
 
   Widget _board(_View v, int cols) {
+    final s = v.strings.monitoring;
     final temps = Metrics.boardTemps.where((d) => v.h.seen(d.id)).toList();
     final fans = Metrics.boardFans
         .where((d) => v.h.everPositive(d.id))
         .toList();
     final columns = cols >= 2 ? 5 : 3;
     return MetricCard(
-      title: 'Placa-mãe',
+      title: s.motherboard,
       icon: Icons.developer_board_outlined,
       footer: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _Subtitle('Temperaturas'),
+          _Subtitle(s.temperatures),
           if (temps.isEmpty)
-            const NoReading(
-              'Sem sensores da placa-mãe: o módulo it87 não está carregado (veja Configurações).',
-            )
+            NoReading(s.noBoardSensors)
           else
             StatGrid(
               columns: columns,
               children: [
                 for (final d in temps)
                   StatTile(
-                    label: d.label,
+                    label: s.metricLabel(d.id, d.label),
                     value: v.temp(d.id),
                     series: v.h.series(d.id),
                     color: WeColors.accentHover,
@@ -236,16 +248,16 @@ class MonitoringPage extends ConsumerWidget {
               ],
             ),
           const SizedBox(height: WeSizes.unit * 2),
-          const _Subtitle('Fans e bomba (somente leitura)'),
+          _Subtitle(s.fansAndPump),
           if (fans.isEmpty)
-            const NoReading('Nenhum conector com RPM.')
+            NoReading(s.noFanConnectors)
           else
             StatGrid(
               columns: columns,
               children: [
                 for (final d in fans)
                   StatTile(
-                    label: d.label,
+                    label: s.metricLabel(d.id, d.label),
                     value: v.fmt(d.id, MetricUnit.rpm),
                     series: v.h.series(d.id),
                     min: 0,
@@ -258,6 +270,7 @@ class MonitoringPage extends ConsumerWidget {
   }
 
   Widget _alv2(_View v) {
+    final s = v.strings.monitoring;
     // Group 0 is usually empty: show it only when it has RPM.
     final groups = [
       for (var g = 0; g < 4; g++)
@@ -266,18 +279,16 @@ class MonitoringPage extends ConsumerWidget {
           g,
     ];
     return MetricCard(
-      title: 'Fans AL V2',
+      title: s.alv2Fans,
       icon: Icons.toys_outlined,
       footer: groups.isEmpty
-          ? const NoReading(
-              'Sem leitura do hub AL V2 (veja Dispositivos em Configurações).',
-            )
+          ? NoReading(s.noAlv2Reading)
           : StatGrid(
               columns: 1,
               children: [
                 for (final g in groups)
                   StatTile(
-                    label: 'Grupo $g',
+                    label: v.strings.common.groupName(g),
                     value: v.fmt(Metrics.alv2Rpm(g), MetricUnit.rpm),
                     series: v.h.series(Metrics.alv2Rpm(g)),
                     min: 0,
@@ -290,13 +301,15 @@ class MonitoringPage extends ConsumerWidget {
 
 /// Reading and formatting helpers for history.
 class _View {
-  _View(this.h, this.unit);
+  _View(this.h, this.unit, this.strings);
   final SensorHistory h;
   final TemperatureUnit unit;
+  final AppStrings strings;
 
   double? now(String id) => h.latest?[id];
   String temp(String id) => formatTemp(now(id), unit);
-  String fmt(String id, MetricUnit u) => formatMetric(now(id), u, unit);
+  String fmt(String id, MetricUnit u) =>
+      formatMetric(now(id), u, unit, strings);
   String tempLabel(double c) => formatTemp(c, unit);
 }
 

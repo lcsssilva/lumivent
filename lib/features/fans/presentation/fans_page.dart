@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings.dart';
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../monitoring/monitoring.dart';
@@ -12,52 +14,47 @@ import '../domain/fan_group.dart';
 import '../domain/fan_response.dart';
 import 'fan_curve_editor.dart';
 
-String _int(num v) {
-  final s = v.round().abs().toString();
-  final b = StringBuffer(v < 0 ? '-' : '');
-  for (var i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 == 0) b.write('.');
-    b.write(s[i]);
-  }
-  return b.toString();
-}
-
 String _temp(double? c, TemperatureUnit unit) => c == null
     ? '—'
     : unit == TemperatureUnit.fahrenheit
     ? '${(c * 9 / 5 + 32).round()} °F'
     : '${c.round()} °C';
 
-String _presetLabel(FanPreset p) => switch (p) {
-  FanPreset.quiet => 'Quiet',
-  FanPreset.standard => 'Standard',
-  FanPreset.high => 'High',
-  FanPreset.full => 'Full',
-  FanPreset.fixed => 'Fixo',
-  FanPreset.user1 => 'Usuário 1',
-  FanPreset.user2 => 'Usuário 2',
-  FanPreset.user3 => 'Usuário 3',
-  FanPreset.user4 => 'Usuário 4',
-  FanPreset.custom => 'Personalizado',
+/// Display name of [g], falling back to the catalog's default group name.
+String _groupLabel(AppStrings strings, FanGroupConfig g) =>
+    g.name.trim().isEmpty ? strings.common.groupName(g.group) : g.name;
+
+String _presetLabel(AppStrings strings, FanPreset p) => switch (p) {
+  FanPreset.quiet => strings.fans.presetQuiet,
+  FanPreset.standard => strings.fans.presetStandard,
+  FanPreset.high => strings.fans.presetHigh,
+  FanPreset.full => strings.fans.presetFull,
+  FanPreset.fixed => strings.fans.presetFixed,
+  FanPreset.user1 => strings.fans.presetUser1,
+  FanPreset.user2 => strings.fans.presetUser2,
+  FanPreset.user3 => strings.fans.presetUser3,
+  FanPreset.user4 => strings.fans.presetUser4,
+  FanPreset.custom => strings.fans.presetCustom,
 };
 
 /// Short label used in the chart.
-String _sourceLabel(FanTempSource s) => switch (s) {
-  FanTempSource.cpuTctl => 'CPU Tctl',
-  FanTempSource.gpuJunction => 'GPU junction',
-  FanTempSource.gpuEdge => 'GPU edge',
-  FanTempSource.boardSystem1 => 'System 1',
-  FanTempSource.boardSystem2 => 'System 2',
-  FanTempSource.boardPch => 'PCH',
-  FanTempSource.boardCpuSocket => 'CPU socket',
-  FanTempSource.boardVrm => 'VRM',
-  FanTempSource.boardPciex16 => 'PCIEX16',
-  FanTempSource.boardPciex4 => 'PCIEX4',
+String _sourceLabel(AppStrings strings, FanTempSource s) => switch (s) {
+  FanTempSource.cpuTctl => strings.fans.sourceCpuTctl,
+  FanTempSource.gpuJunction => strings.fans.sourceGpuJunction,
+  FanTempSource.gpuEdge => strings.fans.sourceGpuEdge,
+  FanTempSource.boardSystem1 => strings.fans.sourceSystem1,
+  FanTempSource.boardSystem2 => strings.fans.sourceSystem2,
+  FanTempSource.boardPch => strings.fans.sourcePch,
+  FanTempSource.boardCpuSocket => strings.fans.sourceCpuSocket,
+  FanTempSource.boardVrm => strings.fans.sourceVrm,
+  FanTempSource.boardPciex16 => strings.fans.sourcePciex16,
+  FanTempSource.boardPciex4 => strings.fans.sourcePciex4,
 };
 
 /// Name in the source list: motherboard sensors are grouped under "Motherboard".
-String _sourceMenuLabel(FanTempSource s) =>
-    s.isBoard ? 'Placa-mãe · ${_sourceLabel(s)}' : _sourceLabel(s);
+String _sourceMenuLabel(AppStrings strings, FanTempSource s) => s.isBoard
+    ? '${strings.fans.motherboardPrefix} · ${_sourceLabel(strings, s)}'
+    : _sourceLabel(strings, s);
 
 String _sourceMetric(FanTempSource s) => switch (s) {
   FanTempSource.cpuTctl => Metrics.cpuTctl,
@@ -72,19 +69,16 @@ String _sourceMetric(FanTempSource s) => switch (s) {
   FanTempSource.boardPciex4 => 'board.pciex4',
 };
 
-String _responseLabel(FanResponse r) => switch (r) {
-  FanResponse.fast => 'Rápida',
-  FanResponse.normal => 'Normal',
-  FanResponse.smooth => 'Suave',
+String _responseLabel(AppStrings strings, FanResponse r) => switch (r) {
+  FanResponse.fast => strings.fans.responseFast,
+  FanResponse.normal => strings.fans.responseNormal,
+  FanResponse.smooth => strings.fans.responseSmooth,
 };
 
-String _responseHint(FanResponse r) => switch (r) {
-  FanResponse.fast =>
-    'Sem média nem rampa: a fan segue a temperatura a cada segundo.',
-  FanResponse.normal =>
-    'Média de 4 s; sobe até 15%/s e desce 3%/s para evitar picos do Tctl.',
-  FanResponse.smooth =>
-    'Média de 10 s; sobe até 5%/s e desce 1%/s para fans silenciosas.',
+String _responseHint(AppStrings strings, FanResponse r) => switch (r) {
+  FanResponse.fast => strings.fans.responseFastHint,
+  FanResponse.normal => strings.fans.responseNormalHint,
+  FanResponse.smooth => strings.fans.responseSmoothHint,
 };
 
 /// AL V2 fan speed: groups, presets, options, and curve editor.
@@ -107,6 +101,8 @@ class _FansPageState extends ConsumerState<FansPage> {
       preferencesProvider.select((p) => p.temperatureUnit),
     );
     final controller = ref.read(fansProvider.notifier);
+    final strings = context.strings;
+    final f = strings.fans;
 
     final present = [
       for (var g = 0; g < fanGroupCount; g++)
@@ -127,8 +123,8 @@ class _FansPageState extends ConsumerState<FansPage> {
         temp != null && rawNow != null && (rawNow - temp).abs() >= .5;
     final tempLabel = temp == null
         ? null
-        : '${_sourceLabel(group.source)} ${_temp(temp, unit)}'
-              '${differs ? ' (agora ${_temp(rawNow, unit)})' : ''}';
+        : '${_sourceLabel(strings, group.source)} ${_temp(temp, unit)}'
+              '${differs ? ' ${f.nowTemperature(_temp(rawNow, unit))}' : ''}';
     final recent = history.samples.length > 60
         ? history.samples.sublist(history.samples.length - 60)
         : history.samples;
@@ -145,10 +141,10 @@ class _FansPageState extends ConsumerState<FansPage> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Grupos do hub AL V2',
-                  style: TextStyle(
+                  f.groupsTitle,
+                  style: const TextStyle(
                     color: WeColors.muted,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -156,18 +152,17 @@ class _FansPageState extends ConsumerState<FansPage> {
                 ),
               ),
               Tooltip(
-                message:
-                    'Copia o preset, os pontos, o Start/Stop, a fonte e a resposta de "${group.name}" para os outros grupos.',
+                message: f.applyAllTooltip(_groupLabel(strings, group)),
                 child: FilledButton.tonalIcon(
                   key: const ValueKey('opt-apply-all'),
                   icon: const Icon(Icons.copy_all, size: 18),
-                  label: Text('Aplicar curva "${group.name}" a todos'),
+                  label: Text(f.applyAllLabel(_groupLabel(strings, group))),
                   onPressed: () {
                     controller.applyCurveToAll(index);
                     ScaffoldMessenger.maybeOf(context)?.showSnackBar(
                       SnackBar(
                         content: Text(
-                          'Curva "${group.name}" aplicada a todos os grupos.',
+                          f.appliedToAll(_groupLabel(strings, group)),
                         ),
                       ),
                     );
@@ -209,7 +204,7 @@ class _FansPageState extends ConsumerState<FansPage> {
           ),
           const SizedBox(height: WeSizes.unit * 2),
           WeCard(
-            title: 'Curva de velocidade',
+            title: f.speedCurve,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -231,7 +226,7 @@ class _FansPageState extends ConsumerState<FansPage> {
                     ])
                       ChoiceChip(
                         key: ValueKey('preset-${p.name}'),
-                        label: Text(_presetLabel(p)),
+                        label: Text(_presetLabel(strings, p)),
                         selected: group.preset == p,
                         showCheckmark: false,
                         onSelected: (_) =>
@@ -256,8 +251,8 @@ class _FansPageState extends ConsumerState<FansPage> {
                 const SizedBox(height: WeSizes.unit),
                 Text(
                   group.preset == FanPreset.fixed
-                      ? 'Arraste o ponto para cima ou para baixo para mudar a velocidade fixa.'
-                      : 'Arraste os pontos · clique duplo adiciona (máx. ${FanPresets.maxPoints}) · botão direito remove.',
+                      ? f.dragFixedHint
+                      : f.dragHint(FanPresets.maxPoints),
                   style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
                 ),
               ],
@@ -265,14 +260,12 @@ class _FansPageState extends ConsumerState<FansPage> {
           ),
           const SizedBox(height: WeSizes.unit * 2),
           WeCard(
-            title: 'Opções do grupo',
+            title: f.groupOptions,
             child: Column(
               children: [
                 SettingRow(
-                  title: 'Start/Stop',
-                  subtitle: const Text(
-                    'Para as fans abaixo da temperatura do primeiro ponto.',
-                  ),
+                  title: f.startStop,
+                  subtitle: Text(f.startStopHint),
                   control: Switch(
                     key: const ValueKey('opt-startstop'),
                     value: group.startStop,
@@ -282,10 +275,8 @@ class _FansPageState extends ConsumerState<FansPage> {
                 ),
                 const Divider(),
                 SettingRow(
-                  title: 'Fonte de temperatura',
-                  subtitle: const Text(
-                    'CPU/GPU para radiadores; temperatura da placa-mãe (System, VRM…) para fans do gabinete.',
-                  ),
+                  title: f.temperatureSource,
+                  subtitle: Text(f.temperatureSourceHint),
                   control: _SourcePicker(
                     key: const ValueKey('opt-source'),
                     selected: group.source,
@@ -297,14 +288,17 @@ class _FansPageState extends ConsumerState<FansPage> {
                 ),
                 const Divider(),
                 SettingRow(
-                  title: 'Resposta à temperatura',
-                  subtitle: Text(_responseHint(group.response)),
+                  title: f.temperatureResponse,
+                  subtitle: Text(_responseHint(strings, group.response)),
                   control: SegmentedButton<FanResponse>(
                     key: const ValueKey('opt-response'),
                     showSelectedIcon: false,
                     segments: [
                       for (final r in FanResponse.values)
-                        ButtonSegment(value: r, label: Text(_responseLabel(r))),
+                        ButtonSegment(
+                          value: r,
+                          label: Text(_responseLabel(strings, r)),
+                        ),
                     ],
                     selected: {group.response},
                     onSelectionChanged: (r) => controller.updateGroup(
@@ -339,6 +333,7 @@ class _SourcePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.strings;
     final sources = [
       for (final s in FanTempSource.values)
         if (!s.isBoard || s == selected || latest?[_sourceMetric(s)] != null) s,
@@ -346,7 +341,7 @@ class _SourcePicker extends StatelessWidget {
     Widget row(FanTempSource s) => Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(_sourceMenuLabel(s)),
+        Text(_sourceMenuLabel(strings, s)),
         const SizedBox(width: WeSizes.unit * 1.5),
         Text(
           _temp(latest?[_sourceMetric(s)], unit),
@@ -385,6 +380,7 @@ class _GroupTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.strings;
     final shape = BorderRadius.circular(WeSizes.radius);
     return Opacity(
       opacity: hasFan || selected ? 1 : .5,
@@ -409,7 +405,7 @@ class _GroupTile extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        config.name,
+                        _groupLabel(strings, config),
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
@@ -425,7 +421,9 @@ class _GroupTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  hasFan ? '${_int(rpm ?? 0)} RPM' : 'sem fan',
+                  hasFan
+                      ? '${strings.grouped((rpm ?? 0).round())} RPM'
+                      : strings.fans.noFan,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -501,12 +499,14 @@ class _HeaderState extends State<_Header> {
 
   @override
   Widget build(BuildContext context) {
+    final strings = context.strings;
+    final f = strings.fans;
     final s = widget.status;
     final pills = <Widget>[
       if (s != null && s.temp == null)
-        const StatusPill(label: 'Sem temperatura', color: WeColors.warn),
+        StatusPill(label: f.noTemperature, color: WeColors.warn),
       if (widget.hubOk == false)
-        const StatusPill(label: 'Hub indisponível', color: WeColors.danger),
+        StatusPill(label: f.hubUnavailable, color: WeColors.danger),
     ];
     Widget stat(String label, String value) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -534,11 +534,12 @@ class _HeaderState extends State<_Header> {
             controller: _controller,
             focusNode: _focus,
             maxLength: 24,
-            decoration: const InputDecoration(
-              labelText: 'Nome do grupo',
+            decoration: InputDecoration(
+              labelText: f.groupName,
+              hintText: strings.common.groupName(widget.group.group),
               isDense: true,
               counterText: '',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
             ),
             onSubmitted: (_) => _commit(),
           ),
@@ -554,11 +555,16 @@ class _HeaderState extends State<_Header> {
           onSelectionChanged: (v) => widget.onSize(v.first),
         ),
         stat(
-          'RPM atual',
-          widget.rpm == null ? '—' : '${_int(widget.rpm!)} RPM',
+          f.currentRpm,
+          widget.rpm == null
+              ? '—'
+              : '${strings.grouped(widget.rpm!.round())} RPM',
         ),
-        stat('Duty', s?.duty == null ? '—' : '${s!.duty} %'),
-        stat('Alvo', s?.targetRpm == null ? '—' : '${_int(s!.targetRpm!)} RPM'),
+        stat(f.duty, s?.duty == null ? '—' : '${s!.duty} %'),
+        stat(
+          f.target,
+          s?.targetRpm == null ? '—' : '${strings.grouped(s!.targetRpm!)} RPM',
+        ),
         ...pills,
       ],
     );

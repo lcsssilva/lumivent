@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../application/lighting_controller.dart';
 
@@ -11,9 +12,10 @@ class ArgbToggle extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final off = ref.watch(lightingProvider.select((s) => s.argbOff));
+    final l = context.strings.lighting;
     void set(bool v) => ref.read(lightingProvider.notifier).setArgbOff(v);
     return Tooltip(
-      message: off ? 'Religar todos os ARGB' : 'Desligar todos os ARGB',
+      message: off ? l.turnOnAllArgb : l.turnOffAllArgb,
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
         onTap: () => set(!off),
@@ -35,7 +37,7 @@ class ArgbToggle extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                off ? 'ARGB desligado' : 'ARGB',
+                off ? l.argbOff : l.argb,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,

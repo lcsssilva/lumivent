@@ -352,7 +352,8 @@ void main() {
       const LightingStatus({
         LightDeviceId.chassis: LightOutputStatus(
           LightOutputState.unavailable,
-          detail: 'Sem permissão para acessar o dispositivo',
+          issue: LightOutputIssue.blocked,
+          args: ['Sem permissão para acessar o dispositivo'],
         ),
         LightDeviceId.ram1: LightOutputStatus(LightOutputState.ok),
       }, fps: 30),
@@ -367,7 +368,9 @@ void main() {
     );
     expect((dot.decoration as BoxDecoration).color, WeColors.danger);
     expect(
-      find.byTooltip('Sem permissão para acessar o dispositivo'),
+      find.byTooltip(
+        'Bloqueado por segurança: Sem permissão para acessar o dispositivo',
+      ),
       findsOneWidget,
     );
   });

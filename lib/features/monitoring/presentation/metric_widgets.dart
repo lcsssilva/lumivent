@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/sparkline.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
@@ -166,9 +167,11 @@ class MetricCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               present.isEmpty || seriesLabel == null
-                  ? 'últimos 5 min'
-                  : 'últimos 5 min · mín ${seriesLabel!(present.reduce((a, b) => a < b ? a : b))}'
-                        ' · máx ${seriesLabel!(present.reduce((a, b) => a > b ? a : b))}',
+                  ? context.strings.monitoring.lastFiveMinutes
+                  : context.strings.monitoring.lastFiveMinutesRange(
+                      seriesLabel!(present.reduce((a, b) => a < b ? a : b)),
+                      seriesLabel!(present.reduce((a, b) => a > b ? a : b)),
+                    ),
               style: const TextStyle(color: WeColors.muted, fontSize: 11.5),
             ),
           ],

@@ -3,8 +3,7 @@ import 'dart:io';
 
 import '../../../core/platform/smbus_ffi.dart';
 import '../../devices/devices.dart' show furyBusName;
-import '../../monitoring/monitoring.dart'
-    show findNvmeSmartHelper, nvmeHelperHint;
+import '../../monitoring/monitoring.dart' show findNvmeSmartHelper;
 import '../domain/diagnostics.dart';
 
 class LinuxDiagnostics implements EnvironmentDiagnostics {
@@ -30,19 +29,19 @@ DiagnosticCheck nvmeHelperCheck({
   String? helper,
   String Function(String path)? getcap,
 }) {
-  const label = 'Helper NVMe SMART';
   if (helper == null) {
-    return const DiagnosticCheck(label, CheckState.warn, nvmeHelperHint);
+    return const DiagnosticCheck(DiagnosticId.nvmeHelper, CheckState.warn, {
+      'path': null,
+      'hasCaps': false,
+    });
   }
   getcap ??= _getcap;
-  final caps = getcap(helper);
-  return caps.contains('cap_sys_admin')
-      ? DiagnosticCheck(label, CheckState.ok, helper)
-      : DiagnosticCheck(
-          label,
-          CheckState.warn,
-          '$helper não tem capabilities. $nvmeHelperHint',
-        );
+  final hasCaps = getcap(helper).contains('cap_sys_admin');
+  return DiagnosticCheck(
+    DiagnosticId.nvmeHelper,
+    hasCaps ? CheckState.ok : CheckState.warn,
+    {'path': helper, 'hasCaps': hasCaps},
+  );
 }
 
 String _getcap(String path) {
@@ -73,28 +72,27 @@ List<DiagnosticCheck> runDiagnostics({
   final udev = udevRulesInstalled(etcRoot: etcRoot, usrRoot: usrRoot);
   final bus = findI2cBusByName(furyBusName, sysfsRoot: sysfsRoot);
   final superIo = ['it8689', 'it8792'].where(hwmon.contains).toList();
+  final spd = hwmon.contains('spd5118');
   return [
     DiagnosticCheck(
-      'Regras udev',
+      DiagnosticId.udevRules,
       udev ? CheckState.ok : CheckState.warn,
-      udev
-          ? '99-lumivent.rules instalada'
-          : 'instale o pacote lumivent (99-lumivent.rules)',
+      {'installed': udev, 'file': '99-lumivent.rules'},
     ),
     DiagnosticCheck(
-      'Sensores da placa-mãe (it87)',
+      DiagnosticId.boardSensors,
       superIo.isNotEmpty ? CheckState.ok : CheckState.warn,
-      superIo.isNotEmpty ? superIo.join(' + ') : 'módulo it87 não carregado',
+      {'modules': superIo},
     ),
     DiagnosticCheck(
-      'SMBus da memória',
+      DiagnosticId.memorySmbus,
       bus != null ? CheckState.ok : CheckState.warn,
-      bus ?? 'PIIX4 0x0B00 ausente (acpi_enforce_resources=lax)',
+      {'bus': bus},
     ),
     DiagnosticCheck(
-      'Temperatura da memória',
-      hwmon.contains('spd5118') ? CheckState.ok : CheckState.warn,
-      hwmon.contains('spd5118') ? 'spd5118' : 'driver spd5118 não carregado',
+      DiagnosticId.memoryTemperature,
+      spd ? CheckState.ok : CheckState.warn,
+      {'driver': spd ? 'spd5118' : null},
     ),
     (nvmeHelper ?? () => nvmeHelperCheck(helper: findNvmeSmartHelper()))(),
   ];

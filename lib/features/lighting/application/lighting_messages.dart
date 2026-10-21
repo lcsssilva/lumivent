@@ -50,22 +50,55 @@ enum LightOutputState {
   unsupported,
 }
 
+/// Why a device has no output. The presentation maps the index to the catalog
+/// (`LightingStrings.outputIssue`); [LightOutputStatus.args] carries details.
+enum LightOutputIssue {
+  /// No driver for this device yet.
+  unsupported,
+
+  /// AL V2 hub absent or without permission.
+  hub,
+
+  /// Motherboard ITE controller absent or without permission.
+  ite,
+
+  /// GPU RGB controller absent or without permission.
+  gpu,
+
+  /// Kingston Fury memory absent or without SMBus permission.
+  ram,
+
+  /// A safety guard blocked the write; the reason is in the args.
+  blocked,
+}
+
 class LightOutputStatus {
-  const LightOutputStatus(this.state, {this.detail});
+  const LightOutputStatus(this.state, {this.issue, this.args = const []});
   final LightOutputState state;
 
-  /// Reason shown in the UI when [state] is not [LightOutputState.ok]
-  /// (Portuguese, user-facing).
-  final String? detail;
+  /// Reason shown in the UI when [state] is not [LightOutputState.ok].
+  final LightOutputIssue? issue;
+
+  /// Optional technical detail for [issue] (not translated).
+  final List<String> args;
 
   @override
   bool operator ==(Object other) =>
       other is LightOutputStatus &&
       other.state == state &&
-      other.detail == detail;
+      other.issue == issue &&
+      _sameArgs(other.args, args);
 
   @override
-  int get hashCode => Object.hash(state, detail);
+  int get hashCode => Object.hash(state, issue, Object.hashAll(args));
+}
+
+bool _sameArgs(List<String> a, List<String> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }
 
 /// Output families with their own send latency and frame lane (see
