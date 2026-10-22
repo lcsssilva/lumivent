@@ -56,6 +56,9 @@ class FakeOutputs implements LightOutputs {
   /// While set, `sendFanFrames` does not finish (frame overlap test).
   Completer<bool>? holdFans;
 
+  /// While set, `setFanQuantity` does not finish (lane gate test).
+  Completer<bool>? holdQty;
+
   /// While set, `initFans` does not finish (stop-during-startup test).
   Completer<bool>? holdInitFans;
   bool throwOnClose = false;
@@ -75,6 +78,8 @@ class FakeOutputs implements LightOutputs {
   @override
   Future<bool> setFanQuantity(List<int> quantity) async {
     calls.add('qty:${quantity.join(',')}');
+    final hold = holdQty;
+    if (hold != null) return hold.future;
     return fansOk;
   }
 
@@ -657,6 +662,34 @@ void main() {
     );
     await rig.advance(const Duration(milliseconds: 100));
     expect(rig.out.count('qty'), 1);
+    rig.module.stop();
+  });
+
+  testWidgets('a hub write does not freeze the ITE/RAM/GPU lanes', (
+    tester,
+  ) async {
+    final out = FakeOutputs();
+    final rig = Rig(tester, LightingConfig(), outputs: out);
+    await rig.settle();
+    out.clear();
+    // A config write to the hub runs as its own job and gates only the fans
+    // lane: the writes of one family must not stop the families whose buses
+    // and isolates it does not share.
+    out.holdQty = Completer<bool>();
+    rig.send(
+      SetLightingConfig(LightingConfig().copyWith(fanQuantity: [0, 3, 6, 3])),
+    );
+    await rig.advance(const Duration(milliseconds: 300));
+    expect(out.count('chassis'), greaterThan(1));
+    expect(out.count('ram:0'), greaterThan(1));
+    expect(out.count('fanFrames'), 0);
+
+    // The fans lane resumes when its own write returns.
+    out.holdQty!.complete(true);
+    await rig.settle();
+    expect(out.calls, contains('qty:0,3,6,3'));
+    await rig.advance(const Duration(milliseconds: 300));
+    expect(out.count('fanFrames'), greaterThan(0));
     rig.module.stop();
   });
 

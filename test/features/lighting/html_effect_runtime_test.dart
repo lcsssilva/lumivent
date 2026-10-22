@@ -4,6 +4,10 @@ import 'dart:io';
 import 'package:ffi/ffi.dart';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/domain/effect_sampling.dart';
+import 'package:lumivent/features/lighting/domain/light_device.dart';
+import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/runtime.dart';
 
 /// `flutter test` only has the native QuickJS library when the Linux bundle was
@@ -290,4 +294,35 @@ requestAnimationFrame(loop);
     skip: _skip,
     timeout: const Timeout(Duration(seconds: 20)),
   );
+
+  test('the worker samples the device colors from its own canvas', () async {
+    final rt = await IsolatedHtmlEffectRuntime.load(
+      effect(
+        script: '''
+var ctx = document.getElementById('exCanvas').getContext('2d');
+ctx.fillStyle = '#ff0000';
+ctx.fillRect(0, 0, 320, 200);
+''',
+      ),
+    );
+    addTearDown(rt.dispose);
+
+    final config = LightingConfig();
+    rt.setSamplePoints(canvasSamplePoints(config));
+    final (frame, colors) = await rt.renderSampled(0);
+    expect(frame.pixelAt(10, 10), (255, 0, 0));
+    // The colors came from the render isolate; the app does not need to read
+    // the frame itself (sampleCanvasPixels runs there too, but a null colors
+    // map would mean the app-side fallback).
+    expect(colors, isNotNull);
+    expect(colors![LightDeviceId.gpu], [const Rgb(255, 0, 0)]);
+    for (final entry in colors.entries) {
+      if (entry.key == LightDeviceId.gpu) continue;
+      expect(
+        entry.value,
+        everyElement(const Rgb(255, 0, 0)),
+        reason: '${entry.key}',
+      );
+    }
+  }, skip: _skip);
 }

@@ -8,6 +8,70 @@ import 'lighting_config.dart';
 import 'native_effects.dart';
 import 'rgb.dart';
 
+/// Stateful composition helpers owned by one lighting engine.
+///
+/// The instance caches validated effect parameters and generated fan layouts;
+/// composition results still depend only on the input config and time.
+class FrameComposer {
+  final _layouts = LedLayoutCache();
+  String? _cachedId;
+  Map<String, Object?>? _cachedRaw;
+  bool _cachedFixedSpeed = false;
+  EffectValues? _cachedValues;
+
+  Map<LightDeviceId, List<Rgb>> compose(
+    LightingConfig config,
+    double seconds, {
+    double Function(LightDeviceId id)? timeFor,
+    Set<LightDeviceId>? only,
+    Map<LightDeviceId, List<Rgb>>? pixels,
+  }) => composeFrame(
+    config,
+    seconds,
+    timeFor: timeFor,
+    only: only,
+    pixels: pixels,
+    composer: this,
+  );
+
+  Rgb averageCanvasColor(
+    LightingConfig config,
+    LightDeviceId id,
+    double seconds, {
+    double Function(LightDeviceId id)? timeFor,
+    Map<LightDeviceId, List<Rgb>>? pixels,
+  }) => composeAverageCanvasColor(
+    config,
+    id,
+    seconds,
+    timeFor: timeFor,
+    pixels: pixels,
+    composer: this,
+  );
+
+  LedLayout _layoutFor(LightDeviceId id, int fanQuantity) =>
+      _layouts.forDevice(id, fanQuantity: fanQuantity);
+
+  EffectValues _valuesOf(LightingConfig config, NativeEffect effect) {
+    final raw = config.effectValues[effect.id] ?? const <String, Object?>{};
+    final fixedSpeed =
+        firmwareSpeedFixed(config) &&
+        effect.params.any((parameter) => parameter.id == 'speed');
+    final cached = _cachedValues;
+    if (cached != null &&
+        _cachedId == effect.id &&
+        identical(_cachedRaw, raw) &&
+        _cachedFixedSpeed == fixedSpeed) {
+      return cached;
+    }
+    final values = _buildValues(config, effect, raw, fixedSpeed);
+    _cachedId = effect.id;
+    _cachedRaw = raw;
+    _cachedFixedSpeed = fixedSpeed;
+    return _cachedValues = values;
+  }
+}
+
 /// Colors of each device in canvas or fixed-color mode at instant [t]
 /// (seconds). Devices in hardware mode and the GPU are kept off the map (the
 /// driver handles them). Disabled (`enabled == false`) or `argbOff` = everything
@@ -27,9 +91,12 @@ Map<LightDeviceId, List<Rgb>> composeFrame(
   double Function(LightDeviceId id)? timeFor,
   Set<LightDeviceId>? only,
   Map<LightDeviceId, List<Rgb>>? pixels,
+  FrameComposer? composer,
 }) {
   final effect = nativeEffectById(c.effectId);
-  final values = effect == null ? null : _valuesOf(c, effect);
+  final values = effect == null
+      ? null
+      : composer?._valuesOf(c, effect) ?? _buildValues(c, effect);
   final out = <LightDeviceId, List<Rgb>>{};
 
   for (final id in LightDeviceId.values) {
@@ -37,7 +104,9 @@ Map<LightDeviceId, List<Rgb>> composeFrame(
     final d = c.device(id);
     if (d.mode == LightMode.hardware) continue;
 
-    final layout = ledLayoutFor(id, fanQuantity: c.fansOf(id));
+    final layout =
+        composer?._layoutFor(id, c.fansOf(id)) ??
+        ledLayoutFor(id, fanQuantity: c.fansOf(id));
     if (layout.length == 0) continue;
     final n = layout.length;
     final off = !d.enabled || c.argbOff;
@@ -79,6 +148,15 @@ Rgb averageCanvasColor(
   double t, {
   double Function(LightDeviceId id)? timeFor,
   Map<LightDeviceId, List<Rgb>>? pixels,
+}) => composeAverageCanvasColor(c, id, t, timeFor: timeFor, pixels: pixels);
+
+Rgb composeAverageCanvasColor(
+  LightingConfig c,
+  LightDeviceId id,
+  double t, {
+  double Function(LightDeviceId id)? timeFor,
+  Map<LightDeviceId, List<Rgb>>? pixels,
+  FrameComposer? composer,
 }) {
   if (!id.isSupported || c.argbOff) return Rgb.black;
   final d = c.device(id);
@@ -87,7 +165,9 @@ Rgb averageCanvasColor(
 
   final dt = timeFor?.call(id) ?? t;
   final effect = nativeEffectById(c.effectId);
-  final values = effect == null ? null : _valuesOf(c, effect);
+  final values = effect == null
+      ? null
+      : composer?._valuesOf(c, effect) ?? _buildValues(c, effect);
   if (effect != null && values != null) {
     // A grid over the placed rectangle; 96 samples are enough for a smooth
     // average and cheap at the GPU lane's ~8 sends/s.
@@ -120,32 +200,18 @@ Rgb averageCanvasColor(
   return Rgb((r / n).round(), (g / n).round(), (b / n).round());
 }
 
-// Last validated values: composeFrame runs every frame, but the raw map of an
-// effect only changes when the user edits it (config copies share it), so an
-// identity check avoids rebuilding and parsing the colors each time.
-String? _cachedId;
-Map<String, Object?>? _cachedRaw;
-bool _cachedFixedSpeed = false;
-EffectValues? _cachedValues;
-
-EffectValues _valuesOf(LightingConfig c, NativeEffect effect) {
-  final raw = c.effectValues[effect.id] ?? const <String, Object?>{};
+EffectValues _buildValues(
+  LightingConfig c,
+  NativeEffect effect, [
+  Map<String, Object?>? raw,
+  bool? fixedSpeed,
+]) {
+  raw ??= c.effectValues[effect.id] ?? const <String, Object?>{};
   // Scan has no speed in the firmware: the canvas follows the
   // firmware's fixed pace instead of the slider.
-  final fixedSpeed =
+  fixedSpeed ??=
       firmwareSpeedFixed(c) && effect.params.any((p) => p.id == 'speed');
-  final cached = _cachedValues;
-  if (cached != null &&
-      _cachedId == effect.id &&
-      identical(_cachedRaw, raw) &&
-      _cachedFixedSpeed == fixedSpeed) {
-    return cached;
-  }
-  final values = effect.valuesFrom(
+  return effect.valuesFrom(
     fixedSpeed ? {...raw, 'speed': firmwareFixedEffectSpeed} : raw,
   );
-  _cachedId = effect.id;
-  _cachedRaw = raw;
-  _cachedFixedSpeed = fixedSpeed;
-  return _cachedValues = values;
 }

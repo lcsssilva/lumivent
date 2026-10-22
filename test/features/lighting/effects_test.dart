@@ -12,6 +12,7 @@ import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/canvas_buffer.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/simple_canvas_raster.dart';
 
 EffectSource source({
   String script = 'var a = 1;',
@@ -34,6 +35,38 @@ InstalledEffect installed({
   publisher: publisher,
   tags: tags,
 );
+
+/// Same layout as the JS shim: opcode, count, then tagged arguments.
+Uint8List encode(List<(int, List<Object>)> ops) {
+  final bytes = BytesBuilder();
+  for (final (code, args) in ops) {
+    bytes.addByte(code);
+    bytes.addByte(args.length);
+    for (final arg in args) {
+      if (arg is num) {
+        final data = ByteData(5)
+          ..setUint8(0, 0)
+          ..setFloat32(1, arg.toDouble(), Endian.little);
+        bytes.add(data.buffer.asUint8List());
+      } else if (arg is GradientRef) {
+        final data = ByteData(5)
+          ..setUint8(0, 2)
+          ..setFloat32(1, arg.id.toDouble(), Endian.little);
+        bytes.add(data.buffer.asUint8List());
+      } else {
+        final text = arg as String;
+        final utf8 = Uint8List.fromList(text.codeUnits);
+        final data = ByteData(3)
+          ..setUint8(0, 1)
+          ..setUint16(1, utf8.length, Endian.little);
+        bytes
+          ..add(data.buffer.asUint8List())
+          ..add(utf8);
+      }
+    }
+  }
+  return bytes.takeBytes();
+}
 
 void main() {
   group('EffectProperty.resolve', () {
@@ -283,38 +316,6 @@ void main() {
   });
 
   group('canvas binary protocol', () {
-    /// Same layout as the JS shim: opcode, count, then tagged arguments.
-    Uint8List encode(List<(int, List<Object>)> ops) {
-      final bytes = BytesBuilder();
-      for (final (code, args) in ops) {
-        bytes.addByte(code);
-        bytes.addByte(args.length);
-        for (final arg in args) {
-          if (arg is num) {
-            final data = ByteData(5)
-              ..setUint8(0, 0)
-              ..setFloat32(1, arg.toDouble(), Endian.little);
-            bytes.add(data.buffer.asUint8List());
-          } else if (arg is GradientRef) {
-            final data = ByteData(5)
-              ..setUint8(0, 2)
-              ..setFloat32(1, arg.id.toDouble(), Endian.little);
-            bytes.add(data.buffer.asUint8List());
-          } else {
-            final text = arg as String;
-            final utf8 = Uint8List.fromList(text.codeUnits);
-            final data = ByteData(3)
-              ..setUint8(0, 1)
-              ..setUint16(1, utf8.length, Endian.little);
-            bytes
-              ..add(data.buffer.asUint8List())
-              ..add(utf8);
-          }
-        }
-      }
-      return bytes.takeBytes();
-    }
-
     test('decodes numbers, strings, and gradient references', () {
       final buffer = CanvasCommandBuffer(
         encode([
@@ -356,6 +357,84 @@ void main() {
         () => CanvasCommandBuffer(Uint8List(4 * 1024 * 1024 + 1)),
         throwsA(isA<FormatException>()),
       );
+    });
+  });
+
+  group('SimpleCanvasRaster.rasterInto', () {
+    SimpleRaster base() => SimpleCanvasRaster.tryRaster(
+      encode([
+        (CanvasOp.fillStyle, ['#ff0000']),
+        (CanvasOp.fillRect, [0.0, 0.0, 320.0, 200.0]),
+      ]),
+    )!;
+
+    test('equals tryRaster on a first frame', () {
+      final baseRaster = base();
+      final canvas = Uint32List(
+        SimpleCanvasRaster.width * SimpleCanvasRaster.height,
+      );
+      final raster = SimpleCanvasRaster.rasterInto(
+        canvas,
+        encode([
+          (CanvasOp.fillStyle, ['#ff0000']),
+          (CanvasOp.fillRect, [0.0, 0.0, 320.0, 200.0]),
+        ]),
+        firstFrame: true,
+      )!;
+      expect(
+        raster.state,
+        const SimpleRasterState(fill: 0xffff0000, alpha: 1, srcOver: true),
+      );
+      expect(raster.opCount, baseRaster.opCount);
+      expect(raster.pixels, baseRaster.pixels);
+      expect(base().opCount, 2);
+    });
+
+    test('mutates the previous frame like tryRaster(previous:)', () {
+      final previous = SimpleCanvasRaster.tryRaster(
+        encode([
+          (CanvasOp.fillStyle, ['#ff0000']),
+          (CanvasOp.fillRect, [0.0, 0.0, 320.0, 100.0]),
+        ]),
+      )!;
+      final second = encode([
+        (CanvasOp.fillStyle, ['#00ff00']),
+        (CanvasOp.fillRect, [160.0, 100.0, 160.0, 100.0]),
+      ]);
+      final inPlace = SimpleCanvasRaster.rasterInto(
+        Uint32List.fromList(previous.pixels),
+        second,
+        firstFrame: false,
+      )!;
+      final copied = SimpleCanvasRaster.tryRaster(
+        second,
+        previous: previous.pixels,
+      )!;
+      expect(inPlace.pixels, copied.pixels);
+      expect(
+        inPlace.state,
+        const SimpleRasterState(fill: 0xff00ff00, alpha: 1, srcOver: true),
+      );
+      // The first frame's red half is preserved (the canvas is retained
+      // between frames, like in a browser).
+      expect(inPlace.pixels[0], previous.pixels[0]);
+      expect(inPlace.pixels[160 + 195 * SimpleCanvasRaster.width], 0xff00ff00);
+    });
+
+    test('a frame the fast path cannot draw returns null', () {
+      final canvas = Uint32List(
+        SimpleCanvasRaster.width * SimpleCanvasRaster.height,
+      );
+      canvas.fillRange(0, canvas.length, 0xff00ff00);
+      final gradientFrame = encode([
+        (CanvasOp.fillStyle, [GradientRef(1)]),
+        (CanvasOp.fillRect, [0.0, 0.0, 320.0, 200.0]),
+      ]);
+      expect(
+        SimpleCanvasRaster.rasterInto(canvas, gradientFrame, firstFrame: true),
+        isNull,
+      );
+      expect(SimpleCanvasRaster.tryRaster(gradientFrame), isNull);
     });
   });
 }

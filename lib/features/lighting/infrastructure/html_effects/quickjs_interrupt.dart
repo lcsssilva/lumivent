@@ -2,9 +2,10 @@
 //
 // flutter_js 0.8.7 accepts a `timeout` but its bridge (`jsNewRuntime`) never
 // installs an interrupt handler, so `while (true) {}` runs forever inside the
-// FFI call. Killing the Dart isolate does not stop native code: the thread kept
-// spinning at 100 % of a core until the app exited. The bridge library does
-// export `JS_SetInterruptHandler`, so the handler is installed here.
+// FFI call. Killing an isolate cannot stop native code, so Linux app builds
+// also run QuickJS in a child process that the parent can kill. The bridge
+// exports `JS_SetInterruptHandler`, which stops ordinary loops before that
+// process-level hard stop is needed.
 //
 // QuickJS polls the handler every ~10 000 bytecode steps on the thread running
 // the script (measured overhead < 1 %). A non-zero return raises an
@@ -17,8 +18,28 @@
 import 'dart:ffi';
 import 'dart:io';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter_js/flutter_js.dart';
 import 'package:flutter_js/quickjs/ffi.dart' show runtimeOpaques;
+
+final class _RLimit extends Struct {
+  @Uint64()
+  external int current;
+
+  @Uint64()
+  external int maximum;
+}
+
+typedef _GetRLimitNative = Int32 Function(
+  Int32 resource,
+  Pointer<_RLimit> limit,
+);
+typedef _GetRLimit = int Function(int resource, Pointer<_RLimit> limit);
+typedef _SetRLimitNative = Int32 Function(
+  Int32 resource,
+  Pointer<_RLimit> limit,
+);
+typedef _SetRLimit = int Function(int resource, Pointer<_RLimit> limit);
 
 typedef _HandlerNative = Int32 Function(Pointer<Void> rt, Pointer<Void> opaque);
 typedef _SetHandlerNative = Void Function(
@@ -42,6 +63,49 @@ int _deadlineUs = _noDeadline;
 const _noDeadline = 1 << 62;
 const _memoryLimitBytes = 96 * 1024 * 1024;
 const _stackLimitBytes = 2 * 1024 * 1024;
+const _addressSpaceHeadroomBytes = 512 * 1024 * 1024;
+
+/// Adds an address-space ceiling around the worker process after the Flutter
+/// VM has started, so native allocations cannot grow without bound.
+void limitWorkerAddressSpace() {
+  if (!Platform.isLinux) {
+    throw UnsupportedError('the effect worker requires Linux');
+  }
+  final statm = File('/proc/self/statm').readAsStringSync().trim().split(' ');
+  final pages = int.tryParse(statm.first);
+  if (pages == null) {
+    throw const FormatException('could not read worker address space');
+  }
+  final currentBytes = pages * 4096;
+  final limit = calloc<_RLimit>();
+  try {
+    final libc = DynamicLibrary.process();
+    final getRLimit = libc.lookupFunction<_GetRLimitNative, _GetRLimit>(
+      'getrlimit',
+    );
+    final setRLimit = libc.lookupFunction<_SetRLimitNative, _SetRLimit>(
+      'setrlimit',
+    );
+    const resourceAs = 9;
+    if (getRLimit(resourceAs, limit) != 0) {
+      throw StateError('could not inspect worker address-space limit');
+    }
+    final hardLimit = limit.ref.maximum;
+    var target = currentBytes + _addressSpaceHeadroomBytes;
+    if (hardLimit > 0 && target > hardLimit) target = hardLimit;
+    if (target <= currentBytes) {
+      throw UnsupportedError(
+        'worker address-space limit is below its current usage',
+      );
+    }
+    limit.ref.current = target;
+    if (setRLimit(resourceAs, limit) != 0) {
+      throw StateError('could not bound worker address space');
+    }
+  } finally {
+    calloc.free(limit);
+  }
+}
 
 int _onInterrupt(Pointer<Void> rt, Pointer<Void> opaque) =>
     _clock.elapsedMicroseconds > _deadlineUs ? 1 : 0;

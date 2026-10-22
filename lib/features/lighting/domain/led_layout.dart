@@ -55,6 +55,20 @@ LedLayout ledLayoutFor(LightDeviceId id, {int fanQuantity = 0}) {
   };
 }
 
+/// Per-owner cache for the dynamically generated fan group layouts.
+///
+/// Keeping this cache on the lighting engine avoids mutable domain-level
+/// globals while preserving the frame loop's allocation behavior.
+class LedLayoutCache {
+  final _fanLayouts = <int, LedLayout>{};
+
+  LedLayout forDevice(LightDeviceId id, {int fanQuantity = 0}) {
+    if (!id.isFan) return ledLayoutFor(id, fanQuantity: fanQuantity);
+    final quantity = fanQuantity.clamp(0, maxFansPerGroup);
+    return _fanLayouts.putIfAbsent(quantity, () => _fanGroupLayout(quantity));
+  }
+}
+
 /// Number of LEDs for [id] (fans: [fanQuantity] × 20).
 int ledCountFor(LightDeviceId id, {int fanQuantity = 0}) => switch (id) {
   _ when id.isFan => fanQuantity.clamp(0, maxFansPerGroup) * ledsPerFan,
@@ -64,12 +78,10 @@ int ledCountFor(LightDeviceId id, {int fanQuantity = 0}) => switch (id) {
   _ => 0,
 };
 
-final _fanLayouts = <int, LedLayout>{};
-
 /// Fans side by side; each with the inner ring (8) and then the outer (12),
 /// starting at the left (the cable side) and proceeding counterclockwise, as
 /// seen on the hardware (checklist 2026-10-19).
-LedLayout _fanGroupLayout(int q) => _fanLayouts.putIfAbsent(q, () {
+LedLayout _fanGroupLayout(int q) {
   if (q == 0) return const LedLayout([], 1);
   final leds = <LedPoint>[];
   for (var f = 0; f < q; f++) {
@@ -87,7 +99,7 @@ LedLayout _fanGroupLayout(int q) => _fanLayouts.putIfAbsent(q, () {
     ring(outerRingLeds, _outerRadius);
   }
   return LedLayout(List.unmodifiable(leds), q.toDouble());
-});
+}
 
 /// D_LED1: index 0 on the right (ITE §0.1.2).
 final _chassis = LedLayout(

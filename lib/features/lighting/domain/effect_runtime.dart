@@ -7,6 +7,9 @@
 import 'dart:typed_data';
 
 import 'effect_meta.dart';
+import 'effect_sampling.dart';
+import 'light_device.dart';
+import 'rgb.dart';
 
 /// One rendered canvas frame: `width × height` pixels in RGBA order.
 class EffectFrame {
@@ -35,6 +38,20 @@ abstract interface class EffectRuntime {
   /// Applies a property value (the JS global with the same name) and calls
   /// `on<name>Changed` when the effect defines it.
   void setProperty(String name, Object? value);
+
+  /// Pins where the frame is sampled: one `(device, x, y)` per LED, in canvas
+  /// pixels, in driver order ([canvasSamplePoints] builds them). Once set,
+  /// [renderSampled] returns the device colors for every frame, computed on
+  /// the render isolate itself. A change replaces the points; `null` stops
+  /// the sampling.
+  void setSamplePoints(List<(LightDeviceId, int, int)>? points);
+
+  /// Renders the frame at [nowMs], together with the device colors sampled on
+  /// the render isolate ([setSamplePoints]); `null` colors mean this runtime
+  /// did not sample (and the app samples from the returned frame itself).
+  Future<(EffectFrame, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
+    double nowMs,
+  );
 
   /// Values for `engine.getSensorValue` (metric id → reading).
   void setSensors(Map<String, double> values);

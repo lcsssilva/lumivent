@@ -24,9 +24,19 @@ class SimpleRasterState {
   final int fill;
   final double alpha;
   final bool srcOver;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SimpleRasterState &&
+      other.fill == fill &&
+      other.alpha == alpha &&
+      other.srcOver == srcOver;
+
+  @override
+  int get hashCode => Object.hash(fill, alpha, srcOver);
 }
 
-/// Result of [SimpleCanvasRaster.tryRaster].
+/// Result of [SimpleCanvasRaster.tryRaster] / [SimpleCanvasRaster.rasterInto].
 class SimpleRaster {
   const SimpleRaster(this.pixels, this.opCount, this.state);
 
@@ -51,13 +61,34 @@ abstract final class SimpleCanvasRaster {
     Uint32List? previous,
     SimpleRasterState state = const SimpleRasterState(),
   }) {
-    final ops = CanvasCommandBuffer(encoded);
     final pixels = Uint32List(width * height);
     if (previous != null) {
       pixels.setAll(0, previous);
-    } else {
+    }
+    return rasterInto(
+      pixels,
+      encoded,
+      firstFrame: previous == null,
+      state: state,
+    );
+  }
+
+  /// Per-render-isolate fast path: rasterizes [encoded] into [pixels],
+  /// mutating it instead of allocating and copying a fresh buffer every
+  /// frame. [pixels] must hold the previous fast frame; a first frame starts
+  /// from opaque black ([firstFrame]). Returns null when the frame needs the
+  /// general dart:ui replay — in that case [pixels] must be discarded: the
+  /// shim's incremental state no longer matches the buffer.
+  static SimpleRaster? rasterInto(
+    Uint32List pixels,
+    Uint8List encoded, {
+    required bool firstFrame,
+    SimpleRasterState state = const SimpleRasterState(),
+  }) {
+    if (firstFrame) {
       pixels.fillRange(0, pixels.length, 0xff000000);
     }
+    final ops = CanvasCommandBuffer(encoded);
     var color = state.fill;
     var alpha = state.alpha;
     var srcOver = state.srcOver;

@@ -1,11 +1,11 @@
 // Runs the installed HTML/Canvas effect and sends the sampled LED colors to the
 // engine (plan §5.5).
 //
-// QuickJS runs in a worker isolate and the canvas is rasterized on the UI
-// isolate, so neither lives in the engine isolate. The effect renders at the
-// effects FPS — even with the window hidden — and the engine only streams the
-// colors to the devices. Fans keep the 2 fps gap (`alv2SafeStreamGap`), so the
-// hub does not lose RPM.
+// QuickJS runs in a child process in Linux app builds (an isolate in test and
+// development runners); the canvas is rasterized on the UI isolate. Neither
+// lives in the engine isolate. The effect renders at the effects FPS — even
+// with the window hidden — and the engine only streams the colors to devices.
+// Fans keep the 2 fps gap (`alv2SafeStreamGap`), so the hub does not lose RPM.
 
 import 'dart:async';
 
@@ -18,12 +18,14 @@ import '../../preferences/preferences.dart';
 import '../domain/effect_runtime.dart';
 import '../domain/effect_sampling.dart';
 import '../domain/installed_effect.dart';
+import '../domain/lighting_config.dart';
 import 'effects_controller.dart';
 import 'lighting_controller.dart';
 import 'lighting_messages.dart';
 
 /// Why the HTML effect is not running. The presentation maps it to the
 /// catalog (`LightingStrings.effectLoadFailed`/`effectPaused`/...).
+
 enum HtmlEffectIssue { loadFailed, paused, unsupported }
 
 class HtmlEffectStatus {
@@ -78,8 +80,8 @@ class HtmlEffectStatus {
 }
 
 /// Longest accepted frame. Above this for [maxSlowFrames] in a row the effect
-/// is paused and marked. A script that never returns is killed by the worker
-/// isolate hard limit (`scriptHardLimit`, in html_effects/runtime.dart).
+/// is paused and marked. A script that never returns is killed at the worker
+/// hard limit (`scriptHardLimit`, in html_effects/runtime.dart).
 const slowFrameLimit = Duration(milliseconds: 250);
 const maxSlowFrames = 3;
 
@@ -108,6 +110,10 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
   int _frameUs = 0;
   Map<String, Object?>? _valuesSent;
   SensorSample? _sensorsSent;
+
+  /// Config the sampling points were last built from; the points only change
+  /// with the devices (modes, quantity, placement), not with every frame.
+  LightingConfig? _sampleConfig;
 
   @override
   HtmlEffectStatus build() {
@@ -152,6 +158,7 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
       _slug = slug;
       _effectId = effectId;
       _valuesSent = values;
+      _sampleConfig = null;
       _thumbnailSaved = false;
       _slowFrames = 0;
       _started = _fpsWindow = DateTime.now();
@@ -191,13 +198,20 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
         }
         _valuesSent = raw;
       }
+      // The render worker samples the LEDs once it knows the LED positions;
+      // the app samples from the frame itself when it does not (see the
+      // `colors == null` fallback below).
+      if (!identical(_sampleConfig, cfg)) {
+        runtime.setSamplePoints(canvasSamplePoints(cfg));
+        _sampleConfig = cfg;
+      }
       final sample = ref.read(monitoringProvider).latest;
       if (sample != null && !identical(sample, _sensorsSent)) {
         runtime.setSensors(sample.values);
         _sensorsSent = sample;
       }
 
-      final frame = await runtime.renderFrame(
+      final (frame, colors) = await runtime.renderSampled(
         DateTime.now().difference(_started).inMicroseconds / 1000,
       );
       // The effect may have been switched while awaiting the frame.
@@ -207,7 +221,12 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
       if (ref.read(lightingProvider).effectId != effectId) return;
       ref
           .read(engineProvider)
-          .send(SetHtmlEffectFrame(effectId, sampleEffectFrame(cfg, frame)));
+          .send(
+            SetHtmlEffectFrame(
+              effectId,
+              colors ?? sampleEffectFrame(cfg, frame),
+            ),
+          );
       _liveFrame?.value = frame;
       if (!_thumbnailSaved) {
         _thumbnailSaved = true;

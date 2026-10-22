@@ -74,6 +74,14 @@ class _FakeRuntime implements EffectRuntime {
       EffectSource(title: 'Teste', properties: const [], script: '');
 
   @override
+  Future<(EffectFrame, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
+    double nowMs,
+  ) => renderFrame(nowMs).then((frame) => (frame, null));
+
+  @override
+  void setSamplePoints(List<(LightDeviceId, int, int)>? points) {}
+
+  @override
   Future<EffectFrame> renderFrame(double nowMs) async => _frame;
 
   @override

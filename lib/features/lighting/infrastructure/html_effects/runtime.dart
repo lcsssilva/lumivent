@@ -1,15 +1,12 @@
 // Runs an HTML/Canvas effect on QuickJS (flutter_js) and draws each frame into a
 // 320×200 ui.Image by replaying the binary canvas commands emitted by
-// canvas2d_shim.js.
-//
-// QuickJS lives in a worker isolate. Each evaluation has a deadline enforced by
-// QuickJS's interrupt handler (quickjs_interrupt.dart), which stops
-// `while (true) {}` and frees the thread; the parent still kills the isolate
-// after [scriptHardLimit] as a second guard. Rasterization (dart:ui) stays on
-// the main isolate, which also keeps the worker free of Flutter bindings.
+// canvas2d_shim.js. Linux app builds use a child process for QuickJS; tests and
+// development runners use an isolate. Both paths enforce evaluation deadlines,
+// while the process boundary can also kill a native call stuck past its limit.
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -20,6 +17,9 @@ import 'package:flutter_js/flutter_js.dart';
 import '../../../../core/platform/numeric_locale.dart';
 import '../../domain/effect_meta.dart';
 import '../../domain/effect_runtime.dart';
+import '../../domain/effect_sampling.dart';
+import '../../domain/light_device.dart';
+import '../../domain/rgb.dart';
 import 'canvas_buffer.dart';
 import 'canvas_replay.dart';
 import 'quickjs_interrupt.dart';
@@ -153,6 +153,9 @@ class _Rasterizer {
 
   Set<String> get unknownOps => _replayer.unknownOps;
 
+  /// The fast frames accepted by [acceptSimple], for preview and snapshot.
+  Uint32List? get simplePixels => _simplePixels;
+
   ui.Image? get image {
     final pixels = _simplePixels;
     if (pixels != null) {
@@ -181,23 +184,40 @@ class _Rasterizer {
     return _frame;
   }
 
+  /// Accepts a frame already rasterized on the render isolate (the fast
+  /// path): the runtime only formats the RGBA bytes ([rgba]) and keeps the
+  /// pixels for preview and snapshot. No raster work reaches the UI isolate.
+  EffectFrame acceptSimple(Uint8List rgba, int opCount) {
+    lastRasterTime = Duration.zero;
+    lastReadbackTime = Duration.zero;
+    lastOpCount = opCount;
+    _frame?.dispose();
+    _frame = null;
+    _simplePixels = Uint32List.view(
+      rgba.buffer,
+      rgba.offsetInBytes,
+      rgba.lengthInBytes >> 2,
+    );
+    return EffectFrame(width, height, rgba);
+  }
+
   Future<EffectFrame> draw(Uint8List encoded) async {
-    final sw = Stopwatch()..start();
     final simple = SimpleCanvasRaster.tryRaster(
       encoded,
       previous: _simplePixels,
       state: _simpleState ?? const SimpleRasterState(),
     );
     if (simple != null) {
-      _simplePixels = simple.pixels;
+      final frame = acceptSimple(simple.rgba, simple.opCount);
       _simpleState = simple.state;
-      _frame?.dispose();
-      _frame = null;
-      lastRasterTime = sw.elapsed;
-      lastReadbackTime = Duration.zero;
-      lastOpCount = simple.opCount;
-      return EffectFrame(width, height, simple.rgba);
+      return frame;
     }
+    return drawSlow(encoded);
+  }
+
+  /// General dart:ui replay, for frames the fast path cannot draw.
+  Future<EffectFrame> drawSlow(Uint8List encoded) async {
+    final sw = Stopwatch()..start();
     _simplePixels = null;
     _simpleState = null;
     _preview?.dispose();
@@ -287,6 +307,7 @@ class HtmlEffectRuntime implements EffectRuntime {
   final EffectSource effect;
   final _JsEffect _js;
   final _Rasterizer _raster;
+  List<(LightDeviceId, int, int)>? _samplePoints;
 
   Duration lastRasterTime = Duration.zero, lastReadbackTime = Duration.zero;
   int lastOpCount = 0;
@@ -308,14 +329,31 @@ class HtmlEffectRuntime implements EffectRuntime {
   }
 
   @override
-  Future<EffectFrame> renderFrame(double nowMs) async {
+  Future<EffectFrame> renderFrame(double nowMs) async =>
+      (await renderSampled(nowMs)).$1;
+
+  @override
+  Future<(EffectFrame, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
+    double nowMs,
+  ) async {
     final encoded = _js.renderOps(nowMs);
     final frame = await _raster.draw(encoded);
     lastOpCount = _raster.lastOpCount;
     lastRasterTime = _raster.lastRasterTime;
     lastReadbackTime = _raster.lastReadbackTime;
-    return frame;
+    final points = _samplePoints;
+    final pixels = _raster.simplePixels;
+    return (
+      frame,
+      points == null || pixels == null
+          ? null
+          : sampleCanvasPixels(points, pixels),
+    );
   }
+
+  @override
+  void setSamplePoints(List<(LightDeviceId, int, int)>? points) =>
+      _samplePoints = points;
 
   @override
   void setProperty(String name, Object? value) => _js.setProperty(name, value);
@@ -336,8 +374,154 @@ class HtmlEffectRuntime implements EffectRuntime {
   }
 }
 
-/// Runtime used by the app: QuickJS in a worker isolate that can be killed
-/// when a frame exceeds [scriptHardLimit] or the effect throws.
+const _processWorkerPrefix = 'LUMIVENT_HTML_EFFECT:';
+
+/// Runs the hidden Flutter entrypoint used by the parent process.
+///
+/// The process boundary is the hard stop for native QuickJS code that does not
+/// return to Dart's interrupt handler.
+Future<void> runHtmlEffectWorker() async {
+  limitWorkerAddressSpace();
+  HtmlEffectRuntime? runtime;
+  Object? pendingError;
+
+  Future<void> send(Object message) async {
+    stdout.writeln('$_processWorkerPrefix${jsonEncode(message)}');
+    await stdout.flush();
+  }
+
+  await send({'ready': true});
+  try {
+    await for (final line
+        in stdin.transform(utf8.decoder).transform(const LineSplitter())) {
+      if (line.length > 12 * 1024 * 1024) {
+        throw const FormatException('effect worker request is too large');
+      }
+      final decoded = jsonDecode(line);
+      if (decoded is! List || decoded.length < 2 || decoded[0] is! int) {
+        continue;
+      }
+      final id = decoded[0] as int;
+      final op = decoded[1];
+      try {
+        Object? reply;
+        switch (op) {
+          case 'load':
+            if (decoded.length < 5 ||
+                decoded[2] is! String ||
+                decoded[3] is! String ||
+                decoded[4] is! Map) {
+              throw const FormatException('invalid load request');
+            }
+            runtime?.dispose();
+            runtime = await HtmlEffectRuntime.load(
+              decoded[2] as String,
+              shim: decoded[3] as String,
+              values: (decoded[4] as Map).cast<String, Object?>(),
+            );
+          case 'points':
+            final raw = decoded.length > 2 ? decoded[2] : null;
+            if (raw == null) {
+              runtime?.setSamplePoints(null);
+              break;
+            }
+            final points = <(LightDeviceId, int, int)>[];
+            if (raw is! List) {
+              throw const FormatException('invalid sample points');
+            }
+            for (final entry in raw) {
+              if (entry is! List ||
+                  entry.length != 3 ||
+                  entry[0] is! String ||
+                  entry[1] is! int ||
+                  entry[2] is! int) {
+                throw const FormatException('invalid sample point');
+              }
+              points.add((
+                LightDeviceId.values.byName(entry[0] as String),
+                entry[1] as int,
+                entry[2] as int,
+              ));
+            }
+            runtime?.setSamplePoints(points);
+          case 'frame':
+            final current = runtime;
+            if (current == null || decoded.length < 3 || decoded[2] is! num) {
+              throw const EffectScriptException('no effect');
+            }
+            final error = pendingError;
+            pendingError = null;
+            if (error != null) throw EffectScriptException('$error');
+            final (frame, colors) = await current.renderSampled(
+              (decoded[2] as num).toDouble(),
+            );
+            reply = [
+              base64Encode(frame.rgba),
+              true,
+              current.lastOpCount,
+              current.drainLog(),
+              current.lastScriptTime.inMicroseconds,
+              colors == null
+                  ? null
+                  : {
+                      for (final entry in colors.entries)
+                        entry.key.name: [
+                          for (final color in entry.value)
+                            [color.r, color.g, color.b],
+                        ],
+                    },
+            ];
+          case 'property':
+            if (decoded.length < 3 || decoded[2] is! String) {
+              throw const FormatException('invalid property request');
+            }
+            try {
+              runtime?.setProperty(
+                decoded[2] as String,
+                decoded.length > 3 ? decoded[3] : null,
+              );
+            } on Object catch (error) {
+              pendingError = error;
+            }
+          case 'sensors':
+            if (decoded.length < 3 || decoded[2] is! Map) {
+              throw const FormatException('invalid sensors request');
+            }
+            try {
+              runtime?.setSensors((decoded[2] as Map).cast<String, double>());
+            } on Object catch (error) {
+              pendingError = error;
+            }
+          case 'log':
+            reply = runtime?.drainLog() ?? const <String>[];
+          case 'dispose':
+            runtime?.dispose();
+            runtime = null;
+            if (id != 0) await send([id, true, null]);
+            return;
+          default:
+            throw FormatException('unknown worker operation: $op');
+        }
+        if (id != 0) await send([id, true, reply]);
+      } on Object catch (error, stack) {
+        if (id != 0) {
+          await send([
+            id,
+            false,
+            ['$error', '$stack'],
+          ]);
+        }
+      }
+    }
+  } finally {
+    runtime?.dispose();
+  }
+}
+
+/// Runtime used by the app: QuickJS in a worker that can be killed when a frame
+/// exceeds [scriptHardLimit] or the effect throws. The fast raster path also
+/// runs there (a simple canvas is mutated in place and published per frame),
+/// so the UI isolate only forwards the RGBA bytes.
 class IsolatedHtmlEffectRuntime implements EffectRuntime {
   static const _maxBufferedLogs = 200;
 
@@ -383,20 +567,94 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
   }
 
   @override
-  Future<EffectFrame> renderFrame(double nowMs) async {
+  Future<EffectFrame> renderFrame(double nowMs) async =>
+      (await renderSampled(nowMs)).$1;
+
+  @override
+  Future<(EffectFrame, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
+    double nowMs,
+  ) async {
     final reply = await _connection.request([
       'frame',
       nowMs,
     ], timeout: scriptHardLimit) as List;
-    final data = reply[0] as TransferableTypedData;
-    _logs.addAll((reply[1] as List).cast<String>().take(_maxBufferedLogs));
+    if (reply.length < 6 || reply[0] is! TransferableTypedData) {
+      throw const EffectScriptException('malformed frame reply');
+    }
+    final rawData = reply[0];
+    final data = switch (rawData) {
+      TransferableTypedData typedData => typedData.materialize().asUint8List(),
+      String encoded => base64Decode(encoded),
+      _ => throw const EffectScriptException('malformed frame data'),
+    };
+    _logs.addAll((reply[3] as List).cast<String>().take(_maxBufferedLogs));
     if (_logs.length > _maxBufferedLogs) {
       _logs.removeRange(0, _logs.length - _maxBufferedLogs);
     }
-    if (reply.length > 2 && reply[2] is num) {
-      _lastScriptTime = Duration(microseconds: (reply[2] as num).toInt());
+    if (reply[4] is num) {
+      _lastScriptTime = Duration(microseconds: (reply[4] as num).toInt());
     }
-    return _raster.draw(data.materialize().asUint8List());
+    if (!identical(reply[1], true)) {
+      // General replay on the UI isolate: no sampling available, the app
+      // samples from the returned frame itself.
+      return (await _raster.drawSlow(data), null);
+    }
+    if (data.lengthInBytes !=
+        SimpleCanvasRaster.width * SimpleCanvasRaster.height * 4) {
+      throw const EffectScriptException('frame pixels have the wrong size');
+    }
+    return (
+      _raster.acceptSimple(
+        data,
+        reply[2] is num ? (reply[2] as num).toInt() : 0,
+      ),
+      // A null map (invalid reply payload) makes the app sample itself.
+      _colors(reply[5]),
+    );
+  }
+
+  @override
+  void setSamplePoints(List<(LightDeviceId, int, int)>? points) =>
+      _connection.send([
+        'points',
+        points?.map((point) => [point.$1.name, point.$2, point.$3]).toList(),
+      ]);
+
+  /// Rebuilds the sampled colors from the worker reply, entry by entry: the
+  /// isolate message may carry anything, so it is checked before use.
+  static Map<LightDeviceId, List<Rgb>>? _colors(Object? raw) {
+    if (raw is! Map) return null;
+    final out = <LightDeviceId, List<Rgb>>{};
+    for (final entry in raw.entries) {
+      final key = entry.key;
+      LightDeviceId? id;
+      if (key is LightDeviceId) {
+        id = key;
+      } else if (key is String) {
+        for (final candidate in LightDeviceId.values) {
+          if (candidate.name == key) {
+            id = candidate;
+            break;
+          }
+        }
+      }
+      final leds = entry.value;
+      if (id == null || leds is! List) return null;
+      final colors = <Rgb>[];
+      for (final color in leds) {
+        if (color is Rgb) {
+          colors.add(color);
+        } else if (color is List &&
+            color.length == 3 &&
+            color.every((channel) => channel is int)) {
+          colors.add(Rgb(color[0] as int, color[1] as int, color[2] as int));
+        } else {
+          return null;
+        }
+      }
+      out[id] = colors;
+    }
+    return out;
   }
 
   @override
@@ -431,18 +689,63 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
 
 /// One request at a time per effect; replies are matched by id.
 class _WorkerConnection {
-  _WorkerConnection._(this._isolate, this._send, this._receive, this._errors);
+  _WorkerConnection._({
+    this._isolate,
+    this._send,
+    this._receive,
+    this._errors,
+    this._process,
+  });
 
-  final Isolate _isolate;
-  final SendPort _send;
-  final ReceivePort _receive;
-  final ReceivePort _errors;
+  final Isolate? _isolate;
+  final SendPort? _send;
+  final ReceivePort? _receive;
+  final ReceivePort? _errors;
+  final Process? _process;
+  StreamSubscription<String>? _stdout;
+  StreamSubscription<String>? _stderr;
+  Completer<void>? _handshake;
   final _pending = <int, Completer<Object?>>{};
   final _timers = <int, Timer>{};
+  String _stderrText = '';
   int _next = 1;
   bool _dead = false;
 
   static Future<_WorkerConnection> spawn() async {
+    if (_shouldSpawnProcess) return _spawnProcess();
+    return _spawnIsolate();
+  }
+
+  static bool get _shouldSpawnProcess =>
+      Platform.isLinux &&
+      File(Platform.resolvedExecutable).uri.pathSegments.last == 'lumivent' &&
+      Platform.environment['LUMIVENT_HTML_EFFECT_WORKER'] != 'isolate';
+
+  static Future<_WorkerConnection> _spawnProcess() async {
+    final process = await Process.start(Platform.resolvedExecutable, [
+      '--html-effect-worker',
+    ]);
+    final connection = _WorkerConnection._(process: process);
+    final handshake = connection._handshake = Completer<void>();
+    connection._stdout = process.stdout
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(connection._onProcessLine, onError: connection._onError);
+    connection._stderr = process.stderr
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(connection._captureStderr, onError: connection._onError);
+    process.exitCode.then(connection._onProcessExit);
+    try {
+      await handshake.future.timeout(scriptLoadLimit);
+      return connection;
+    } on Object {
+      connection.close();
+      rethrow;
+    }
+  }
+
+  static Future<_WorkerConnection> _spawnIsolate() async {
     final ready = ReceivePort();
     final errors = ReceivePort();
     final isolate = await Isolate.spawn(
@@ -471,7 +774,12 @@ class _WorkerConnection {
     });
     try {
       final send = await handshake.future.timeout(scriptLoadLimit);
-      connection = _WorkerConnection._(isolate, send, ready, errors);
+      connection = _WorkerConnection._(
+        isolate: isolate,
+        send: send,
+        receive: ready,
+        errors: errors,
+      );
       errors.listen(connection._onError);
       return connection;
     } on Object {
@@ -498,14 +806,66 @@ class _WorkerConnection {
         ),
       );
     });
-    _send.send([id, ...message]);
+    _sendMessage([id, ...message]);
     return completer.future;
   }
 
   /// Fire-and-forget (properties/sensors); errors surface on the next frame.
   void send(List<Object?> message) {
     if (_dead) return;
-    _send.send([0, ...message]);
+    _sendMessage([0, ...message]);
+  }
+
+  void _sendMessage(List<Object?> message) {
+    final process = _process;
+    if (process == null) {
+      _send!.send(message);
+      return;
+    }
+    unawaited(() async {
+      try {
+        process.stdin.writeln(jsonEncode(message));
+        await process.stdin.flush();
+      } on Object catch (error) {
+        _fail(EffectScriptException('could not send to effect worker: $error'));
+      }
+    }());
+  }
+
+  void _onProcessLine(String line) {
+    if (_dead || !line.startsWith(_processWorkerPrefix)) return;
+    try {
+      final message = jsonDecode(line.substring(_processWorkerPrefix.length));
+      if (message is Map && message['ready'] == true) {
+        final handshake = _handshake;
+        if (handshake != null && !handshake.isCompleted) {
+          handshake.complete();
+        }
+        return;
+      }
+      _onMessage(message);
+    } on Object catch (error) {
+      _fail(EffectScriptException('invalid effect worker response: $error'));
+    }
+  }
+
+  void _captureStderr(String line) {
+    _stderrText = '$_stderrText$line\n';
+    if (_stderrText.length > 8192) {
+      _stderrText = _stderrText.substring(_stderrText.length - 8192);
+    }
+  }
+
+  void _onProcessExit(int code) {
+    if (_dead) return;
+    final detail = _stderrText.trim();
+    _fail(
+      EffectScriptException(
+        detail.isEmpty
+            ? 'effect worker exited with code $code'
+            : 'effect worker exited with code $code: $detail',
+      ),
+    );
   }
 
   void _onMessage(dynamic message) {
@@ -535,6 +895,10 @@ class _WorkerConnection {
   void _fail(Object error) {
     if (_dead) return;
     _dead = true;
+    final handshake = _handshake;
+    if (handshake != null && !handshake.isCompleted) {
+      handshake.completeError(error);
+    }
     for (final t in _timers.values) {
       t.cancel();
     }
@@ -543,9 +907,12 @@ class _WorkerConnection {
       if (!c.isCompleted) c.completeError(error);
     }
     _pending.clear();
-    _isolate.kill(priority: Isolate.immediate);
-    _receive.close();
-    _errors.close();
+    _isolate?.kill(priority: Isolate.immediate);
+    _process?.kill(ProcessSignal.sigkill);
+    _receive?.close();
+    _errors?.close();
+    unawaited(_stdout?.cancel());
+    unawaited(_stderr?.cancel());
   }
 
   void close() => _fail(const EffectScriptException('Effect unloaded.'));
@@ -556,6 +923,18 @@ void _workerMain(SendPort main) {
   main.send(receive.sendPort);
   _JsEffect? runtime;
   Object? pendingError;
+
+  // Fast-path state of the effect being drawn: the previous fast canvas is
+  // mutated in place every frame ("double buffer" of one retained canvas);
+  // each transfer publishes a per-frame copy, so the UI isolate never touches
+  // this memory. Null canvas = the general replay drew the previous frame,
+  // so the next frame starts over from opaque black.
+  Uint32List? fastCanvas;
+  SimpleRasterState fastState = const SimpleRasterState();
+
+  // Where the LED colors are sampled (the runner sends the points once its
+  // config changes; null = the app samples the returned frame itself).
+  List<(LightDeviceId, int, int)>? samplePoints;
 
   void reply(int id, bool ok, Object? payload) {
     main.send([id, ok, payload]);
@@ -574,7 +953,31 @@ void _workerMain(SendPort main) {
             message[3] as String,
             (message[4] as Map).cast<String, Object?>(),
           );
+          fastCanvas = null;
+          fastState = const SimpleRasterState();
           reply(id, true, null);
+        case 'points':
+          final raw = message.length > 2 ? message[2] : null;
+          if (raw == null) {
+            samplePoints = null;
+            break;
+          }
+          final points = <(LightDeviceId, int, int)>[];
+          for (final entry in raw is List ? raw : const []) {
+            if (entry is! List ||
+                entry.length != 3 ||
+                entry[0] is! String ||
+                entry[1] is! int ||
+                entry[2] is! int) {
+              throw const FormatException('invalid sample point');
+            }
+            points.add((
+              LightDeviceId.values.byName(entry[0] as String),
+              entry[1] as int,
+              entry[2] as int,
+            ));
+          }
+          samplePoints = points;
         case 'frame':
           final error = pendingError;
           pendingError = null;
@@ -583,10 +986,42 @@ void _workerMain(SendPort main) {
           if (js == null) throw const EffectScriptException('no effect');
           final bytes = js.renderOps((message[2] as num).toDouble());
           final logs = js.drainLog();
+          final raster = fastCanvas == null
+              ? SimpleCanvasRaster.rasterInto(
+                  Uint32List(
+                    SimpleCanvasRaster.width * SimpleCanvasRaster.height,
+                  ),
+                  bytes,
+                  firstFrame: true,
+                )
+              : SimpleCanvasRaster.rasterInto(
+                  fastCanvas!,
+                  bytes,
+                  firstFrame: false,
+                  state: fastState,
+                );
+          final simple = raster != null;
+          if (simple) {
+            fastCanvas = raster.pixels;
+            fastState = raster.state;
+          } else {
+            // The frame went to the general replay: drop the fast canvas.
+            fastCanvas = null;
+          }
+          final points = samplePoints;
+          final colors = simple && points != null
+              ? sampleCanvasPixels(points, raster.pixels)
+              : null;
           reply(id, true, [
-            TransferableTypedData.fromList([bytes]),
+            // Fast frames transfer the RGBA pixels; slow frames the raw ops.
+            TransferableTypedData.fromList([
+              simple ? raster.pixels : bytes as TypedData,
+            ]),
+            simple,
+            simple ? raster.opCount : -1,
             logs,
             js.lastScriptTime.inMicroseconds,
+            colors,
           ]);
         case 'property':
           try {
@@ -608,6 +1043,7 @@ void _workerMain(SendPort main) {
         case 'dispose':
           runtime?.dispose();
           runtime = null;
+          fastCanvas = null;
           reply(id, true, null);
           receive.close();
       }

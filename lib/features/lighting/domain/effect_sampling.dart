@@ -1,6 +1,8 @@
 // Lighting module domain (pure Dart): samples an effect frame at each LED
 // position (plan §5.5). Fans, case, board and memory all read the same canvas.
 
+import 'dart:typed_data';
+
 import 'effect_runtime.dart';
 import 'led_layout.dart';
 import 'light_device.dart';
@@ -16,8 +18,15 @@ import 'rgb.dart';
 Map<LightDeviceId, List<Rgb>> sampleEffectFrame(
   LightingConfig config,
   EffectFrame frame,
-) {
-  final out = <LightDeviceId, List<Rgb>>{};
+) => _colorsByPoint(canvasSamplePoints(config), frame.pixelAt);
+
+/// Where the frame is sampled for [config]: one `(device, x, y)` entry per LED
+/// of every enabled canvas device, in driver order, with the pixels given in
+/// driver order too. The GPU is the average of its rectangle; the colors are
+/// assembled by [sampleEffectFrame] (byte frame) and [sampleCanvasPixels]
+/// (`Uint32List` canvas, on the render isolate).
+List<(LightDeviceId, int, int)> canvasSamplePoints(LightingConfig config) {
+  final out = <(LightDeviceId, int, int)>[];
   if (config.argbOff) return out;
   for (final id in LightDeviceId.values) {
     if (!id.isSupported) continue;
@@ -27,29 +36,61 @@ Map<LightDeviceId, List<Rgb>> sampleEffectFrame(
       // The GPU has one color: the average of its rectangle.
       const cols = 12, rows = 8;
       final rect = d.placement;
-      var r = 0, g = 0, b = 0;
       for (var iy = 0; iy < rows; iy++) {
         final y = rect.y + (iy + 0.5) * rect.h / rows;
         for (var ix = 0; ix < cols; ix++) {
           final x = rect.x + (ix + 0.5) * rect.w / cols;
-          final (pr, pg, pb) = frame.pixelAt(x.floor(), y.floor());
-          r += pr;
-          g += pg;
-          b += pb;
+          out.add((id, x.floor(), y.floor()));
         }
       }
-      final n = cols * rows;
-      out[id] = [Rgb((r / n).round(), (g / n).round(), (b / n).round())];
       continue;
     }
     final layout = ledLayoutFor(id, fanQuantity: config.fansOf(id));
     if (layout.length == 0) continue;
-    final colors = List<Rgb>.generate(layout.length, (i) {
+    for (var i = 0; i < layout.length; i++) {
       final (x, y) = d.placement.map(layout.leds[i]);
-      final (r, g, b) = frame.pixelAt(x.floor(), y.floor());
-      return Rgb(r, g, b);
-    }, growable: false);
-    out[id] = colors;
+      out.add((id, x.floor(), y.floor()));
+    }
+  }
+  return out;
+}
+
+/// Colors per device from [points] over a `width × height` canvas (one
+/// `0xAABBGGRR` pixel per word, little endian — the layout of
+/// `SimpleCanvasRaster`, kept as its own copy per frame on the UI isolate).
+Map<LightDeviceId, List<Rgb>> sampleCanvasPixels(
+  List<(LightDeviceId, int, int)> points,
+  Uint32List pixels, {
+  int width = canvasWidth,
+  int height = canvasHeight,
+}) => _colorsByPoint(points, (x, y) {
+  final v = pixels[(y.clamp(0, height - 1) * width) + x.clamp(0, width - 1)];
+  return ((v & 0xFF), (v >> 8) & 0xFF, (v >> 16) & 0xFF);
+});
+
+/// Groups [pixel] readings by device and turns the GPU sample grid into its
+/// single average color, like the direct frame sampler did.
+Map<LightDeviceId, List<Rgb>> _colorsByPoint(
+  List<(LightDeviceId, int, int)> points,
+  (int, int, int) Function(int x, int y) pixel,
+) {
+  final out = <LightDeviceId, List<Rgb>>{};
+  for (final (id, x, y) in points) {
+    final (r, g, b) = pixel(x, y);
+    (out[id] ??= []).add(Rgb(r, g, b));
+  }
+  final gpu = out.remove(LightDeviceId.gpu);
+  if (gpu != null && gpu.isNotEmpty) {
+    var r = 0, g = 0, b = 0;
+    for (final c in gpu) {
+      r += c.r;
+      g += c.g;
+      b += c.b;
+    }
+    final n = gpu.length;
+    out[LightDeviceId.gpu] = [
+      Rgb((r / n).round(), (g / n).round(), (b / n).round()),
+    ];
   }
   return out;
 }
