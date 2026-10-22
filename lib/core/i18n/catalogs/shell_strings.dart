@@ -118,7 +118,7 @@ class ShellStringsEn extends ShellStrings {
   String importedBackupAt(String path) =>
       'Configuration imported and applied. The previous one was saved as $path.';
   @override
-  String failed(String error) => 'Failed: $error';
+  String failed(String error) => 'Failed. Technical details: $error';
   @override
   String get invalidJson => 'The file is not valid JSON.';
   @override
@@ -202,7 +202,7 @@ class ShellStringsPt extends ShellStrings {
   String importedBackupAt(String path) =>
       'Configuração importada e aplicada. A anterior ficou em $path.';
   @override
-  String failed(String error) => 'Falhou: $error';
+  String failed(String error) => 'Falha. Detalhes técnicos: $error';
   @override
   String get invalidJson => 'O arquivo não é um JSON válido.';
   @override

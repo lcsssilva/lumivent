@@ -2,7 +2,6 @@
 abstract class ExploreStrings {
   const ExploreStrings();
 
-  String get title;
   String get subtitle;
 
   // Import buttons and dialogs.
@@ -70,7 +69,6 @@ class ExploreStringsEn extends ExploreStrings {
   const ExploreStringsEn();
 
   @override
-  String get title => 'Explore';
   @override
   String get subtitle => 'Local library of HTML/Canvas effects';
   @override
@@ -141,7 +139,8 @@ class ExploreStringsEn extends ExploreStrings {
   String importDoneWithError(String summary, String error) =>
       '$summary. $error';
   @override
-  String importFailed(String error) => 'Import failed: $error';
+  String importFailed(String error) =>
+      'Import failed. Technical details: $error';
   @override
   String effectApplied(String name) =>
       '“$name” applied. Adjust the controls in Lighting.';
@@ -156,7 +155,8 @@ class ExploreStringsEn extends ExploreStrings {
   @override
   String effectRemoved(String name) => '“$name” removed.';
   @override
-  String removeFailed(String error) => 'Could not remove: $error';
+  String removeFailed(String error) =>
+      'Could not remove the effect. Technical details: $error';
   @override
   String importSummary({
     required int imported,
@@ -186,9 +186,9 @@ class ExploreStringsEn extends ExploreStrings {
           'catalog_en.json not found in the cache folder: without it there is '
               'no way to tell which effects are paid.',
         'noEffectHtml' => 'No effect.html found in $path.',
-        'invalidZip' => '$path: invalid ZIP ($error)',
+        'invalidZip' => '$path: invalid ZIP. Technical details: $error',
         'noHtmlInZip' => 'The ZIP has no HTML files.',
-        _ => '$path: $error',
+        _ => '$path. Technical details: $error',
       };
 }
 
@@ -196,7 +196,6 @@ class ExploreStringsPt extends ExploreStrings {
   const ExploreStringsPt();
 
   @override
-  String get title => 'Explore';
   @override
   String get subtitle => 'Biblioteca local de efeitos HTML/Canvas';
   @override
@@ -267,7 +266,8 @@ class ExploreStringsPt extends ExploreStrings {
   String importDoneWithError(String summary, String error) =>
       '$summary. $error';
   @override
-  String importFailed(String error) => 'Falha na importação: $error';
+  String importFailed(String error) =>
+      'Falha na importação. Detalhes técnicos: $error';
   @override
   String effectApplied(String name) =>
       '“$name” aplicado. Ajuste os controles em Iluminação.';
@@ -282,7 +282,8 @@ class ExploreStringsPt extends ExploreStrings {
   @override
   String effectRemoved(String name) => '“$name” removido.';
   @override
-  String removeFailed(String error) => 'Não foi possível remover: $error';
+  String removeFailed(String error) =>
+      'Não foi possível remover o efeito. Detalhes técnicos: $error';
   @override
   String importSummary({
     required int imported,
@@ -314,8 +315,8 @@ class ExploreStringsPt extends ExploreStrings {
           'catalog_en.json não encontrado na pasta cache: sem ele não dá para '
               'saber quais efeitos são pagos.',
         'noEffectHtml' => 'Nenhum effect.html encontrado em $path.',
-        'invalidZip' => '$path: ZIP inválido ($error)',
+        'invalidZip' => '$path: ZIP inválido. Detalhes técnicos: $error',
         'noHtmlInZip' => 'O ZIP não tem arquivos HTML.',
-        _ => '$path: $error',
+        _ => '$path. Detalhes técnicos: $error',
       };
 }

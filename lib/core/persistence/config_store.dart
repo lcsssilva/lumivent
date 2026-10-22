@@ -6,6 +6,7 @@
 // Each module reads and writes only its own section (through its repository),
 // like module tables in a modular monolith. Writes are atomic (temporary file
 // plus rename) and are serialized.
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -21,6 +22,26 @@ Directory defaultConfigDir([Map<String, String>? env]) {
 
 typedef JsonMap = Map<String, Object?>;
 
+/// A failure to persist the configuration file.
+class ConfigWriteFailure implements Exception {
+  const ConfigWriteFailure({
+    required this.section,
+    required this.cause,
+    required this.stackTrace,
+  });
+
+  /// JSON section name that was being written; whole-file writes (import) are
+  /// recorded as `configuration`.
+  final String section;
+
+  /// The original write error.
+  final Object cause;
+  final StackTrace stackTrace;
+
+  @override
+  String toString() => 'Failed to save $section: $cause';
+}
+
 class ConfigStore {
   ConfigStore._(this.dir, this._data);
 
@@ -29,6 +50,22 @@ class ConfigStore {
   final Directory dir;
   final JsonMap _data;
   Future<void> _queue = Future.value();
+
+  // One piece of write-failure state: set by a failed write, cleared only by
+  // a later successful write (recovery) or by reporting it once at flush.
+  ConfigWriteFailure? _writeFailure;
+
+  /// Emits a failure each time a write fails (a consecutive failure is a new
+  /// event, it is not kept silently). Successful writes emit nothing; the
+  /// failure is already visible through [flush] when rogue state would be
+  /// lost at shutdown.
+  // Synchronous delivery: a failure is announced in the order the writes
+  // finish, including while a test awaits the failed write itself.
+  late final _writeFailures = StreamController<ConfigWriteFailure>.broadcast(
+    sync: true,
+  );
+
+  Stream<ConfigWriteFailure> get writeFailures => _writeFailures.stream;
 
   File get file => File('${dir.path}/config.json');
 
@@ -63,9 +100,7 @@ class ConfigStore {
   Future<void> saveSection(String name, JsonMap value) {
     _data[name] = Map.of(value);
     final snapshot = {..._data, 'version': schemaVersion};
-    final next = _queue.then((_) => _write(snapshot));
-    _queue = next.catchError((_) {});
-    return next;
+    return _enqueue(name, () => _write(snapshot));
   }
 
   /// The whole configuration as it goes to disk (export). A deep copy.
@@ -80,18 +115,46 @@ class ConfigStore {
       _data[key] = value;
     }
     final snapshot = {..._data, 'version': schemaVersion};
-    final next = _queue.then((_) async {
+    return _enqueue('configuration', () async {
       if (backupSuffix != null && await file.exists()) {
         await file.copy('${file.path}.$backupSuffix');
       }
       await _write(snapshot);
     });
-    _queue = next.catchError((_) {});
-    return next;
   }
 
-  /// Waits for pending writes (used during shutdown).
-  Future<void> flush() => _queue;
+  /// Waits for pending writes (used during shutdown) and reports a failure
+  /// that still was not recovered by a later successful write, exactly once.
+  Future<void> flush() async {
+    await _queue;
+    final failure = _writeFailure;
+    _writeFailure = null;
+    if (failure != null) {
+      Error.throwWithStackTrace(failure, failure.stackTrace);
+    }
+  }
+
+  Future<void> _enqueue(String section, Future<void> Function() write) {
+    final next = _queue.then((_) async {
+      try {
+        await write();
+        _writeFailure = null;
+      } on Object catch (error, stackTrace) {
+        final failure = ConfigWriteFailure(
+          section: section,
+          cause: error,
+          stackTrace: stackTrace,
+        );
+        _writeFailure = failure;
+        _writeFailures.add(failure);
+        // The caller keeps seeing the write error type it caused, wrapped to
+        // carry the section name and the original stack trace.
+        Error.throwWithStackTrace(failure, stackTrace);
+      }
+    });
+    _queue = next.then<void>((_) {}, onError: (Object _) {});
+    return next;
+  }
 
   Future<void> _write(JsonMap data) async {
     await dir.create(recursive: true);
@@ -103,6 +166,11 @@ class ConfigStore {
     await tmp.rename(file.path);
   }
 }
+
+/// Emits one failure event per failed write, for user-visible notifications.
+final configWriteFailuresProvider = StreamProvider<ConfigWriteFailure>((ref) {
+  return ref.watch(configStoreProvider).writeFailures;
+});
 
 final configStoreProvider = Provider<ConfigStore>(
   (ref) => throw UnimplementedError('configStoreProvider'),

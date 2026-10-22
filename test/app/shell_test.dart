@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -350,5 +351,62 @@ void main() {
         reason: 'subtitle ${route.name}',
       );
     }
+  });
+
+  // A failed configuration write is notified by the shell. Like the restart
+  // test above, the real IO needs runAsync to advance on the fake clock.
+  testWidgets('a failed configuration write shows the notification', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.pump();
+
+    // Writes fail while the config file path exists as a directory: the
+    // rename of the temporary file cannot replace a directory. The failure
+    // is the expected subject of the test and the shell announces it, so it
+    // is not re-checked here.
+    store.file.deleteSync();
+    Directory('${tmp.path}/config.json').createSync();
+    await tester.runAsync(
+      () => store
+          .saveSection('lighting', {'argbOff': true})
+          .catchError((Object _) {}),
+    );
+    await tester.pump();
+    expect(
+      find.textContaining('Não foi possível salvar suas alterações'),
+      findsOneWidget,
+    );
+
+    // A later successful write recovers the pending change on disk.
+    Directory('${tmp.path}/config.json').deleteSync();
+    final onDisk = await tester.runAsync(() async {
+      await store.saveSection('lighting', {'argbOff': false});
+      return jsonDecode(await store.file.readAsString());
+    });
+    expect(onDisk['lighting'], {'argbOff': false});
+  });
+
+  testWidgets('the notification is localized in English', (tester) async {
+    // The preferences provider reads the store on first access, so switching
+    // the language here (before the first frame) applies at once.
+    await tester.runAsync(
+      () => store.saveSection(
+        'preferences',
+        const Preferences(language: AppLanguage.en).toJson(),
+      ),
+    );
+    await pumpApp(tester);
+    await tester.pump();
+
+    store.file.deleteSync();
+    Directory('${tmp.path}/config.json').createSync();
+    await tester.runAsync(
+      () => store
+          .saveSection('lighting', {'argbOff': true})
+          .catchError((Object _) {}),
+    );
+    await tester.pump();
+    expect(find.textContaining('Could not save your changes'), findsOneWidget);
   });
 }

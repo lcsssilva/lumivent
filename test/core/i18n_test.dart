@@ -239,7 +239,7 @@ void main() {
           'effect.zip',
           error: 'truncated',
         ),
-        'effect.zip: invalid ZIP (truncated)',
+        'effect.zip: invalid ZIP. Technical details: truncated',
       );
       expect(
         AppStrings.pt.explore.importIssue(
@@ -247,15 +247,34 @@ void main() {
           'effect.zip',
           error: 'truncated',
         ),
-        'effect.zip: ZIP inválido (truncated)',
+        'effect.zip: ZIP inválido. Detalhes técnicos: truncated',
       );
       expect(
         AppStrings.en.explore.importIssue('unknown', 'effect.zip', error: 'x'),
-        'effect.zip: x',
+        'effect.zip. Technical details: x',
       );
       expect(
         AppStrings.pt.explore.importIssue('unknown', 'effect.zip', error: 'x'),
-        'effect.zip: x',
+        'effect.zip. Detalhes técnicos: x',
+      );
+    });
+
+    test('runtime errors label technical details in both languages', () {
+      expect(
+        AppStrings.en.lighting.effectLoadFailed('Bad state'),
+        contains('Technical details: Bad state'),
+      );
+      expect(
+        AppStrings.pt.lighting.effectLoadFailed('Bad state'),
+        contains('Detalhes técnicos: Bad state'),
+      );
+      expect(
+        AppStrings.en.system.autostartFailed('systemctl', 'failed'),
+        contains('Technical details: systemctl: failed'),
+      );
+      expect(
+        AppStrings.pt.system.autostartFailed('systemctl', 'failed'),
+        contains('Detalhes técnicos: systemctl: failed'),
       );
     });
   });

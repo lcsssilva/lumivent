@@ -192,7 +192,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            e.title,
+            strings.shell.explore,
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 2),
@@ -284,7 +284,10 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('$err'),
+                    Text(
+                      '${strings.common.technicalDetails}: $err',
+                      style: const TextStyle(color: WeColors.muted),
+                    ),
                     const SizedBox(height: 12),
                     OutlinedButton(
                       onPressed: () => ref.invalidate(installedEffectsProvider),

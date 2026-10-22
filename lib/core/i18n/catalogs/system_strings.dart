@@ -127,7 +127,9 @@ class SystemStringsEn extends SystemStrings {
   @override
   String loopValue(String family, String value) => '$family $value';
   @override
-  String autostartFailed(String command, String stderr) => '$command: $stderr';
+  String autostartFailed(String command, String stderr) =>
+      'Could not update the startup setting.\n'
+      'Technical details: $command: $stderr';
 }
 
 class SystemStringsPt extends SystemStrings {
@@ -210,5 +212,7 @@ class SystemStringsPt extends SystemStrings {
   @override
   String loopValue(String family, String value) => '$family $value';
   @override
-  String autostartFailed(String command, String stderr) => '$command: $stderr';
+  String autostartFailed(String command, String stderr) =>
+      'Não foi possível atualizar a inicialização.\n'
+      'Detalhes técnicos: $command: $stderr';
 }

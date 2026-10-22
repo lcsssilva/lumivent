@@ -35,6 +35,9 @@ class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard> {
     setState(() => _busy = true);
     try {
       await job();
+    } on ConfigWriteFailure {
+      // The shell already notifies every configuration write failure; this
+      // card would only show the same problem a second time.
     } on Object catch (e) {
       _tell(e is FormatException ? e.message : strings.shell.failed('$e'));
     } finally {

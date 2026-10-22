@@ -11,6 +11,8 @@ import 'package:flutter/widgets.dart';
 import 'app/bootstrap.dart';
 import 'app/bootstrap_failure.dart';
 import 'core/persistence/config_store.dart';
+import 'features/lighting/infrastructure/html_effects/runtime.dart'
+    show runHtmlEffectWorker;
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +26,17 @@ Future<void> main(List<String> args) async {
     stderr.writeln(stack);
     return true;
   };
+
+  if (args.contains('--html-effect-worker')) {
+    try {
+      await runHtmlEffectWorker();
+    } on Object catch (error, stack) {
+      stderr.writeln('Lumivent effect worker failed: $error');
+      stderr.writeln(stack);
+      exitCode = 1;
+    }
+    exit(exitCode);
+  }
 
   try {
     await bootstrap(args);

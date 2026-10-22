@@ -37,7 +37,7 @@ class _StartupCardState extends ConsumerState<StartupCard> {
         e.command,
         e.stderr,
       ),
-      _ => '$error',
+      _ => '${strings.common.technicalDetails}: $error',
     };
     return WeCard(
       title: s.startup,

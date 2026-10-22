@@ -83,8 +83,17 @@ static gboolean my_application_local_command_line(GApplication* application,
   MyApplication* self = MY_APPLICATION(application);
   // Strip out the first argument as it is the binary name.
   self->dart_entrypoint_arguments = g_strdupv(*arguments + 1);
+  gboolean is_effect_worker =
+      g_strv_contains(self->dart_entrypoint_arguments, "--html-effect-worker");
   self->start_hidden =
+      is_effect_worker ||
       g_strv_contains(self->dart_entrypoint_arguments, "--minimized");
+  if (is_effect_worker) {
+    g_application_set_flags(
+        application,
+        static_cast<GApplicationFlags>(g_application_get_flags(application) |
+                                       G_APPLICATION_NON_UNIQUE));
+  }
 
   g_autoptr(GError) error = nullptr;
   if (!g_application_register(application, nullptr, &error)) {

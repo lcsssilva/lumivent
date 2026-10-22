@@ -20,6 +20,18 @@ import 'desktop_actions.dart';
 const _trayIcon = 'assets/icons/tray.png';
 const _trayIconOff = 'assets/icons/tray-off.png';
 
+/// Flushes pending configuration writes at shutdown. A write failure that
+/// still was not recovered is logged with its technical details (cause and
+/// stack trace) and shutdown continues either way.
+@visibleForTesting
+Future<void> flushPendingWrites(ConfigStore store) async {
+  try {
+    await store.flush();
+  } on ConfigWriteFailure catch (failure) {
+    debugPrint('$failure\n${failure.stackTrace}');
+  }
+}
+
 class DesktopController with WindowListener implements DesktopActions {
   DesktopController(this._container);
 
@@ -148,8 +160,14 @@ class DesktopController with WindowListener implements DesktopActions {
     if (_quitting) return;
     _quitting = true;
     windowManager.removeListener(this);
-    await _container.read(engineProvider).shutdown();
-    await _container.read(configStoreProvider).flush();
+    try {
+      await _container.read(engineProvider).shutdown();
+    } on Object catch (error, stackTrace) {
+      // The shutdown must continue: the tray icon, the prevent-close flag,
+      // and the window are released below.
+      debugPrint('engine shutdown failed: $error\n$stackTrace');
+    }
+    await flushPendingWrites(_container.read(configStoreProvider));
     _tray?.setVisible(false);
     _tray?.dispose();
     _tray = null;

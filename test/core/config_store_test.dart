@@ -46,6 +46,110 @@ void main() {
     },
   );
 
+  test('a failed write throws the write failure, mutates the section in memory '
+      'and reports exactly once at flush while it stays unrecovered', () async {
+    final blocked = File('${tmp.path}/blocked')
+      ..writeAsStringSync('not a directory');
+    final store = await ConfigStore.open(Directory(blocked.path));
+
+    final failures = <ConfigWriteFailure>[];
+    store.writeFailures.listen(failures.add);
+
+    await expectLater(
+      store.saveSection('preferences', {'effectsFps': 60}),
+      throwsA(
+        isA<ConfigWriteFailure>().having(
+          (f) => f.cause,
+          'cause',
+          isA<FileSystemException>(),
+        ),
+      ),
+    );
+    // The observer sees the failure without depending on flush().
+    expect(failures, hasLength(1));
+
+    await expectLater(store.flush(), throwsA(isA<ConfigWriteFailure>()));
+    // Reported exactly once.
+    await expectLater(store.flush(), completes);
+  });
+
+  test('a later successful write recovers the failed change', () async {
+    final blocked = File('${tmp.path}/blocked')
+      ..writeAsStringSync('not a directory');
+    final store = await ConfigStore.open(Directory(blocked.path));
+
+    await expectLater(
+      store.saveSection('preferences', {'effectsFps': 60}),
+      throwsA(isA<ConfigWriteFailure>()),
+    );
+
+    blocked.deleteSync();
+    Directory(blocked.path).createSync();
+    await store.saveSection('preferences', {'effectsFps': 30});
+    // The successful write already includes the failed change (the snapshot
+    // is the whole file), so there is nothing left to report at flush.
+    expect(store.section('preferences'), {'effectsFps': 30});
+    await store.flush();
+  });
+
+  test('consecutive failures are each notified as a new event', () async {
+    final blocked = File('${tmp.path}/blocked')
+      ..writeAsStringSync('not a directory');
+    final store = await ConfigStore.open(Directory(blocked.path));
+
+    final failures = <ConfigWriteFailure>[];
+    store.writeFailures.listen(failures.add);
+
+    await expectLater(
+      store.saveSection('preferences', {'effectsFps': 60}),
+      throwsA(isA<ConfigWriteFailure>()),
+    );
+    await expectLater(
+      store.saveSection('lighting', {'argbOff': true}),
+      throwsA(isA<ConfigWriteFailure>()),
+    );
+    await expectLater(store.flush(), throwsA(isA<ConfigWriteFailure>()));
+
+    expect(failures.map((failure) => failure.section), [
+      'preferences',
+      'lighting',
+    ]);
+  });
+
+  test('the message names the section or the whole configuration', () async {
+    final blocked = File('${tmp.path}/blocked')
+      ..writeAsStringSync('not a directory');
+    final store = await ConfigStore.open(Directory(blocked.path));
+
+    await expectLater(
+      store.saveSection('preferences', {'effectsFps': 60}),
+      throwsA(
+        isA<ConfigWriteFailure>()
+            .having((f) => f.section, 'section', 'preferences')
+            .having(
+              (f) => f.toString(),
+              'toString()',
+              startsWith('Failed to save preferences'),
+            ),
+      ),
+    );
+
+    await expectLater(
+      store.replaceSections({
+        'lighting': {'argbOff': true},
+      }),
+      throwsA(
+        isA<ConfigWriteFailure>()
+            .having((f) => f.section, 'section', 'configuration')
+            .having(
+              (f) => f.toString(),
+              'toString()',
+              startsWith('Failed to save configuration:'),
+            ),
+      ),
+    );
+  });
+
   test('corrupted file becomes .bad and the store starts empty', () async {
     File('${tmp.path}/config.json').writeAsStringSync('{ this is not json');
     final store = await ConfigStore.open(tmp);

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/i18n/app_strings_scope.dart';
+import '../../core/persistence/config_store.dart';
 import '../../features/explore/explore.dart';
 import '../../features/fans/fans.dart';
 import '../../features/lighting/lighting.dart';
@@ -10,11 +12,26 @@ import 'settings_page.dart';
 import 'sidebar.dart';
 import 'topbar.dart';
 
-class Shell extends ConsumerWidget {
+class Shell extends ConsumerStatefulWidget {
   const Shell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<Shell> createState() => _ShellState();
+}
+
+class _ShellState extends ConsumerState<Shell> {
+  @override
+  Widget build(BuildContext context) {
+    // One notification per failed write: the provider emits a new event for
+    // consecutive failures, and provider notifications reach the listener
+    // without waiting for an unrelated frame or being dropped when a later
+    // write succeeds first.
+    ref.listen(configWriteFailuresProvider, (_, event) {
+      if (event.value == null || !mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(context.strings.common.configWriteFailed)),
+      );
+    });
     final route = ref.watch(routeProvider);
     return Scaffold(
       body: Row(

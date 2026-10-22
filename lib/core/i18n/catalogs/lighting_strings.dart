@@ -203,7 +203,8 @@ class LightingStringsEn extends LightingStrings {
   @override
   String get loadingEffects => 'Loading installed effects…';
   @override
-  String libraryError(String error) => 'Could not read the library: $error';
+  String libraryError(String error) =>
+      'Could not read the library.\nTechnical details: $error';
   @override
   String get effectNotInstalled =>
       'This effect is not installed. Import it in the Explore tab.';
@@ -214,7 +215,8 @@ class LightingStringsEn extends LightingStrings {
   @override
   String fixedColorTitle(String device) => 'Solid color · $device';
   @override
-  String effectLoadFailed(String error) => 'Could not load the effect: $error';
+  String effectLoadFailed(String error) =>
+      'Could not load the effect.\nTechnical details: $error';
   @override
   String effectPaused(int ms) => 'Effect paused: frame took $ms ms.';
   @override
@@ -442,7 +444,7 @@ class LightingStringsPt extends LightingStrings {
   String get loadingEffects => 'Carregando efeitos instalados…';
   @override
   String libraryError(String error) =>
-      'Não foi possível ler a biblioteca: $error';
+      'Não foi possível ler a biblioteca.\nDetalhes técnicos: $error';
   @override
   String get effectNotInstalled =>
       'Este efeito não está instalado. Importe-o na aba Explore.';
@@ -453,7 +455,8 @@ class LightingStringsPt extends LightingStrings {
   @override
   String fixedColorTitle(String device) => 'Cor fixa · $device';
   @override
-  String effectLoadFailed(String error) => 'Falha ao carregar o efeito: $error';
+  String effectLoadFailed(String error) =>
+      'Falha ao carregar o efeito.\nDetalhes técnicos: $error';
   @override
   String effectPaused(int ms) => 'Efeito pausado: quadro demorou $ms ms.';
   @override
