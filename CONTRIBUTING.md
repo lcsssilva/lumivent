@@ -43,14 +43,22 @@ in the README.
 From the repository root:
 
 ```sh
+dart run build_runner build
 dart format lib test tool
 flutter analyze
 flutter test
 ```
 
-CI runs the format check, `flutter analyze` and `flutter test` on every push and
-pull request. A pull request with failing tests or analyzer warnings is not
-merged.
+CI runs the generated-code check, the format check, `flutter analyze` and
+`flutter test` on every push and pull request. A pull request with failing
+tests or analyzer warnings is not merged.
+
+### Generated code
+
+Some domain models use [freezed](https://pub.dev/packages/freezed). The generated
+`*.freezed.dart` files are committed: run `dart run build_runner build` after
+changing a `@freezed` class and include the regenerated file in the same commit.
+Never edit `*.freezed.dart` by hand, and do not ignore those files in Git.
 
 ### Tests
 
