@@ -101,11 +101,18 @@ Uint8List? _fromHex(String hex) {
       : (ctrl: ctrl, log: log, error: null);
 }
 
+/// Starts the helper process; replaced in tests.
+typedef NvmeProcessStarter = Future<Process> Function(
+  String executable,
+  List<String> arguments,
+);
+
 class NvmeSsdReader implements SsdReader {
   NvmeSsdReader({
     this.sysfsRoot = '/sys',
     this._helper,
     this.timeout = const Duration(seconds: 5),
+    this._startProcess = Process.start,
   });
 
   final String sysfsRoot;
@@ -113,6 +120,7 @@ class NvmeSsdReader implements SsdReader {
 
   /// Helper path; `null` searches in [nvmeHelperCandidates].
   final String? _helper;
+  final NvmeProcessStarter _startProcess;
 
   @override
   Future<List<SsdInfo>> read() async {
@@ -168,7 +176,7 @@ class NvmeSsdReader implements SsdReader {
     }
     final ProcessResult r;
     try {
-      r = await Process.run(helper, ctrls).timeout(timeout);
+      r = await _run(helper, ctrls);
     } on Object catch (e) {
       return (
         const <String, Never>{},
@@ -190,6 +198,25 @@ class NvmeSsdReader implements SsdReader {
               stderr: (r.stderr as String).trim(),
             ),
     );
+  }
+
+  /// Runs the helper and collects its output. On timeout the process is killed
+  /// (it holds CAP_SYS_ADMIN and would otherwise keep running, piling up with
+  /// the next periodic reads) and a [TimeoutException] is thrown.
+  Future<ProcessResult> _run(String helper, List<String> ctrls) async {
+    final process = await _startProcess(helper, ctrls);
+    final stdout = process.stdout.transform(utf8.decoder).join();
+    final stderr = process.stderr.transform(utf8.decoder).join();
+    try {
+      final exitCode = await process.exitCode.timeout(timeout);
+      return ProcessResult(process.pid, exitCode, await stdout, await stderr);
+    } on TimeoutException {
+      process.kill(ProcessSignal.sigkill);
+      // Drain the pipes so the killed process leaves nothing pending.
+      unawaited(stdout.then<void>((_) {}, onError: (Object _) {}));
+      unawaited(stderr.then<void>((_) {}, onError: (Object _) {}));
+      rethrow;
+    }
   }
 
   static String? _str(String path) {

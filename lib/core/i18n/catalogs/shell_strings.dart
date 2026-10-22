@@ -45,6 +45,14 @@ abstract class ShellStrings {
   String get notAppConfig;
   String get newerVersion;
   String get noKnownSections;
+  String fileTooLarge(int megabytes);
+
+  // Startup failure screen (shown before preferences can be read).
+  String get startupFailedTitle;
+  String get startupFailedHint;
+  String configurationAt(String path);
+  String get openConfigurationFolder;
+  String openFolderFailed(String error);
 
   /// Placeholder card title for areas not built yet.
   String get underConstruction;
@@ -129,6 +137,22 @@ class ShellStringsEn extends ShellStrings {
   String get noKnownSections =>
       'The file has no preferences, lighting, or fans.';
   @override
+  String fileTooLarge(int megabytes) =>
+      'The file is larger than $megabytes MB and is not a configuration.';
+  @override
+  String get startupFailedTitle => 'Lumivent could not start';
+  @override
+  String get startupFailedHint =>
+      'The error was written to the terminal. Check the configuration or open '
+      'its folder to fix the problem.';
+  @override
+  String configurationAt(String path) => 'Configuration: $path';
+  @override
+  String get openConfigurationFolder => 'Open configuration folder';
+  @override
+  String openFolderFailed(String error) =>
+      'Could not open the folder. Technical details: $error';
+  @override
   String get underConstruction => 'Under construction';
   @override
   String phase(int phase) => 'Phase $phase';
@@ -212,6 +236,22 @@ class ShellStringsPt extends ShellStrings {
   @override
   String get noKnownSections =>
       'O arquivo não tem preferências, iluminação nem fans.';
+  @override
+  String fileTooLarge(int megabytes) =>
+      'O arquivo tem mais de $megabytes MB e não é uma configuração.';
+  @override
+  String get startupFailedTitle => 'O Lumivent não conseguiu iniciar';
+  @override
+  String get startupFailedHint =>
+      'O erro foi escrito no terminal. Confira a configuração ou abra a pasta '
+      'dela para corrigir o problema.';
+  @override
+  String configurationAt(String path) => 'Configuração: $path';
+  @override
+  String get openConfigurationFolder => 'Abrir pasta de configuração';
+  @override
+  String openFolderFailed(String error) =>
+      'Não foi possível abrir a pasta. Detalhes técnicos: $error';
   @override
   String get underConstruction => 'Em construção';
   @override

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import '../../devices/devices.dart' show Alv2HubProxy;
 import '../domain/metrics.dart';
@@ -15,8 +16,10 @@ import '../domain/metrics.dart';
 /// come after monitoring in the list, fans stop first and send the exit duty
 /// before the hub closes.
 class Alv2RpmSource implements SensorSource {
-  Alv2RpmSource(this._hub);
+  Alv2RpmSource(this._hub, {void Function(String message)? log})
+    : _log = log ?? stderr.writeln;
   final Alv2HubProxy _hub;
+  final void Function(String message) _log;
 
   /// While the lighting streams to the hub, single RPM readings alternate
   /// between ~0.9× and ~1.12× the real speed on every group at once (the
@@ -28,6 +31,10 @@ class Alv2RpmSource implements SensorSource {
   Map<String, double> _last = const {};
   bool _reading = false;
   bool _disposed = false;
+
+  /// The error already logged for the current run of failures; reset by a
+  /// successful read so a later failure is reported again.
+  String? _loggedError;
 
   @override
   Map<String, double> read() {
@@ -46,12 +53,15 @@ class Alv2RpmSource implements SensorSource {
         _last = const {};
         return;
       }
+      _loggedError = null;
       _history.add(rpm);
       if (_history.length > window) _history.removeAt(0);
       _last = {
         for (var g = 0; g < rpm.length; g++) Metrics.alv2Rpm(g): _mean(g),
       };
-    } on Object {
+    } on Object catch (e) {
+      if (_loggedError != '$e') _log('monitoring: Alv2RpmSource: $e');
+      _loggedError = '$e';
       _history.clear();
       _last = const {};
     } finally {

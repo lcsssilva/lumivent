@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_connection.dart';
@@ -120,4 +121,98 @@ ctx.fillStyle = "red";
       completes,
     );
   }, skip: _skip);
+
+  group('request timeout', () {
+    const timeout = Duration(milliseconds: 750);
+    const stall = Duration(seconds: 2);
+
+    late ReceivePort port;
+    late _FakeStopwatch stopwatch;
+    late EffectWorkerConnection connection;
+
+    setUp(() {
+      port = ReceivePort();
+      stopwatch = _FakeStopwatch();
+      connection = EffectWorkerConnection.withPort(
+        port.sendPort,
+        stopwatch: () => stopwatch,
+      );
+    });
+
+    tearDown(() {
+      connection.close();
+      port.close();
+    });
+
+    Future<Object?> outcome(Future<Object?> request) =>
+        request.then<Object?>((v) => v, onError: (Object e) => e);
+
+    final hungError = isA<EffectScriptException>().having(
+      (e) => e.message,
+      'message',
+      contains('effect hung'),
+    );
+
+    testWidgets('an on-time timeout fails immediately as hung', (tester) async {
+      final result = outcome(connection.request(['frame'], timeout: timeout));
+      stopwatch.elapsed = timeout;
+      await tester.pump(timeout);
+
+      expect(await result, hungError);
+    });
+
+    testWidgets('a stalled timer waits for a reply that is already queued', (
+      tester,
+    ) async {
+      final result = outcome(connection.request(['frame'], timeout: timeout));
+      // The main isolate was blocked: the timer fires 2 s late.
+      stopwatch.elapsed = timeout + stall;
+      await tester.pump(timeout);
+      // The queued reply is delivered right after the stalled timer.
+      connection.handleMessage([1, true, 'pong']);
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(await result, 'pong');
+    });
+
+    testWidgets('a stalled timer still fails once the grace period passes', (
+      tester,
+    ) async {
+      final result = outcome(connection.request(['frame'], timeout: timeout));
+      stopwatch.elapsed = timeout + stall;
+      await tester.pump(timeout);
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(await result, hungError);
+    });
+  });
+}
+
+class _FakeStopwatch implements Stopwatch {
+  @override
+  Duration elapsed = Duration.zero;
+
+  @override
+  void start() {}
+
+  @override
+  void stop() {}
+
+  @override
+  void reset() => elapsed = Duration.zero;
+
+  @override
+  int get elapsedMicroseconds => elapsed.inMicroseconds;
+
+  @override
+  int get elapsedMilliseconds => elapsed.inMilliseconds;
+
+  @override
+  int get elapsedTicks => elapsed.inMicroseconds;
+
+  @override
+  int get frequency => 1000000;
+
+  @override
+  bool get isRunning => true;
 }

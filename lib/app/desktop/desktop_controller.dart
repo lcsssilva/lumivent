@@ -63,6 +63,16 @@ class DesktopController with WindowListener implements DesktopActions {
     if (startMinimized && !trayAvailable) await showWindow();
   }
 
+  /// Undoes [init] without quitting, when startup fails after it: the failure
+  /// screen must close normally and must not show this app's tray menu.
+  Future<void> release() async {
+    windowManager.removeListener(this);
+    _tray?.setVisible(false);
+    _tray?.dispose();
+    _tray = null;
+    await windowManager.setPreventClose(false);
+  }
+
   AppStrings get _strings => _container.read(stringsProvider);
 
   void _setUpTray() {

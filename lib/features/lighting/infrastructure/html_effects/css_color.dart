@@ -79,19 +79,24 @@ int? _channel(String p) {
   final v = p.endsWith('%')
       ? double.tryParse(p.substring(0, p.length - 1))?.let((x) => x * 2.55)
       : double.tryParse(p);
-  return v?.round().clamp(0, 255);
+  // NaN makes the color invalid; out-of-range values (even ±Infinity) clamp,
+  // as in browsers.
+  if (v == null || v.isNaN) return null;
+  return v.clamp(0.0, 255.0).round();
 }
 
 double? _alpha(String p) {
   final v = p.endsWith('%')
       ? double.tryParse(p.substring(0, p.length - 1))?.let((x) => x / 100)
       : double.tryParse(p);
-  return v?.clamp(0.0, 1.0);
+  if (v == null || v.isNaN) return null;
+  return v.clamp(0.0, 1.0);
 }
 
 double? _percent(String p) {
   final v = double.tryParse(p.endsWith('%') ? p.substring(0, p.length - 1) : p);
-  return v?.clamp(0.0, 100.0).let((x) => x / 100);
+  if (v == null || v.isNaN) return null;
+  return v.clamp(0.0, 100.0) / 100;
 }
 
 double? _hue(String p) {

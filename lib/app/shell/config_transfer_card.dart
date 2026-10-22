@@ -61,7 +61,10 @@ class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard>
       allowedExtensions: const ['json'],
     );
     if (file == null) return;
-    final text = utf8.decode(await file.readAsBytes());
+    final text = await readImportText(
+      file.readAsByteStream(),
+      strings: strings,
+    );
     final transfer = ref.read(configTransferProvider);
     await transfer.importText(text, strings: strings);
     _tell(s.importedBackupAt(transfer.backupPath));

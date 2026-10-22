@@ -15,7 +15,7 @@ import 'ui_language.dart';
 ///
 /// Widgets read it through `context.strings`; providers and isolates receive it
 /// as a parameter. `core/` must not depend on `features/`, so [UiLanguage] lives
-/// here and `bootstrap.dart` maps the saved preference to it.
+/// here and `lib/app/ui_language_binding.dart` maps the saved preference to it.
 abstract class AppStrings {
   const AppStrings();
 

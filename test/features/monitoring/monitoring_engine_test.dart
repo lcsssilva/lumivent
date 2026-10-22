@@ -179,8 +179,48 @@ class _RpmTransport implements Alv2Transport {
   void close() => log.add('close');
 }
 
+class _ScriptedLink implements Alv2HubLink {
+  _ScriptedLink(this.replies);
+
+  /// Each entry is a reply, or an error to throw.
+  final List<Object> replies;
+
+  @override
+  Future<Alv2HubReply> request(Alv2HubCommand command) async {
+    final next = replies.removeAt(0);
+    if (next is Alv2HubReply) return next;
+    throw next;
+  }
+
+  @override
+  void dispose() {}
+}
+
 void rpmSourceTests() {
   group('Alv2RpmSource', () {
+    test('logs a failed read once per run of failures', () async {
+      final link = _ScriptedLink([
+        StateError('boom'),
+        StateError('boom'),
+        const Alv2HubReply(1, rpm: [900, 900, 900, 900]),
+        StateError('boom'),
+      ]);
+      final logs = <String>[];
+      final source = Alv2RpmSource(Alv2HubProxy(link), log: logs.add);
+      Future<void> tick() async {
+        source.read();
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+
+      await tick();
+      await tick();
+      expect(logs, ['monitoring: Alv2RpmSource: Bad state: boom']);
+      await tick();
+      expect(source.read(), isNotEmpty);
+      await tick();
+      expect(logs, hasLength(2), reason: 'a new failure after a success');
+    });
+
     test('read returns the last reading and never waits for the hub', () async {
       final tr = _RpmTransport();
       final hub = Alv2HubProxy.local(

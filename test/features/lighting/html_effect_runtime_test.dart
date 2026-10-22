@@ -136,6 +136,43 @@ requestAnimationFrame(loop);
     expect(nextGradientFrame.pixelAt(317, 100).$3, greaterThan(200));
   }, skip: _skip);
 
+  test('gradient stops added after assignment reach the replay', () async {
+    final rt = await IsolatedHtmlEffectRuntime.load(
+      effect(
+        script: '''
+var ctx = document.getElementById('exCanvas').getContext('2d');
+var g = ctx.createLinearGradient(0, 0, 320, 0);
+var frame = 0;
+function loop() {
+  if (frame === 0) {
+    ctx.fillStyle = g;
+    g.addColorStop(0, '#ff0000');
+    g.addColorStop(1, '#0000ff');
+  } else if (frame === 2) {
+    // Mutate an already-assigned gradient without reassigning it.
+    g.addColorStop(0.5, '#00ff00');
+  }
+  frame++;
+  ctx.fillRect(0, 0, 320, 200);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+''',
+      ),
+    );
+    addTearDown(rt.dispose);
+    final first = await rt.renderFrame(0);
+    expect(first.pixelAt(2, 100).$1, greaterThan(200));
+    expect(first.pixelAt(317, 100).$3, greaterThan(200));
+    // Reused in a later frame without reassignment: still the same colors.
+    final second = await rt.renderFrame(16);
+    expect(second.pixelAt(2, 100).$1, greaterThan(200));
+    expect(second.pixelAt(317, 100).$3, greaterThan(200));
+    final third = await rt.renderFrame(32);
+    expect(third.pixelAt(160, 100).$2, greaterThan(200));
+    expect(third.pixelAt(2, 100).$1, greaterThan(200));
+  }, skip: _skip);
+
   test('hsl, rgb, hex and named colors', () async {
     final rt = await IsolatedHtmlEffectRuntime.load(
       effect(

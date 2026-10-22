@@ -43,6 +43,12 @@ Future<void> main(List<String> args) async {
   } on Object catch (error, stack) {
     stderr.writeln('Lumivent startup failed: $error');
     stderr.writeln(stack);
-    runApp(BootstrapFailureApp(error: error, configDir: defaultConfigDir()));
+    runApp(
+      BootstrapFailureApp(
+        error: error,
+        configDir: defaultConfigDir(),
+        strings: startupFailureStrings(PlatformDispatcher.instance.locale),
+      ),
+    );
   }
 }

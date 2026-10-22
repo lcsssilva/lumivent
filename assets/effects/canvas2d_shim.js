@@ -350,15 +350,35 @@
     this.__op = op;
     this.__args = args;
     this.__stops = [];
+    this.__emittedFrame = 0;
   }
+  // Frame counter (starts at 1 on the first frame); a gradient is known to
+  // the Dart replay only for the frame in which it was emitted.
+  var frameNumber = 0;
   Gradient.prototype.emit = function () {
+    this.__emittedFrame = frameNumber;
     emit(this.__op, [this.__id].concat(this.__args));
     for (var i = 0; i < this.__stops.length; i++) {
       emit(OP.cs, [this.__id, this.__stops[i][0], this.__stops[i][1]]);
     }
   };
   Gradient.prototype.addColorStop = function (offset, color) {
-    this.__stops.push([num(offset), String(color)]);
+    var stop = [num(offset), String(color)];
+    this.__stops.push(stop);
+    if (this.__emittedFrame === frameNumber) {
+      // Already sent this frame: the replay holds the gradient, so just add
+      // the stop.
+      emit(OP.cs, [this.__id, stop[0], stop[1]]);
+    } else if (this.__emittedFrame !== 0) {
+      // Sent in an earlier frame and possibly still the active style: send it
+      // again with all stops and reapply it where it is in use.
+      var isFill = st.fillStyle === this, isStroke = st.strokeStyle === this;
+      if (isFill || isStroke) {
+        this.emit();
+        if (isFill) emit(OP.fs, [this]);
+        if (isStroke) emit(OP.ss, [this]);
+      }
+    }
   };
 
   // ---- path: rectangles become fillRect ---------------------------------
@@ -707,7 +727,18 @@
 
   g.__we_frame = function (t) {
     now = t;
+    frameNumber++;
     styleDirty = true;
+    // The replay drops its gradients every frame: resend the ones still in
+    // use as the active fill or stroke style.
+    if (st.fillStyle instanceof Gradient) {
+      st.fillStyle.emit();
+      emit(OP.fs, [st.fillStyle]);
+    }
+    if (st.strokeStyle instanceof Gradient) {
+      if (st.strokeStyle !== st.fillStyle) st.strokeStyle.emit();
+      emit(OP.ss, [st.strokeStyle]);
+    }
     if (hslCacheCooldown > 0) hslCacheCooldown--;
     // The Dart replay starts every frame with a new Path.
     pathCleared = true;

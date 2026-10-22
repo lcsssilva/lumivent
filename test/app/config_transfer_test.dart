@@ -156,4 +156,56 @@ void main() {
     ], fanNames);
     expect(engine.sent.whereType<SetFansConfig>(), hasLength(1));
   });
+
+  group('reading an import file', () {
+    Stream<List<int>> chunks(List<List<int>> parts) =>
+        Stream.fromIterable(parts);
+
+    test('valid UTF-8 is returned as text', () async {
+      expect(
+        await readImportText(
+          chunks([utf8.encode('{"a":'), utf8.encode('"é"}')]),
+        ),
+        '{"a":"é"}',
+      );
+    });
+
+    test('a file over the limit is rejected before it is read whole', () async {
+      final chunk = List<int>.filled(1024 * 1024, 0x20);
+      var pulled = 0;
+      final endless = Stream<List<int>>.periodic(Duration.zero, (_) {
+        pulled++;
+        return chunk;
+      });
+      await expectLater(
+        readImportText(endless, strings: AppStrings.pt),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            AppStrings.pt.shell.fileTooLarge(maxImportMegabytes),
+          ),
+        ),
+      );
+      expect(pulled, maxImportMegabytes + 1);
+    });
+
+    test('malformed UTF-8 gets the localized message', () async {
+      await expectLater(
+        readImportText(
+          chunks([
+            [0x7B, 0xC3, 0x28, 0x7D],
+          ]),
+          strings: AppStrings.pt,
+        ),
+        throwsA(
+          isA<FormatException>().having(
+            (e) => e.message,
+            'message',
+            AppStrings.pt.shell.invalidJson,
+          ),
+        ),
+      );
+    });
+  });
 }

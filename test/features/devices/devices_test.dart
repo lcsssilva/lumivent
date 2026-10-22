@@ -101,6 +101,26 @@ void main() {
       expect(isForbiddenSmbusAddress(0x58), isFalse);
       expect(furyAddresses.any(isForbiddenSmbusAddress), isFalse);
     });
+
+    test('non-7-bit addresses are rejected before any ioctl', () {
+      // A regular file stands in for /dev/i2c-N: the guard must throw before
+      // I2C_SLAVE, so no ioctl ever reaches it.
+      final dir = Directory.systemTemp.createTempSync('lumivent-smbus-');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final file = File('${dir.path}/i2c-0')..createSync();
+      final bus = SmBus.open(file.path);
+      addTearDown(bus.close);
+      // 0xB4 is the 8-bit form of 0x5A; it would address another device.
+      for (final addr in [-1, 0x80, 0xB4, 0x3FF]) {
+        expect(
+          () => bus.writeByteData(addr, 0x00, 0x00),
+          throwsArgumentError,
+          reason: '0x${addr.toRadixString(16)}',
+        );
+        expect(() => bus.readByteData(addr, 0x00), throwsArgumentError);
+        expect(() => bus.writeQuick(addr), throwsArgumentError);
+      }
+    });
   });
 
   group('fake sysfs and /proc', () {

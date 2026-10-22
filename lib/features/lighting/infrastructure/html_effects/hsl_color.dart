@@ -2,6 +2,10 @@
 // of packing them in JS (QuickJS is slow at the per-color math).
 
 int hslArgb(double hDeg, double sPct, double lPct) {
+  // Non-finite components count as 0, like the shim's own HSL parser.
+  if (!hDeg.isFinite) hDeg = 0;
+  if (!sPct.isFinite) sPct = 0;
+  if (!lPct.isFinite) lPct = 0;
   var h = hDeg % 360;
   if (h < 0) h += 360;
   h /= 360;

@@ -888,6 +888,12 @@ void main() {
     await rig.advance(const Duration(milliseconds: 200));
     expect(out.gpuLog.last, (const Rgb(10, 20, 30), 5));
 
+    // Below the controller's lowest step (byte 1 ≈ 10%) the color is dimmed
+    // instead, so 5% is not shown at 10%.
+    rig.send(SetLightingConfig(cfg.copyWith(brightness: 0.05)));
+    await rig.advance(const Duration(milliseconds: 200));
+    expect(out.gpuLog.last, (const Rgb(10, 20, 30).scaled(0.5), 1));
+
     // A new fixed color goes out; an unchanged one is not repeated.
     final next = cfg.withDevice(
       LightDeviceId.gpu,

@@ -14,6 +14,10 @@ import 'hsl_color.dart';
 
 /// Context state that survives between fast frames (the shim only sends
 /// changes, just like a real canvas).
+///
+/// A null field is unknown: the general replay drew the last frame and left a
+/// style the fast path cannot reproduce (a gradient, a restored state...).
+/// A frame may only rely on a field after it set it.
 class SimpleRasterState {
   const SimpleRasterState({
     this.fill = 0xff000000,
@@ -21,9 +25,16 @@ class SimpleRasterState {
     this.srcOver = true,
   });
 
-  final int fill;
-  final double alpha;
-  final bool srcOver;
+  /// Nothing about the context is known.
+  static const unknown = SimpleRasterState(
+    fill: null,
+    alpha: null,
+    srcOver: null,
+  );
+
+  final int? fill;
+  final double? alpha;
+  final bool? srcOver;
 
   @override
   bool operator ==(Object other) =>
@@ -60,6 +71,7 @@ abstract final class SimpleCanvasRaster {
     Uint8List encoded, {
     Uint32List? previous,
     SimpleRasterState state = const SimpleRasterState(),
+    bool mustCover = false,
   }) {
     final pixels = Uint32List(width * height);
     if (previous != null) {
@@ -68,7 +80,8 @@ abstract final class SimpleCanvasRaster {
     return rasterInto(
       pixels,
       encoded,
-      firstFrame: previous == null,
+      firstFrame: previous == null && !mustCover,
+      mustCover: mustCover,
       state: state,
     );
   }
@@ -79,19 +92,25 @@ abstract final class SimpleCanvasRaster {
   /// from opaque black ([firstFrame]). Returns null when the frame needs the
   /// general dart:ui replay — in that case [pixels] must be discarded: the
   /// shim's incremental state no longer matches the buffer.
+  ///
+  /// [mustCover] is for a frame that follows a general-replay frame: the
+  /// contents of [pixels] are unknown, so the frame is only accepted when its
+  /// first pixel-writing command covers the whole canvas with a known value.
   static SimpleRaster? rasterInto(
     Uint32List pixels,
     Uint8List encoded, {
     required bool firstFrame,
+    bool mustCover = false,
     SimpleRasterState state = const SimpleRasterState(),
   }) {
     if (firstFrame) {
       pixels.fillRange(0, pixels.length, 0xff000000);
     }
+    var covered = !mustCover;
     final ops = CanvasCommandBuffer(encoded);
-    var color = state.fill;
-    var alpha = state.alpha;
-    var srcOver = state.srcOver;
+    int? color = state.fill;
+    double? alpha = state.alpha;
+    bool? srcOver = state.srcOver;
     while (ops.next()) {
       switch (ops.opcode) {
         case CanvasOp.fillStyle:
@@ -110,7 +129,18 @@ abstract final class SimpleCanvasRaster {
         case CanvasOp.composite:
           srcOver = ops.text(0) == 'source-over';
         case CanvasOp.fillRect:
-          if (alpha != 1 || !srcOver) return null;
+          if (alpha != 1 || srcOver != true || color == null) return null;
+          if (!covered) {
+            if (!_covers(
+              ops.number(0),
+              ops.number(1),
+              ops.number(2),
+              ops.number(3),
+            )) {
+              return null;
+            }
+            covered = true;
+          }
           if (!_fill(
             pixels,
             ops.number(0),
@@ -122,9 +152,20 @@ abstract final class SimpleCanvasRaster {
             return null;
           }
         case CanvasOp.fillRect16:
-          if (alpha != 1 || !srcOver) return null;
+          if (alpha != 1 || srcOver != true) return null;
           final packed = ops.color(4);
           if ((packed >>> 24) != 255) return null;
+          if (!covered) {
+            if (!_covers(
+              ops.number(0),
+              ops.number(1),
+              ops.number(2),
+              ops.number(3),
+            )) {
+              return null;
+            }
+            covered = true;
+          }
           if (!_fill(
             pixels,
             ops.number(0),
@@ -136,7 +177,18 @@ abstract final class SimpleCanvasRaster {
             return null;
           }
         case CanvasOp.fillRect16Hsl:
-          if (alpha != 1 || !srcOver) return null;
+          if (alpha != 1 || srcOver != true) return null;
+          if (!covered) {
+            if (!_covers(
+              ops.number(0),
+              ops.number(1),
+              ops.number(2),
+              ops.number(3),
+            )) {
+              return null;
+            }
+            covered = true;
+          }
           if (!_fill(
             pixels,
             ops.number(0),
@@ -148,6 +200,18 @@ abstract final class SimpleCanvasRaster {
             return null;
           }
         case CanvasOp.clearRect:
+          // clearRect ignores alpha and composite (canvas spec).
+          if (!covered) {
+            if (!_covers(
+              ops.number(0),
+              ops.number(1),
+              ops.number(2),
+              ops.number(3),
+            )) {
+              return null;
+            }
+            covered = true;
+          }
           _fill(
             pixels,
             ops.number(0),
@@ -173,6 +237,61 @@ abstract final class SimpleCanvasRaster {
     );
   }
 
+  /// The context state after the general replay drew [encoded] on top of
+  /// [state]: tracks the styles the fast path understands so an effect that
+  /// sets its style once can resume the fast path after an occasional
+  /// fallback. Anything it cannot mirror becomes unknown.
+  static SimpleRasterState stateAfterReplay(
+    Uint8List encoded,
+    SimpleRasterState state,
+  ) {
+    int? fill = state.fill;
+    double? alpha = state.alpha;
+    bool? srcOver = state.srcOver;
+    final ops = CanvasCommandBuffer(encoded);
+    try {
+      while (ops.next()) {
+        switch (ops.opcode) {
+          case CanvasOp.fillStyle:
+            if (ops.isGradient(0)) {
+              fill = null;
+            } else {
+              final argb = ops.isColor(0)
+                  ? ops.color(0)
+                  : parseCssColor(ops.text(0))?.toARGB32();
+              fill = argb != null && (argb >>> 24) == 255 ? argb : null;
+            }
+          case CanvasOp.hslStyle:
+            fill = hslArgb(ops.number(0), ops.number(1), ops.number(2));
+          case CanvasOp.alpha:
+            final value = ops.number(0);
+            if (value >= 0 && value <= 1) alpha = value;
+          case CanvasOp.composite:
+            srcOver = ops.text(0) == 'source-over';
+          case CanvasOp.restore:
+            fill = null;
+            alpha = null;
+            srcOver = null;
+        }
+      }
+    } on FormatException {
+      return SimpleRasterState.unknown;
+    }
+    return SimpleRasterState(fill: fill, alpha: alpha, srcOver: srcOver);
+  }
+
+  /// Whether the rectangle covers the whole canvas after rounding and clamping
+  /// (the same geometry as [_fill]).
+  static bool _covers(double x, double y, double w, double h) {
+    if (!x.isFinite || !y.isFinite || !w.isFinite || !h.isFinite) return false;
+    final x0 = x.round(), x1 = (x + w).round();
+    final y0 = y.round(), y1 = (y + h).round();
+    return (x0 < x1 ? x0 : x1) <= 0 &&
+        (x0 < x1 ? x1 : x0) >= width &&
+        (y0 < y1 ? y0 : y1) <= 0 &&
+        (y0 < y1 ? y1 : y0) >= height;
+  }
+
   /// Fills [rect] with a packed ARGB color; 0 means transparent.
   static bool _fill(
     Uint32List pixels,
@@ -182,6 +301,8 @@ abstract final class SimpleCanvasRaster {
     double h,
     int argb,
   ) {
+    // Canvas spec: a rect with a non-finite argument draws nothing.
+    if (!x.isFinite || !y.isFinite || !w.isFinite || !h.isFinite) return true;
     var x0 = x.round();
     var y0 = y.round();
     var x1 = (x + w).round();

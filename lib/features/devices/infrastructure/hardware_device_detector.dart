@@ -89,9 +89,14 @@ class HardwareDeviceDetector implements DeviceDetector {
     if (all.isEmpty) {
       return info(DeviceStatus.missing, issue: DeviceIssue.fanUsbCable);
     }
-    final target =
-        all.where((d) => d.interfaceNumber == alv2Interface).firstOrNull ??
-        all.first;
+    // Never fall back to another interface: the composite device also exposes
+    // keyboard/consumer interfaces that must not receive the read command.
+    final target = all
+        .where((d) => d.interfaceNumber == alv2Interface)
+        .firstOrNull;
+    if (target == null) {
+      return info(DeviceStatus.missing, issue: DeviceIssue.fanUsbCable);
+    }
     return _withHid(hid, target.path, info, (dev) {
       dev.sendFeature(alv2ReadFirmware, alv2FeatureLength);
       sleep(alv2PacketGap);

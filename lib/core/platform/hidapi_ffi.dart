@@ -203,6 +203,8 @@ class HidDevice {
 
   /// Reads an input report from the interrupt endpoint; empty on timeout.
   Uint8List read(int length, {int timeoutMs = 100}) {
+    _checkOpen();
+    _checkLength(length, 'hid_read_timeout');
     final buf = calloc<Uint8>(length);
     try {
       final n = _api._readTimeout(_dev, buf, length, timeoutMs);
@@ -230,6 +232,7 @@ class HidDevice {
 
   Uint8List _ioRead(_IoD fn, int reportId, int length, String name) {
     _checkOpen();
+    _checkLength(length, name);
     final buf = calloc<Uint8>(length);
     try {
       buf[0] = reportId;
@@ -243,6 +246,11 @@ class HidDevice {
 
   void _checkOpen() {
     if (_closed) throw StateError('HidDevice is already closed: $path');
+  }
+
+  // A read needs at least the report ID byte.
+  static void _checkLength(int length, String name) {
+    if (length <= 0) throw ArgumentError('$name: length must be positive');
   }
 
   void close() {

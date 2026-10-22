@@ -91,7 +91,7 @@ class GpuController {
   int? get ssid => _ssid;
   bool get is4N => _is4N;
 
-  /// Why the controller cannot be used (Portuguese, user-facing).
+  /// Why the controller cannot be used (English technical message).
   String? get disabledReason => _disabledReason;
 
   /// Reads firmware (`0x10`) and SSID (`0x11`). Required before any `0x12`;

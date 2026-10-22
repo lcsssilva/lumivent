@@ -64,8 +64,26 @@ class _FaultyModule implements EngineModule {
   }
 }
 
+class _ThrowingStartModule implements EngineModule {
+  @override
+  void start(void Function(EngineEvent) emit) => throw StateError('start boom');
+
+  @override
+  bool handle(EngineCommand command) => false;
+
+  @override
+  void stop() {}
+}
+
 // Runs inside the engine isolate.
 List<EngineModule> _modules(int base) => [_EchoModule(base)];
+
+List<EngineModule> _throwingStartModules(int base) => [
+  _EchoModule(base),
+  _ThrowingStartModule(),
+];
+
+List<EngineModule> _throwingBuild(int base) => throw StateError('build boom');
 
 List<EngineModule> _throwingHandleModules(int base) => [
   _FaultyModule(),
@@ -119,4 +137,30 @@ void main() {
       expect(received.last, isA<EngineStopped>());
     },
   );
+
+  test('real isolate: a module that throws on start fails the spawn', () async {
+    await expectLater(
+      IsolateEngine.spawn(_throwingStartModules, 100),
+      throwsA(
+        isA<EngineStartupException>().having(
+          (e) => e.message,
+          'message',
+          contains('start boom'),
+        ),
+      ),
+    );
+  });
+
+  test('real isolate: a factory that throws fails the spawn', () async {
+    await expectLater(
+      IsolateEngine.spawn(_throwingBuild, 100),
+      throwsA(
+        isA<EngineStartupException>().having(
+          (e) => e.message,
+          'message',
+          contains('build boom'),
+        ),
+      ),
+    );
+  });
 }

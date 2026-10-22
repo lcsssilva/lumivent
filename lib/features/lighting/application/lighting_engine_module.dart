@@ -881,12 +881,13 @@ class LightingEngineModule implements EngineModule {
     final brightness = off ? 0 : _gpuBrightness(_config.brightness);
     final color = off
         ? Rgb.black
-        : d.mode == LightMode.fixed
-        ? d.fixedColor
-        : _compositor.gpuAverage(
-            _config,
-            seconds: _seconds(at) + _leadSeconds(OutputFamily.gpu),
-          );
+        : (d.mode == LightMode.fixed
+                  ? d.fixedColor
+                  : _compositor.gpuAverage(
+                      _config,
+                      seconds: _seconds(at) + _leadSeconds(OutputFamily.gpu),
+                    ))
+              .scaled(_gpuColorScale(_config.brightness));
     if (!_deduplicator.shouldSendGpu(color, brightness, at)) return false;
 
     final lane = _lanes[OutputFamily.gpu]!;
@@ -907,9 +908,16 @@ class LightingEngineModule implements EngineModule {
     return true;
   }
 
-  /// Global brightness (0–1) as the controller's 0–10 byte: 0 only at 0.
+  /// Global brightness (0–1) as the controller's 0–10 byte. Byte 0 is never
+  /// sent here (off is handled by the caller); below 10% the byte stays at 1
+  /// and [_gpuColorScale] dims the color for the rest.
   static int _gpuBrightness(double brightness) =>
       (brightness * 10).round().clamp(1, 10);
+
+  /// Color factor below the controller's lowest step (byte 1 ≈ 10%), so 1–9%
+  /// is not shown at 10% while every other device follows the slider.
+  static double _gpuColorScale(double brightness) =>
+      brightness >= 0.1 ? 1.0 : brightness * 10;
 
   void _log(String message) => stderr.writeln('lighting: $message');
 }

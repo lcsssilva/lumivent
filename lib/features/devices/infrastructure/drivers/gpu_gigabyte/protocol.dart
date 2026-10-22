@@ -113,7 +113,7 @@ class GpuRgb {
   String toString() => 'GpuRgb($r,$g,$b)';
 }
 
-/// Safety guard failure. The message is user-facing (Portuguese).
+/// Safety guard failure. The message is an English technical message.
 class GpuGuardException implements Exception {
   const GpuGuardException(this.message);
   final String message;

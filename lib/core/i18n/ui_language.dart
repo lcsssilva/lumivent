@@ -1,7 +1,7 @@
 // Languages the interface is available in.
 //
 // `core/i18n` must not depend on `features/` (architecture rule 1), so the
-// domain preference (`AppLanguage`) is mapped here in `bootstrap.dart`.
+// domain preference (`AppLanguage`) is mapped in `lib/app/ui_language_binding.dart`.
 import 'dart:ui' show Locale;
 
 enum UiLanguage {

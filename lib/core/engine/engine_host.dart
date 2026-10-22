@@ -64,11 +64,28 @@ final engineProvider = Provider<EngineApi>(
   (ref) => throw UnimplementedError('engineProvider'),
 );
 
+/// The engine could not build or start its modules; it stopped the modules
+/// that had started and exited.
+class EngineStartupException implements Exception {
+  const EngineStartupException(this.message);
+  final String message;
+
+  @override
+  String toString() => 'Engine startup failed: $message';
+}
+
 // ── UI side ────────────────────────────────────────────────────────────────
 
 class _EngineReady extends EngineEvent {
   const _EngineReady(this.commands);
   final SendPort commands;
+}
+
+// Strings only: the original error may hold objects that cannot cross isolates.
+class _EngineStartFailed extends EngineEvent {
+  const _EngineStartFailed(this.error, this.stack);
+  final String error;
+  final String stack;
 }
 
 class _Bootstrap<T> {
@@ -86,14 +103,34 @@ class IsolateEngine implements EngineApi {
       switch (m) {
         case _EngineReady(:final commands):
           _ready.complete(commands);
+        case _EngineStartFailed(:final error, :final stack):
+          _ready.completeError(
+            EngineStartupException(error),
+            StackTrace.fromString(stack),
+          );
         case EngineEvent():
           _last[m.runtimeType] = m;
           _events.add(m);
         case [final error, final stack]:
           // Unhandled engine error (Isolate.spawn onError).
           stderr.writeln('engine: $error\n$stack');
+        case null:
+          // Isolate.spawn onExit.
+          _onExit();
       }
     });
+  }
+
+  void _onExit() {
+    if (_exited) return;
+    _exited = true;
+    if (!_ready.isCompleted) {
+      _ready.completeError(
+        const EngineStartupException('the engine exited during startup'),
+      );
+    } else if (!_shuttingDown) {
+      stderr.writeln('engine: the isolate exited unexpectedly');
+    }
   }
 
   final ReceivePort _rx;
@@ -102,6 +139,8 @@ class IsolateEngine implements EngineApi {
   final _last = <Type, EngineEvent>{};
   late final Isolate _isolate;
   late final SendPort _commands;
+  bool _exited = false;
+  bool _shuttingDown = false;
 
   @override
   Stream<EngineEvent> get events => _events.stream;
@@ -120,8 +159,15 @@ class IsolateEngine implements EngineApi {
       debugName: 'lumivent-engine',
       errorsAreFatal: false,
       onError: e._rx.sendPort,
+      onExit: e._rx.sendPort,
     );
-    e._commands = await e._ready.future;
+    try {
+      e._commands = await e._ready.future;
+    } on Object {
+      e._rx.close();
+      await e._events.close();
+      rethrow;
+    }
     return e;
   }
 
@@ -130,12 +176,15 @@ class IsolateEngine implements EngineApi {
 
   @override
   Future<void> shutdown() async {
-    final stopped = events.firstWhere((e) => e is EngineStopped);
-    send(const ShutdownEngine());
-    try {
-      await stopped.timeout(const Duration(seconds: 3));
-    } on TimeoutException {
-      _isolate.kill(priority: Isolate.immediate);
+    _shuttingDown = true;
+    if (!_exited) {
+      final stopped = events.firstWhere((e) => e is EngineStopped);
+      send(const ShutdownEngine());
+      try {
+        await stopped.timeout(const Duration(seconds: 3));
+      } on TimeoutException {
+        _isolate.kill(priority: Isolate.immediate);
+      }
     }
     _rx.close();
     await _events.close();
@@ -146,20 +195,27 @@ class IsolateEngine implements EngineApi {
 
 Future<void> _engineMain<T>(_Bootstrap<T> boot) async {
   final rx = ReceivePort('lumivent-engine-commands');
-  boot.events.send(_EngineReady(rx.sendPort));
-  final modules = boot.build();
-  for (final m in modules) {
-    m.start(boot.events.send);
+  // Ready is announced only after every module started: a failure here must
+  // reach the UI as a startup error, not leave an engine that drops commands.
+  final modules = <EngineModule>[];
+  try {
+    final built = boot.build();
+    for (final m in built) {
+      // Added before start: a module that throws midway may own resources.
+      modules.add(m);
+      m.start(boot.events.send);
+    }
+  } catch (e, s) {
+    stderr.writeln('engine: startup failed: $e\n$s');
+    await _stopAll(modules);
+    boot.events.send(_EngineStartFailed('$e', '$s'));
+    rx.close();
+    return;
   }
+  boot.events.send(_EngineReady(rx.sendPort));
   await for (final cmd in rx) {
     if (cmd is ShutdownEngine) {
-      for (final m in modules.reversed) {
-        try {
-          await Future.sync(m.stop).timeout(moduleStopTimeout);
-        } catch (e, s) {
-          stderr.writeln('engine: ${m.runtimeType} stop failed: $e\n$s');
-        }
-      }
+      await _stopAll(modules);
       boot.events.send(const EngineStopped());
       rx.close();
     } else if (cmd is EngineCommand) {
@@ -182,6 +238,17 @@ Future<void> _engineMain<T>(_Bootstrap<T> boot) async {
       if (!handled) {
         stderr.writeln('engine: command has no module: ${cmd.runtimeType}');
       }
+    }
+  }
+}
+
+/// Stops [modules] in reverse order; one failure does not block the others.
+Future<void> _stopAll(List<EngineModule> modules) async {
+  for (final m in modules.reversed) {
+    try {
+      await Future.sync(m.stop).timeout(moduleStopTimeout);
+    } catch (e, s) {
+      stderr.writeln('engine: ${m.runtimeType} stop failed: $e\n$s');
     }
   }
 }

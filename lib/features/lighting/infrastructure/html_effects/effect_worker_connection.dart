@@ -7,9 +7,19 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 import 'effect_worker.dart';
 import 'effect_worker_protocol.dart';
 import 'quickjs_effect.dart';
+
+/// How much later than scheduled the request timer may fire before the main
+/// isolate is considered stalled rather than the worker hung.
+const _timerStallThreshold = Duration(milliseconds: 100);
+
+/// Extra wait granted once after a stalled timer, so a reply already queued
+/// behind the stall is processed before a healthy worker is killed.
+const _stallGrace = Duration(milliseconds: 250);
 
 /// One request at a time per effect; replies are matched by id.
 class EffectWorkerConnection {
@@ -19,7 +29,18 @@ class EffectWorkerConnection {
     this._receive,
     this._errors,
     this._process,
-  });
+    Stopwatch Function()? stopwatch,
+  }) : _newStopwatch = stopwatch ?? Stopwatch.new;
+
+  /// Connection over a bare [SendPort], with no worker behind it. Replies are
+  /// fed through [handleMessage]. Used by tests to drive the request timers.
+  @visibleForTesting
+  EffectWorkerConnection.withPort(
+    SendPort send, {
+    Stopwatch Function()? stopwatch,
+  }) : this._(send: send, stopwatch: stopwatch);
+
+  final Stopwatch Function() _newStopwatch;
 
   final Isolate? _isolate;
   final SendPort? _send;
@@ -123,12 +144,21 @@ class EffectWorkerConnection {
     final id = _next++;
     final completer = Completer<Object?>();
     _pending[id] = completer;
+    final elapsed = _newStopwatch()..start();
+    void hung() => _fail(
+      EffectScriptException(
+        'effect hung: frame exceeded ${timeout.inMilliseconds} ms',
+      ),
+    );
     _timers[id] = Timer(timeout, () {
-      _fail(
-        EffectScriptException(
-          'effect hung: frame exceeded ${timeout.inMilliseconds} ms',
-        ),
-      );
+      // A timer that fires far past its deadline means this isolate was
+      // stalled, so a reply may already be queued: wait once for it. A timer
+      // that fires on time is a genuinely hung worker and fails immediately.
+      if (elapsed.elapsed - timeout > _timerStallThreshold) {
+        _timers[id] = Timer(_stallGrace, hung);
+      } else {
+        hung();
+      }
     });
     _sendMessage([id, ...message]);
     return completer.future;
@@ -193,6 +223,10 @@ class EffectWorkerConnection {
       ),
     );
   }
+
+  /// Processes one worker reply as if a transport had delivered it.
+  @visibleForTesting
+  void handleMessage(dynamic message) => _onMessage(message);
 
   void _onMessage(dynamic message) {
     final reply = EffectWorkerReply.tryParse(message);

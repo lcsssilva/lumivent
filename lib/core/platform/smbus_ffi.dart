@@ -1,8 +1,8 @@
 // SMBus access through /dev/i2c-N (i2c-dev) via ioctl, using dart:ffi on libc.
 //
 // Operations: byte/word reads, byte writes, and quick write (ACK pre-check).
-// Addresses 0x50–0x57 (memory SPD/EEPROM) are always rejected before any ioctl:
-// accessing them can damage the module.
+// Addresses outside the 7-bit range and 0x50–0x57 (memory SPD/EEPROM) are
+// always rejected before any ioctl: accessing SPD can damage the module.
 import 'dart:ffi';
 import 'dart:io';
 
@@ -138,6 +138,9 @@ class SmBus {
     int? value,
   ) {
     if (_closed) throw StateError('SmBus is already closed: $path');
+    if (addr < 0 || addr > 0x7F) {
+      throw ArgumentError('not a 7-bit SMBus address: $addr');
+    }
     if (isForbiddenSmbusAddress(addr)) {
       throw ArgumentError(
         'address 0x${addr.toRadixString(16)} is SPD: access denied',

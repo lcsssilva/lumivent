@@ -24,7 +24,7 @@ class EffectRasterizer {
   );
   ui.Image? _frame;
   Uint32List? _simplePixels;
-  SimpleRasterState? _simpleState;
+  SimpleRasterState _simpleState = const SimpleRasterState();
   ui.Image? _preview;
   bool _decodingPreview = false;
   DateTime _lastPreviewAt = DateTime.fromMillisecondsSinceEpoch(0);
@@ -85,7 +85,9 @@ class EffectRasterizer {
     final simple = SimpleCanvasRaster.tryRaster(
       encoded,
       previous: _simplePixels,
-      state: _simpleState ?? const SimpleRasterState(),
+      state: _simpleState,
+      // A general-replay frame left the retained pixels in _frame only.
+      mustCover: _simplePixels == null && _frame != null,
     );
     if (simple != null) {
       final frame = acceptSimple(simple.rgba, simple.opCount);
@@ -98,8 +100,12 @@ class EffectRasterizer {
   /// General dart:ui replay, for frames the fast path cannot draw.
   Future<EffectFrame> drawSlow(Uint8List encoded) async {
     final sw = Stopwatch()..start();
+    // After fast frames the retained canvas lives only in the pixels: decode
+    // it so the replay draws on top of it, as the browser would.
+    final retained = _simplePixels;
+    if (_frame == null && retained != null) _frame = await _decode(retained);
     _simplePixels = null;
-    _simpleState = null;
+    _simpleState = SimpleCanvasRaster.stateAfterReplay(encoded, _simpleState);
     _preview?.dispose();
     _preview = null;
     final ops = CanvasCommandBuffer(encoded);
@@ -172,7 +178,9 @@ class EffectRasterizer {
     _frame = null;
     _preview?.dispose();
     _preview = null;
+    // A decode still in flight sees this and disposes its image.
+    _decodingPreview = false;
     _simplePixels = null;
-    _simpleState = null;
+    _simpleState = const SimpleRasterState();
   }
 }

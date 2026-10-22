@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -145,5 +146,49 @@ echo '{"ctrl":"nvme10","error":"open: No such device"}'
       expect(ssds.first.smartError?.exitCode, 2);
       expect(ssds.first.smartError?.stderr, 'uso: ...');
     });
+
+    test(
+      'a hanging helper is killed on timeout and reported as failed',
+      () async {
+        final process = _HangingProcess();
+        final ssds = await NvmeSsdReader(
+          sysfsRoot: root.path,
+          helper: '/fake/helper',
+          timeout: const Duration(milliseconds: 20),
+          startProcess: (_, _) async => process,
+        ).read();
+        expect(process.killedWith, ProcessSignal.sigkill);
+        expect(ssds, hasLength(3));
+        expect(ssds.first.smart, isNull);
+        expect(ssds.first.smartError?.kind, SsdErrorKind.helperFailed);
+      },
+    );
   });
+}
+
+class _HangingProcess implements Process {
+  final _stdout = StreamController<List<int>>();
+  final _stderr = StreamController<List<int>>();
+  final _exit = Completer<int>();
+  ProcessSignal? killedWith;
+
+  @override
+  bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
+    killedWith = signal;
+    _stdout.close();
+    _stderr.close();
+    _exit.complete(-9);
+    return true;
+  }
+
+  @override
+  Future<int> get exitCode => _exit.future;
+  @override
+  int get pid => 4242;
+  @override
+  Stream<List<int>> get stdout => _stdout.stream;
+  @override
+  Stream<List<int>> get stderr => _stderr.stream;
+  @override
+  IOSink get stdin => throw UnimplementedError();
 }

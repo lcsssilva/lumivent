@@ -214,13 +214,19 @@ class _SpikePageState extends State<SpikePage> {
   }
 
   Future<void> _autoRun() async {
-    final name = _rt!.effect.title;
+    // The runtime may be replaced or disposed while this run awaits (effect
+    // switch, widget disposal); abort instead of dereferencing a stale one.
+    final rt = _rt;
+    if (rt == null) return;
+    bool stale() => !mounted || !identical(_rt, rt);
+    final name = rt.effect.title;
     stdout.writeln(
-      '== $name (${_rt!.effect.properties.map((p) => '${p.name}=${p.initialValue}').join(', ')})',
+      '== $name (${rt.effect.properties.map((p) => '${p.name}=${p.initialValue}').join(', ')})',
     );
     final cpu0 = _cpuTicks();
     final t0 = _clock.elapsed;
     await Future<void>.delayed(const Duration(seconds: 4));
+    if (stale()) return;
     final secs = (_clock.elapsed - t0).inMilliseconds / 1000;
     final cpu = (_cpuTicks() - cpu0) / (secs * 100) * 100;
     stdout.writeln(
@@ -231,17 +237,20 @@ class _SpikePageState extends State<SpikePage> {
       'LED (160,100) = #${(_led.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}',
     );
     final dump = widget.dump;
-    if (dump != null && _rt!.preview != null) {
-      final png = await _rt!.snapshotPng();
+    if (dump != null && rt.preview != null) {
+      final png = await rt.snapshotPng();
+      if (stale()) return;
       final f = File('$dump/${name.replaceAll(' ', '_')}.png');
       await f.writeAsBytes(png!);
       stdout.writeln('quadro salvo em ${f.path}');
     }
     await _hideFor(const Duration(seconds: 10));
+    if (stale()) return;
     final before = _stats.frames;
     await Future<void>.delayed(const Duration(seconds: 3));
+    if (stale()) return;
     stdout.writeln('VISIBLE again: ${_stats.frames - before} frames in 3 s');
-    final unknown = _rt!.unknownOps;
+    final unknown = rt.unknownOps;
     stdout.writeln(
       'unsupported ops: ${unknown.isEmpty ? 'none' : unknown.join(', ')}',
     );

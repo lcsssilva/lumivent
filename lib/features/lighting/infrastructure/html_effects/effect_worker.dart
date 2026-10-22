@@ -138,10 +138,12 @@ void runHtmlEffectIsolateWorker(SendPort main) {
   // Fast-path state of the effect being drawn: the previous fast canvas is
   // mutated in place every frame ("double buffer" of one retained canvas);
   // each transfer publishes a per-frame copy, so the UI isolate never touches
-  // this memory. Null canvas = the general replay drew the previous frame, so
-  // the next frame starts over from opaque black.
+  // this memory. Null canvas after the first frame = the general replay drew
+  // the previous frame: its pixels are unknown, so the next fast frame must
+  // start by covering the whole canvas ([renderIsolateFrame]).
   Uint32List? fastCanvas;
   SimpleRasterState fastState = const SimpleRasterState();
+  var firstFrame = true;
 
   // Where the LED colors are sampled (the runner sends the points once its
   // config changes; null = the app samples the returned frame itself).
@@ -162,6 +164,7 @@ void runHtmlEffectIsolateWorker(SendPort main) {
           );
           fastCanvas = null;
           fastState = const SimpleRasterState();
+          firstFrame = true;
         case EffectWorkerOperation.points:
           samplePoints = request.samplePoints;
         case EffectWorkerOperation.frame:
@@ -175,10 +178,12 @@ void runHtmlEffectIsolateWorker(SendPort main) {
             request.frameTime(),
             fastState: fastState,
             fastCanvas: fastCanvas,
+            firstFrame: firstFrame,
             points: samplePoints,
             onState: (canvas, state) {
               fastCanvas = canvas;
               fastState = state;
+              firstFrame = false;
             },
           );
         case EffectWorkerOperation.property:
@@ -216,35 +221,34 @@ void runHtmlEffectIsolateWorker(SendPort main) {
 
 /// One isolate-transport frame: renders the ops on QuickJS, tries the fast
 /// raster path in place, and answers with [frameReply]. The caller keeps the
-/// fast canvas via [onState].
+/// fast canvas via [onState]. A null [fastCanvas] on a frame that is not the
+/// [firstFrame] means the general replay drew the previous one.
 List<Object?> renderIsolateFrame(
   QuickJsEffect js,
   double nowMs, {
   required SimpleRasterState fastState,
   required Uint32List? fastCanvas,
+  required bool firstFrame,
   required List<(LightDeviceId, int, int)>? points,
   required void Function(Uint32List? canvas, SimpleRasterState state) onState,
 }) {
   final bytes = js.renderOps(nowMs);
   final logs = js.drainLog();
-  final raster = fastCanvas == null
-      ? SimpleCanvasRaster.rasterInto(
-          Uint32List(SimpleCanvasRaster.width * SimpleCanvasRaster.height),
-          bytes,
-          firstFrame: true,
-        )
-      : SimpleCanvasRaster.rasterInto(
-          fastCanvas,
-          bytes,
-          firstFrame: false,
-          state: fastState,
-        );
+  final raster = SimpleCanvasRaster.rasterInto(
+    fastCanvas ??
+        Uint32List(SimpleCanvasRaster.width * SimpleCanvasRaster.height),
+    bytes,
+    firstFrame: fastCanvas == null && firstFrame,
+    mustCover: fastCanvas == null && !firstFrame,
+    state: fastState,
+  );
   final simple = raster != null;
   if (simple) {
     onState(raster.pixels, raster.state);
   } else {
-    // The frame went to the general replay: drop the fast canvas.
-    onState(null, const SimpleRasterState());
+    // The frame went to the general replay: drop the fast canvas and keep the
+    // styles it left behind.
+    onState(null, SimpleCanvasRaster.stateAfterReplay(bytes, fastState));
   }
   final colors = simple && points != null
       ? sampleCanvasPixels(points, raster.pixels)

@@ -176,6 +176,25 @@ void main() {
     expect(find.text('Open configuration folder'), findsOneWidget);
   });
 
+  testWidgets('bootstrap failure follows a Portuguese system locale', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      BootstrapFailureApp(
+        error: StateError('config directory is not writable'),
+        configDir: tmp,
+        strings: startupFailureStrings(const Locale('pt', 'BR')),
+      ),
+    );
+
+    expect(find.text('O Lumivent não conseguiu iniciar'), findsOneWidget);
+    expect(find.text('Abrir pasta de configuração'), findsOneWidget);
+    expect(
+      startupFailureStrings(const Locale('de', 'DE')).language,
+      AppStrings.en.language,
+    );
+  });
+
   testWidgets('engine devices appear in the sidebar and Settings', (
     tester,
   ) async {

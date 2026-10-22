@@ -1,5 +1,6 @@
 // Composition root: opens configuration, starts the engine with its modules,
 // connects each module's ports to implementations, and prepares the window and tray.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -33,37 +34,71 @@ Future<void> bootstrap(List<String> args) async {
     EngineInit(lighting: lighting, lightingFps: fps, fans: fans),
   );
 
-  late final DesktopController desktop;
-  final container = ProviderContainer(
-    overrides: [
-      configStoreProvider.overrideWithValue(store),
-      engineProvider.overrideWithValue(engine),
-      ...PreferencesModule.overrides(store),
-      ...LightingModule.overrides(store),
-      ...FansModule.overrides(store),
-      // The lighting screen shows the group names set on the fans page.
-      fanGroupNamesProvider.overrideWith(
-        (ref) => [for (final g in ref.watch(fansProvider).groups) g.name],
-      ),
-      ...SystemModule.overrides(executable: Platform.resolvedExecutable),
-      desktopActionsProvider.overrideWith((ref) => desktop),
-      uiLanguageFromPreferences(),
-    ],
-  );
-  // The LED loop follows the FPS preference.
-  container.listen(preferencesProvider.select((p) => p.effectsFps), (
-    prev,
-    fps,
-  ) {
-    if (prev != fps) engine.send(SetLightingFps(fps));
-  });
-  // The HTML effect renderer must keep running while the window is hidden and
-  // regardless of the visible page (plan §5.5).
-  container.listen(htmlEffectRunnerProvider, (_, _) {});
-  desktop = DesktopController(container);
-  await desktop.init(startMinimized: args.contains('--minimized'));
+  ProviderContainer? container;
+  DesktopController? desktop;
+  try {
+    container = ProviderContainer(
+      overrides: [
+        configStoreProvider.overrideWithValue(store),
+        engineProvider.overrideWithValue(engine),
+        ...PreferencesModule.overrides(store),
+        ...LightingModule.overrides(store),
+        ...FansModule.overrides(store),
+        // The lighting screen shows the group names set on the fans page.
+        fanGroupNamesProvider.overrideWith(
+          (ref) => [for (final g in ref.watch(fansProvider).groups) g.name],
+        ),
+        ...SystemModule.overrides(executable: Platform.resolvedExecutable),
+        desktopActionsProvider.overrideWith((ref) => desktop!),
+        uiLanguageFromPreferences(),
+      ],
+    );
+    // The LED loop follows the FPS preference.
+    container.listen(preferencesProvider.select((p) => p.effectsFps), (
+      prev,
+      fps,
+    ) {
+      if (prev != fps) engine.send(SetLightingFps(fps));
+    });
+    // The HTML effect renderer must keep running while the window is hidden and
+    // regardless of the visible page (plan §5.5).
+    container.listen(htmlEffectRunnerProvider, (_, _) {});
+    desktop = DesktopController(container);
+    await desktop.init(startMinimized: args.contains('--minimized'));
+  } on Object {
+    // The engine already drives the fans and LEDs: release it before the
+    // failure screen, or the hardware keeps running with no way to quit.
+    await releaseAfterStartupFailure(
+      engine: engine,
+      container: container,
+      releaseDesktop: desktop?.release,
+    );
+    rethrow;
+  }
 
   runApp(UncontrolledProviderScope(container: container, child: const WeApp()));
+}
+
+/// Undoes what startup acquired after the engine spawned, in reverse order:
+/// window/tray hooks, providers (the effect renderer), then the engine, which
+/// stops its modules. A cleanup failure is logged and the next step still runs.
+@visibleForTesting
+Future<void> releaseAfterStartupFailure({
+  required EngineApi engine,
+  ProviderContainer? container,
+  Future<void> Function()? releaseDesktop,
+}) async {
+  Future<void> step(String what, FutureOr<void> Function() run) async {
+    try {
+      await run();
+    } on Object catch (error, stack) {
+      stderr.writeln('Lumivent startup cleanup ($what) failed: $error\n$stack');
+    }
+  }
+
+  if (releaseDesktop != null) await step('desktop', releaseDesktop);
+  if (container != null) await step('providers', container.dispose);
+  await step('engine', engine.shutdown);
 }
 
 /// FPS of the effects saved in the preferences (before the main container exists).

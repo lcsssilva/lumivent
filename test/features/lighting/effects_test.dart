@@ -12,6 +12,8 @@ import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/canvas_buffer.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/css_color.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/hsl_color.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/simple_canvas_raster.dart';
 
 EffectSource source({
@@ -360,6 +362,34 @@ void main() {
     });
   });
 
+  group('non-finite values from effect scripts', () {
+    test('a fast fillRect with NaN or Infinity draws nothing', () {
+      final raster = SimpleCanvasRaster.tryRaster(
+        encode([
+          (CanvasOp.fillStyle, ['#ff0000']),
+          (CanvasOp.fillRect, [double.nan, 0.0, 320.0, 200.0]),
+          (CanvasOp.fillRect, [0.0, 0.0, double.infinity, 200.0]),
+          (CanvasOp.fillRect, [0.0, 0.0, 10.0, 10.0]),
+        ]),
+      );
+      expect(raster, isNotNull);
+      expect(raster!.pixels[0], 0xff0000ff); // the finite rect, as ABGR
+      expect(raster.pixels[SimpleCanvasRaster.width * 100], 0xff000000);
+    });
+
+    test('rgb() clamps Infinity and rejects NaN, as browsers do', () {
+      expect(parseCssColor('rgb(1e999, 0, 0)')?.toARGB32(), 0xffff0000);
+      expect(parseCssColor('rgba(0, 0, 0, 1e999)')?.toARGB32(), 0xff000000);
+      expect(parseCssColor('rgb(NaN, 0, 0)'), isNull);
+      expect(parseCssColor('hsl(0, NaN%, 50%)'), isNull);
+    });
+
+    test('HSL from the shim treats non-finite components as 0', () {
+      expect(hslArgb(double.nan, 100, 50), hslArgb(0, 100, 50));
+      expect(hslArgb(120, double.infinity, double.nan), 0xff000000);
+    });
+  });
+
   group('SimpleCanvasRaster.rasterInto', () {
     SimpleRaster base() => SimpleCanvasRaster.tryRaster(
       encode([
@@ -435,6 +465,124 @@ void main() {
         isNull,
       );
       expect(SimpleCanvasRaster.tryRaster(gradientFrame), isNull);
+    });
+
+    group('after a general-replay frame', () {
+      final gradientFrame = encode([
+        (CanvasOp.fillStyle, [GradientRef(1)]),
+        (CanvasOp.fillRect, [0.0, 0.0, 320.0, 200.0]),
+      ]);
+      Uint32List blank() =>
+          Uint32List(SimpleCanvasRaster.width * SimpleCanvasRaster.height);
+
+      test('a fill without a known style is not rasterized', () {
+        final state = SimpleCanvasRaster.stateAfterReplay(
+          gradientFrame,
+          const SimpleRasterState(),
+        );
+        expect(state.fill, isNull);
+        final frame = encode([
+          (CanvasOp.fillRect, [0.0, 0.0, 10.0, 10.0]),
+        ]);
+        expect(
+          SimpleCanvasRaster.rasterInto(
+            blank(),
+            frame,
+            firstFrame: false,
+            mustCover: true,
+            state: state,
+          ),
+          isNull,
+        );
+      });
+
+      test('a partial fill does not restart from fabricated black', () {
+        final frame = encode([
+          (CanvasOp.fillStyle, ['#ff0000']),
+          (CanvasOp.fillRect, [0.0, 0.0, 10.0, 10.0]),
+        ]);
+        expect(
+          SimpleCanvasRaster.rasterInto(
+            blank(),
+            frame,
+            firstFrame: false,
+            mustCover: true,
+          ),
+          isNull,
+        );
+        expect(SimpleCanvasRaster.tryRaster(frame, mustCover: true), isNull);
+      });
+
+      test('a full opaque fill resumes the fast path', () {
+        final frame = encode([
+          (CanvasOp.fillStyle, ['#00ff00']),
+          (CanvasOp.fillRect, [0.0, 0.0, 320.0, 200.0]),
+          (CanvasOp.fillRect, [0.0, 0.0, 10.0, 10.0]),
+        ]);
+        final raster = SimpleCanvasRaster.tryRaster(frame, mustCover: true);
+        expect(raster, isNotNull);
+        expect(raster!.pixels[0], 0xff00ff00);
+        expect(raster.pixels.every((p) => p == 0xff00ff00), isTrue);
+      });
+
+      test('a full clearRect covers the canvas', () {
+        expect(
+          SimpleCanvasRaster.tryRaster(
+            encode([
+              (CanvasOp.clearRect, [-5.0, -5.0, 400.0, 300.0]),
+            ]),
+            mustCover: true,
+          ),
+          isNotNull,
+        );
+      });
+
+      test('style set before a fallback is tracked and reused', () {
+        final state = SimpleCanvasRaster.stateAfterReplay(
+          encode([
+            (CanvasOp.fillStyle, ['#0000ff']),
+            (CanvasOp.save, <Object>[]),
+            (CanvasOp.fillRect, [0.0, 0.0, 5.0, 5.0]),
+          ]),
+          const SimpleRasterState(),
+        );
+        expect(state.fill, 0xff0000ff);
+        final raster = SimpleCanvasRaster.tryRaster(
+          encode([
+            (CanvasOp.fillRect, [0.0, 0.0, 320.0, 200.0]),
+          ]),
+          state: state,
+          mustCover: true,
+        );
+        expect(raster?.pixels[0], 0xffff0000);
+      });
+
+      test('restore, alpha and composite leave the fast state unknown', () {
+        expect(
+          SimpleCanvasRaster.stateAfterReplay(
+            encode([(CanvasOp.restore, <Object>[])]),
+            const SimpleRasterState(),
+          ),
+          SimpleRasterState.unknown,
+        );
+        final state = SimpleCanvasRaster.stateAfterReplay(
+          encode([
+            (CanvasOp.alpha, [0.5]),
+          ]),
+          const SimpleRasterState(),
+        );
+        expect(state.alpha, 0.5);
+        expect(
+          SimpleCanvasRaster.tryRaster(
+            encode([
+              (CanvasOp.fillRect, [0.0, 0.0, 320.0, 200.0]),
+            ]),
+            state: state,
+            mustCover: true,
+          ),
+          isNull,
+        );
+      });
     });
   });
 }

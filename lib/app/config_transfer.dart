@@ -5,6 +5,7 @@
 // a backup of the current file, and the caller reloads the modules so the
 // change applies without restarting the app.
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -22,6 +23,34 @@ const importBackupSuffix = 'before-import';
 
 /// Default name of an exported file.
 const exportFileName = 'lumivent-config.json';
+
+/// Largest file an import reads. A real configuration is a few kilobytes;
+/// the cap stops a wrong pick from being loaded whole into memory.
+const maxImportMegabytes = 16;
+const maxImportBytes = maxImportMegabytes * 1024 * 1024;
+
+/// Reads an import file from [bytes] as UTF-8, stopping as soon as it exceeds
+/// [maxImportBytes].
+///
+/// Throws [FormatException] (message in [strings]) when the file is too large
+/// or is not valid UTF-8, the same way [importableSections] reports bad JSON.
+Future<String> readImportText(
+  Stream<List<int>> bytes, {
+  AppStrings strings = AppStrings.en,
+}) async {
+  final buffer = BytesBuilder(copy: false);
+  await for (final chunk in bytes) {
+    if (buffer.length + chunk.length > maxImportBytes) {
+      throw FormatException(strings.shell.fileTooLarge(maxImportMegabytes));
+    }
+    buffer.add(chunk);
+  }
+  try {
+    return utf8.decode(buffer.takeBytes());
+  } on FormatException {
+    throw FormatException(strings.shell.invalidJson);
+  }
+}
 
 /// The configuration as exported (pretty JSON).
 String exportConfig(ConfigStore store) =>
