@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/async_action.dart';
 import '../../../core/ui/theme.dart';
-import '../../../core/ui/widgets.dart';
+import '../../../core/ui/we_card.dart';
+import '../../../core/ui/setting_row.dart';
 import '../application/system_controller.dart';
 import '../domain/autostart.dart';
 

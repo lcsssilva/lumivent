@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/monitoring/infrastructure/nvme.dart';
+import 'package:lumivent/features/monitoring/infrastructure/nvme_ssd_reader.dart';
 import 'package:lumivent/features/monitoring/monitoring.dart';
 
 import 'smart_fixture.dart';

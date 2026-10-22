@@ -5,7 +5,7 @@ import '../../../core/i18n/app_strings.dart';
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/i18n/catalogs/system_strings.dart';
 import '../../../core/ui/theme.dart';
-import '../../../core/ui/widgets.dart';
+import '../../../core/ui/we_card.dart';
 import '../application/runtime_checks.dart';
 import '../application/system_controller.dart';
 import '../domain/diagnostics.dart';

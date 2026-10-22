@@ -10,7 +10,7 @@ import '../../features/monitoring/monitoring.dart';
 import '../navigation/app_route.dart';
 import 'settings_page.dart';
 import 'sidebar.dart';
-import 'topbar.dart';
+import 'top_bar.dart';
 
 class Shell extends ConsumerStatefulWidget {
   const Shell({super.key});

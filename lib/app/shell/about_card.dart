@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/i18n/app_strings_scope.dart';
-import '../../core/ui/widgets.dart';
+import '../../core/ui/we_card.dart';
+import '../../core/ui/setting_row.dart';
 
 /// Project license and the licenses of everything bundled with the app.
 class AboutCard extends StatelessWidget {

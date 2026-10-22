@@ -22,7 +22,7 @@ import '../domain/installed_effect.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 import '../domain/rgb.dart';
-import 'effects_controller.dart';
+import 'installed_effects_controller.dart';
 import 'lighting_controller.dart';
 import 'lighting_messages.dart';
 

@@ -23,7 +23,7 @@ export 'domain/ssd.dart'
         SsdInfo,
         SsdReader,
         SsdSmartError;
-export 'infrastructure/nvme.dart' show findNvmeSmartHelper;
+export 'infrastructure/nvme_ssd_reader.dart' show findNvmeSmartHelper;
 export 'monitoring_module.dart';
 export 'presentation/monitoring_page.dart' show MonitoringPage;
 export 'presentation/topbar_sensors.dart' show TopbarSensors;

@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/engine_host.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/core/ui/theme.dart';
-import 'package:lumivent/features/monitoring/infrastructure/nvme.dart';
+import 'package:lumivent/features/monitoring/infrastructure/nvme_ssd_reader.dart';
 import 'package:lumivent/features/monitoring/monitoring.dart';
 import 'package:lumivent/features/preferences/preferences.dart';
 

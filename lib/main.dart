@@ -9,7 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'app/bootstrap.dart';
-import 'app/bootstrap_failure.dart';
+import 'app/bootstrap_failure_app.dart';
 import 'core/persistence/config_store.dart';
 import 'features/lighting/infrastructure/html_effects/runtime.dart'
     show runHtmlEffectWorker;

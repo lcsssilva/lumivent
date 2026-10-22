@@ -3,87 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/sparkline.dart';
 import '../../../core/ui/theme.dart';
-import '../../../core/ui/widgets.dart';
-
-/// A small value with a label and, optionally, its own history.
-class StatTile extends StatelessWidget {
-  const StatTile({
-    super.key,
-    required this.label,
-    required this.value,
-    this.series,
-    this.min,
-    this.max,
-    this.color = WeColors.accent,
-  });
-
-  final String label;
-  final String value;
-  final List<double?>? series;
-  final double? min, max;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: WeColors.muted, fontSize: 12),
-      ),
-      const SizedBox(height: 2),
-      Text(
-        value,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-      if (series != null) ...[
-        const SizedBox(height: 4),
-        Sparkline(
-          values: series!,
-          height: 22,
-          min: min,
-          max: max,
-          color: color,
-        ),
-      ],
-    ],
-  );
-}
-
-/// Grid of [StatTile]s with [columns] columns.
-class StatGrid extends StatelessWidget {
-  const StatGrid({super.key, required this.children, this.columns = 3});
-  final List<Widget> children;
-  final int columns;
-
-  @override
-  Widget build(BuildContext context) {
-    final rows = <Widget>[];
-    for (var i = 0; i < children.length; i += columns) {
-      if (i > 0) rows.add(const SizedBox(height: WeSizes.unit * 2));
-      rows.add(
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var j = i; j < i + columns; j++) ...[
-              if (j > i) const SizedBox(width: WeSizes.unit * 2),
-              Expanded(
-                child: j < children.length ? children[j] : const SizedBox(),
-              ),
-            ],
-          ],
-        ),
-      );
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: rows,
-    );
-  }
-}
+import '../../../core/ui/we_card.dart';
+import 'stat_grid.dart';
 
 /// Area card (CPU, GPU…): large primary value with 5-minute history below and
 /// a grid of secondary values.
@@ -186,27 +107,4 @@ class MetricCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Subtle text shown when an area has no reading.
-class NoReading extends StatelessWidget {
-  const NoReading(this.text, {super.key});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: WeSizes.unit),
-    child: Row(
-      children: [
-        const StatusDot(WeColors.muted, size: 6),
-        const SizedBox(width: WeSizes.unit),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
-          ),
-        ),
-      ],
-    ),
-  );
 }

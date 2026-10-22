@@ -1,7 +1,7 @@
 /// Devices module: detection, identification, and drivers for all hardware. Public API: other modules import only this file.
 library;
 
-export 'application/devices_controller.dart'
+export 'application/devices_notifier.dart'
     show DevicesNotifier, devicesProvider;
 export 'application/devices_engine_module.dart' show DevicesEngineModule;
 export 'application/devices_messages.dart' show DevicesChanged, RescanDevices;

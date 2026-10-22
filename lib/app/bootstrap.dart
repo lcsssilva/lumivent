@@ -12,7 +12,7 @@ import '../features/fans/fans.dart';
 import '../features/lighting/lighting.dart';
 import '../features/preferences/preferences.dart';
 import '../features/system/system.dart';
-import 'app.dart';
+import 'we_app.dart';
 import 'desktop/desktop_actions.dart';
 import 'desktop/desktop_controller.dart';
 import 'engine_modules.dart';

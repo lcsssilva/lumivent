@@ -3,8 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
-import '../../../core/ui/widgets.dart';
-import '../application/devices_controller.dart';
+import '../../../core/ui/status_pill.dart';
+import '../../../core/ui/we_card.dart';
+import '../application/devices_notifier.dart';
 import '../domain/device.dart';
 import 'device_status_ui.dart';
 

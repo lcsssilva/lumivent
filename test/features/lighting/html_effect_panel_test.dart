@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/engine_host.dart';
 import 'package:lumivent/core/ui/theme.dart';
-import 'package:lumivent/features/lighting/application/effects_controller.dart';
+import 'package:lumivent/features/lighting/application/installed_effects_controller.dart';
 import 'package:lumivent/features/lighting/application/lighting_controller.dart';
 import 'package:lumivent/features/lighting/domain/effect_compat.dart';
 import 'package:lumivent/features/lighting/domain/effect_library.dart';

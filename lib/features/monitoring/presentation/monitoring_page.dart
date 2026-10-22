@@ -9,8 +9,11 @@ import '../application/monitoring_controller.dart';
 import '../domain/gpu_fan.dart';
 import '../domain/metrics.dart';
 import 'format.dart';
-import 'metric_widgets.dart';
+import 'metric_card.dart';
+import 'no_reading.dart';
 import 'ssd_section.dart';
+import 'stat_grid.dart';
+import 'stat_tile.dart';
 
 class MonitoringPage extends ConsumerWidget {
   const MonitoringPage({super.key});

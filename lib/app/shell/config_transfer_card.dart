@@ -7,7 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/i18n/app_strings_scope.dart';
 import '../../core/persistence/config_store.dart';
 import '../../core/ui/async_action.dart';
-import '../../core/ui/widgets.dart';
+import '../../core/ui/we_card.dart';
+import '../../core/ui/setting_row.dart';
 import '../config_transfer.dart';
 
 /// Export/import of the whole configuration. An import applies at once: the

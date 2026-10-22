@@ -3,7 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/engine_host.dart';
-import 'package:lumivent/features/lighting/application/effects_controller.dart';
+import 'package:lumivent/features/lighting/application/installed_effects_controller.dart';
 import 'package:lumivent/features/lighting/application/lighting_controller.dart';
 import 'package:lumivent/features/lighting/application/lighting_messages.dart';
 import 'package:lumivent/features/lighting/application/html_effect_runner.dart';

@@ -12,12 +12,15 @@ import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/i18n/catalogs/explore_strings.dart';
 import '../../../core/ui/async_action.dart';
 import '../../../core/ui/theme.dart';
-import '../../../core/ui/widgets.dart';
+import '../../../core/ui/we_card.dart';
 import '../../lighting/lighting.dart';
 import '../application/effect_filter.dart';
+import 'effect_card.dart';
+import 'explore_empty_state.dart';
+import 'explore_filters.dart';
 
-String _formatIssue(ExploreStrings e, ImportIssue issue) =>
-    e.importIssue(issue.kind.name, issue.path ?? '', error: issue.detail);
+String _formatIssue(ExploreStrings explore, ImportIssue issue) =>
+    explore.importIssue(issue.kind.name, issue.path ?? '', error: issue.detail);
 
 class ExplorePage extends ConsumerStatefulWidget {
   const ExplorePage({super.key});
@@ -33,6 +36,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
   SupportFilter _support = SupportFilter.all;
   String? _tag;
   String? _publisher;
+
   @override
   void dispose() {
     _query.dispose();
@@ -74,22 +78,22 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
               ),
         error: issues.isNotEmpty,
       );
-    } on Object catch (e) {
-      _tell(strings.explore.importFailed('$e'), error: true);
+    } on Object catch (error) {
+      _tell(strings.explore.importFailed('$error'), error: true);
     }
   });
 
   Future<void> _importFiles() async {
-    final strings = context.strings.explore;
+    final explore = context.strings.explore;
     final files = await FilePicker.pickFiles(
-      dialogTitle: strings.importEffectsDialogTitle,
+      dialogTitle: explore.importEffectsDialogTitle,
       type: FileType.custom,
       allowedExtensions: ['html', 'htm', 'zip'],
     );
     if (files.isEmpty) return;
     final paths = [
-      for (final f in files)
-        if (f.path != null) f.path!,
+      for (final file in files)
+        if (file.path != null) file.path!,
     ];
     if (paths.isEmpty) return;
     await _run(
@@ -120,7 +124,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
   void _apply(InstalledEffect effect) {
     ref
         .read(lightingProvider.notifier)
-        .update((c) => c.copyWith(effectId: effect.effectId));
+        .update((current) => current.copyWith(effectId: effect.effectId));
     _tell(context.strings.explore.effectApplied(effect.title));
   }
 
@@ -152,14 +156,14 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
     if (applied) {
       ref
           .read(lightingProvider.notifier)
-          .update((c) => c.copyWith(effectId: defaultEffectId));
+          .update((current) => current.copyWith(effectId: defaultEffectId));
     }
     try {
       await ref.read(installedEffectsProvider.notifier).remove(effect.id);
       _thumbs.remove(effect.id);
       _tell(strings.explore.effectRemoved(effect.title));
-    } on Object catch (e) {
-      _tell(strings.explore.removeFailed('$e'), error: true);
+    } on Object catch (error) {
+      _tell(strings.explore.removeFailed('$error'), error: true);
     }
   }
 
@@ -171,17 +175,17 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
   @override
   Widget build(BuildContext context) {
     final strings = context.strings;
-    final e = strings.explore;
+    final explore = strings.explore;
     final installed = ref.watch(installedEffectsProvider);
-    final cfg = ref.watch(lightingProvider);
-    final all = installed.value ?? const <InstalledEffect>[];
-    final filter = EffectFilter(
+    final lightingConfig = ref.watch(lightingProvider);
+    final allEffects = installed.value ?? const <InstalledEffect>[];
+    final effectFilter = EffectFilter(
       query: _query.text,
       support: _support,
       tag: _tag,
       publisher: _publisher,
     );
-    final visible = filterEffects(all, filter);
+    final visibleEffects = filterEffects(allEffects, effectFilter);
 
     return Padding(
       padding: const EdgeInsets.all(WeSizes.unit * 3),
@@ -194,11 +198,18 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
           ),
           const SizedBox(height: 2),
           Text(
-            e.subtitle,
+            explore.subtitle,
             style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
           ),
           const SizedBox(height: WeSizes.unit * 2),
-          Expanded(child: _installedTab(installed, all, visible, cfg)),
+          Expanded(
+            child: _installedTab(
+              installed,
+              allEffects,
+              visibleEffects,
+              lightingConfig,
+            ),
+          ),
         ],
       ),
     );
@@ -206,9 +217,9 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
 
   Widget _installedTab(
     AsyncValue<List<InstalledEffect>> installed,
-    List<InstalledEffect> all,
-    List<InstalledEffect> visible,
-    LightingConfig cfg,
+    List<InstalledEffect> allEffects,
+    List<InstalledEffect> visibleEffects,
+    LightingConfig lightingConfig,
   ) {
     final strings = context.strings;
     return Column(
@@ -216,14 +227,24 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
       children: [
         _buildToolbar(strings.explore),
         const SizedBox(height: WeSizes.unit * 2),
-        _buildFilters(availableTags(all), availablePublishers(all)),
+        _buildFilters(
+          availableTags(allEffects),
+          availablePublishers(allEffects),
+        ),
         const SizedBox(height: WeSizes.unit * 2),
-        Expanded(child: _buildContent(installed, all, visible, cfg)),
+        Expanded(
+          child: _buildContent(
+            installed,
+            allEffects,
+            visibleEffects,
+            lightingConfig,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildToolbar(ExploreStrings e) {
+  Widget _buildToolbar(ExploreStrings explore) {
     return Row(
       children: [
         if (isRunning)
@@ -245,19 +266,19 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
                 key: const Key('import-files'),
                 onPressed: isRunning ? null : _importFiles,
                 icon: const Icon(Icons.insert_drive_file_outlined, size: 18),
-                label: Text(e.importEffect),
+                label: Text(explore.importEffect),
               ),
               OutlinedButton.icon(
                 key: const Key('import-folder'),
                 onPressed: isRunning ? null : _importFolder,
                 icon: const Icon(Icons.folder_open_outlined, size: 18),
-                label: Text(e.folder),
+                label: Text(explore.folder),
               ),
               FilledButton.tonalIcon(
                 key: const Key('import-windows-cache'),
                 onPressed: isRunning ? null : _importWindowsCache,
                 icon: const Icon(Icons.desktop_windows_outlined, size: 18),
-                label: Text(e.importFromWindows),
+                label: Text(explore.importFromWindows),
               ),
             ],
           ),
@@ -267,7 +288,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
   }
 
   Widget _buildFilters(List<String> tags, List<String> publishers) {
-    return _Filters(
+    return ExploreFilters(
       controller: _query,
       support: _support,
       tag: _tag,
@@ -275,35 +296,36 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
       tags: tags,
       publishers: publishers,
       onQuery: () => setState(() {}),
-      onSupport: (v) => setState(() => _support = v),
-      onTag: (v) => setState(() => _tag = v),
-      onPublisher: (v) => setState(() => _publisher = v),
+      onSupport: (value) => setState(() => _support = value),
+      onTag: (value) => setState(() => _tag = value),
+      onPublisher: (value) => setState(() => _publisher = value),
     );
   }
 
   Widget _buildContent(
     AsyncValue<List<InstalledEffect>> installed,
-    List<InstalledEffect> all,
-    List<InstalledEffect> visible,
-    LightingConfig cfg,
+    List<InstalledEffect> allEffects,
+    List<InstalledEffect> visibleEffects,
+    LightingConfig lightingConfig,
   ) {
-    final e = context.strings.explore;
+    final explore = context.strings.explore;
     return installed.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, _) => _buildLibraryError(e, err),
-      data: (_) => _buildGrid(all, visible, cfg, e),
+      error: (error, _) => _buildLibraryError(explore, error),
+      data: (_) =>
+          _buildGrid(allEffects, visibleEffects, lightingConfig, explore),
     );
   }
 
-  Widget _buildLibraryError(ExploreStrings e, Object err) {
+  Widget _buildLibraryError(ExploreStrings explore, Object error) {
     return Center(
       child: WeCard(
-        title: e.libraryReadFailed,
+        title: explore.libraryReadFailed,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '${context.strings.common.technicalDetails}: $err',
+              '${context.strings.common.technicalDetails}: $error',
               style: const TextStyle(color: WeColors.muted),
             ),
             const SizedBox(height: 12),
@@ -318,15 +340,18 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
   }
 
   Widget _buildGrid(
-    List<InstalledEffect> all,
-    List<InstalledEffect> visible,
-    LightingConfig cfg,
-    ExploreStrings e,
+    List<InstalledEffect> allEffects,
+    List<InstalledEffect> visibleEffects,
+    LightingConfig lightingConfig,
+    ExploreStrings explore,
   ) {
-    if (all.isEmpty) return const _EmptyState();
-    if (visible.isEmpty) {
+    if (allEffects.isEmpty) return const ExploreEmptyState();
+    if (visibleEffects.isEmpty) {
       return Center(
-        child: Text(e.noMatch, style: const TextStyle(color: WeColors.muted)),
+        child: Text(
+          explore.noMatch,
+          style: const TextStyle(color: WeColors.muted),
+        ),
       );
     }
     return GridView.builder(
@@ -338,426 +363,18 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: visible.length,
-      itemBuilder: (context, i) {
-        final effect = visible[i];
-        return _EffectCard(
+      itemCount: visibleEffects.length,
+      itemBuilder: (context, index) {
+        final effect = visibleEffects[index];
+        return EffectCard(
           key: ValueKey('effect-card-${effect.id}'),
           effect: effect,
-          applied: cfg.effectId == effect.effectId,
+          applied: lightingConfig.effectId == effect.effectId,
           thumbnail: effect.hasThumbnail ? _thumbnail(effect) : null,
           onApply: effect.canRun ? () => _apply(effect) : null,
           onRemove: () => _remove(effect),
         );
       },
-    );
-  }
-}
-
-class _Filters extends StatelessWidget {
-  const _Filters({
-    required this.controller,
-    required this.support,
-    required this.tag,
-    required this.publisher,
-    required this.tags,
-    required this.publishers,
-    required this.onQuery,
-    required this.onSupport,
-    required this.onTag,
-    required this.onPublisher,
-  });
-
-  final TextEditingController controller;
-  final SupportFilter support;
-  final String? tag, publisher;
-  final List<String> tags, publishers;
-  final VoidCallback onQuery;
-  final ValueChanged<SupportFilter> onSupport;
-  final ValueChanged<String?> onTag;
-  final ValueChanged<String?> onPublisher;
-
-  @override
-  Widget build(BuildContext context) {
-    final e = context.strings.explore;
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        SizedBox(
-          width: 250,
-          child: TextField(
-            key: const Key('explore-search'),
-            controller: controller,
-            onChanged: (_) => onQuery(),
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: e.searchHint,
-              prefixIcon: const Icon(Icons.search, size: 18),
-              suffixIcon: controller.text.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.close, size: 16),
-                      onPressed: () {
-                        controller.clear();
-                        onQuery();
-                      },
-                    ),
-            ),
-          ),
-        ),
-        for (final option in [
-          (SupportFilter.all, e.filterAll),
-          (SupportFilter.compatible, e.filterCompatible),
-          (SupportFilter.partial, e.filterPartial),
-          (SupportFilter.unsupported, e.filterUnsupported),
-        ])
-          ChoiceChip(
-            key: ValueKey('filter-${option.$1.name}'),
-            label: Text(option.$2),
-            selected: support == option.$1,
-            onSelected: (_) => onSupport(option.$1),
-          ),
-        if (tags.isNotEmpty)
-          _Dropdown(
-            key: const Key('filter-tag'),
-            value: tag,
-            hint: e.allCategories,
-            values: tags,
-            onChanged: onTag,
-          ),
-        if (publishers.isNotEmpty)
-          _Dropdown(
-            key: const Key('filter-publisher'),
-            value: publisher,
-            hint: e.allPublishers,
-            values: publishers,
-            onChanged: onPublisher,
-          ),
-      ],
-    );
-  }
-}
-
-class _Dropdown extends StatelessWidget {
-  const _Dropdown({
-    super.key,
-    required this.value,
-    required this.hint,
-    required this.values,
-    required this.onChanged,
-  });
-
-  final String? value;
-  final String hint;
-  final List<String> values;
-  final ValueChanged<String?> onChanged;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12),
-    decoration: BoxDecoration(
-      color: WeColors.surface2,
-      borderRadius: BorderRadius.circular(WeSizes.radius),
-      border: Border.all(color: WeColors.border),
-    ),
-    child: DropdownButtonHideUnderline(
-      child: DropdownButton<String>(
-        value: value != null && values.contains(value) ? value! : '',
-        isDense: true,
-        dropdownColor: WeColors.surface2,
-        style: const TextStyle(color: WeColors.text, fontSize: 13),
-        items: [
-          DropdownMenuItem(value: '', child: Text(hint)),
-          for (final v in values) DropdownMenuItem(value: v, child: Text(v)),
-        ],
-        onChanged: (v) => onChanged(v == null || v.isEmpty ? null : v),
-      ),
-    ),
-  );
-}
-
-class _EffectCard extends StatelessWidget {
-  const _EffectCard({
-    super.key,
-    required this.effect,
-    required this.applied,
-    required this.thumbnail,
-    required this.onApply,
-    required this.onRemove,
-  });
-
-  final InstalledEffect effect;
-  final bool applied;
-  final Future<Uint8List?>? thumbnail;
-  final VoidCallback? onApply;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = context.strings;
-    final e = strings.explore;
-    final badgeColor = switch (effect.compatibility.support) {
-      EffectSupport.compatible => WeColors.ok,
-      EffectSupport.partial => WeColors.warn,
-      EffectSupport.unsupported => WeColors.danger,
-    };
-    return Container(
-      decoration: BoxDecoration(
-        color: WeColors.surface,
-        borderRadius: BorderRadius.circular(WeSizes.radius),
-        border: Border.all(
-          color: applied ? WeColors.accent : WeColors.border,
-          width: applied ? 1.5 : 1,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                _Thumb(effect: effect, bytes: thumbnail),
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: StatusPill(
-                    label: switch (effect.compatibility.support) {
-                      EffectSupport.compatible => e.compatible,
-                      EffectSupport.partial => e.partial,
-                      EffectSupport.unsupported => e.unsupported,
-                    },
-                    color: badgeColor,
-                    background: WeColors.bg.withValues(alpha: .82),
-                  ),
-                ),
-                if (applied)
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: StatusPill(
-                      label: e.appliedBadge,
-                      color: WeColors.accent,
-                      background: WeColors.bg.withValues(alpha: .82),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    effect.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    effect.publisher ??
-                        switch (effect.origin) {
-                          EffectOrigin.file => e.originFile,
-                          EffectOrigin.folder => e.originFolder,
-                          EffectOrigin.zip => e.originZip,
-                          EffectOrigin.windowsCache => e.originWindowsCache,
-                        },
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: WeColors.muted, fontSize: 12),
-                  ),
-                  const SizedBox(height: 6),
-                  SizedBox(
-                    height: 22,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        for (final t in effect.tags.take(4))
-                          Padding(
-                            padding: const EdgeInsets.only(right: 4),
-                            child: _Tag(text: t),
-                          ),
-                      ],
-                    ),
-                  ),
-                  if (!effect.canRun) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      e.requires(
-                        [
-                          for (final i in effect.compatibility.issues)
-                            strings.lighting.compatibilityIssue(i.index),
-                        ].join(', '),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: WeColors.danger,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: applied
-                            ? OutlinedButton.icon(
-                                onPressed: null,
-                                icon: const Icon(
-                                  Icons.check_circle_outline,
-                                  size: 16,
-                                ),
-                                label: Text(e.applied),
-                              )
-                            : FilledButton.tonalIcon(
-                                onPressed: onApply,
-                                icon: const Icon(Icons.play_arrow, size: 18),
-                                label: Text(e.apply),
-                              ),
-                      ),
-                      const SizedBox(width: 4),
-                      IconButton(
-                        key: ValueKey('remove-${effect.id}'),
-                        onPressed: onRemove,
-                        tooltip: e.removeFromLibrary,
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          size: 18,
-                          color: WeColors.muted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Thumb extends StatelessWidget {
-  const _Thumb({required this.effect, required this.bytes});
-  final InstalledEffect effect;
-  final Future<Uint8List?>? bytes;
-
-  @override
-  Widget build(BuildContext context) {
-    final future = bytes;
-    if (future != null) {
-      return FutureBuilder<Uint8List?>(
-        future: future,
-        builder: (context, snap) {
-          final data = snap.data;
-          if (data != null) {
-            return Image.memory(
-              data,
-              fit: BoxFit.cover,
-              gaplessPlayback: true,
-              // A frame is 320×200: keep it crisp.
-              filterQuality: FilterQuality.medium,
-            );
-          }
-          return _placeholder();
-        },
-      );
-    }
-    return _placeholder();
-  }
-
-  Widget _placeholder() {
-    final hash = effect.id.hashCode.abs();
-    final hue = (hash % 360).toDouble();
-    final a = HSVColor.fromAHSV(1, hue, .55, .38).toColor();
-    final b = HSVColor.fromAHSV(1, (hue + 55) % 360, .65, .18).toColor();
-    final initial = effect.title.trim().isEmpty
-        ? '?'
-        : effect.title.trim().characters.first.toUpperCase();
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [b, a],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Center(
-        child: Text(
-          initial,
-          style: TextStyle(
-            fontSize: 40,
-            fontWeight: FontWeight.w700,
-            color: Colors.white.withValues(alpha: .82),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-    decoration: BoxDecoration(
-      color: WeColors.surface2,
-      borderRadius: BorderRadius.circular(999),
-      border: Border.all(color: WeColors.border),
-    ),
-    child: Text(
-      text,
-      style: const TextStyle(color: WeColors.muted, fontSize: 10.5),
-    ),
-  );
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    final e = context.strings.explore;
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.auto_awesome_outlined,
-            size: 42,
-            color: WeColors.muted,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            e.noEffectsTitle,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          SizedBox(
-            width: 430,
-            child: Text(
-              e.noEffectsBody,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

@@ -10,6 +10,7 @@ import '../domain/lighting_config.dart';
 import 'board_hardware_panel.dart';
 import 'effect_panel.dart';
 import 'fan_hardware_panel.dart';
+import 'fixed_color_panel.dart';
 import 'gpu_hardware_panel.dart';
 
 class LightingModePanel extends ConsumerWidget {

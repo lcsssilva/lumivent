@@ -1,5 +1,5 @@
 // Right column (canvas mode): global effect controls generated from the
-// `EffectParam` declarations, plus the fixed-color panel.
+// `EffectParam` declarations.
 //
 // Installed HTML effects generate the same controls from their
 // `<meta property>` tags (plan §5.5).
@@ -10,19 +10,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
-import '../../../core/ui/widgets.dart';
-import '../application/effects_controller.dart';
+import '../../../core/ui/we_card.dart';
+import '../application/installed_effects_controller.dart';
 import '../application/lighting_controller.dart';
 import '../application/html_effect_runner.dart';
 import '../domain/effect_compat.dart';
 import '../domain/effect_meta.dart';
 import '../domain/hardware_equivalents.dart';
 import '../domain/installed_effect.dart';
-import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 import '../domain/native_effects.dart';
 import '../domain/rgb.dart';
-import 'color_picker.dart';
 import 'labels.dart';
 import 'panel_controls.dart';
 
@@ -238,48 +236,53 @@ class _HtmlEffectControls extends ConsumerWidget {
 }
 
 /// `EffectProperty` → the control declaration the panel already draws.
-EffectParam? _paramOf(EffectProperty p) {
-  switch (p.type) {
+EffectParam? _paramOf(EffectProperty property) {
+  switch (property.type) {
     case 'number':
-      final lo = (p.min ?? 0).toDouble();
-      final hi = (p.max ?? 100).toDouble();
-      final def = p.initialValue is num
-          ? (p.initialValue as num).toDouble()
-          : lo;
+      final minimum = (property.min ?? 0).toDouble();
+      final maximum = (property.max ?? 100).toDouble();
+      final maximumOrMinimum = maximum <= minimum ? minimum + 1 : maximum;
+      final defaultValue = property.initialValue is num
+          ? (property.initialValue as num).toDouble()
+          : minimum;
       return EffectParam.number(
-        p.name,
-        p.label ?? p.name,
-        min: lo,
-        max: hi <= lo ? lo + 1 : hi,
-        defaultValue: def.clamp(lo, hi <= lo ? lo + 1 : hi),
+        property.name,
+        property.label ?? property.name,
+        min: minimum,
+        max: maximumOrMinimum,
+        defaultValue: defaultValue.clamp(minimum, maximumOrMinimum),
       );
     case 'hue':
-      final def = p.initialValue is num
-          ? (p.initialValue as num).toDouble()
+      final defaultValue = property.initialValue is num
+          ? (property.initialValue as num).toDouble()
           : 0.0;
-      return EffectParam.hue(p.name, p.label ?? p.name, defaultValue: def);
+      return EffectParam.hue(
+        property.name,
+        property.label ?? property.name,
+        defaultValue: defaultValue,
+      );
     case 'color':
-      final def = p.resolve(null);
+      final defaultValue = property.resolve(null);
       return EffectParam.color(
-        p.name,
-        p.label ?? p.name,
-        defaultValue: def is String ? def : '#FFFFFF',
+        property.name,
+        property.label ?? property.name,
+        defaultValue: defaultValue is String ? defaultValue : '#FFFFFF',
       );
     case 'boolean':
       return EffectParam.boolean(
-        p.name,
-        p.label ?? p.name,
-        defaultValue: p.resolve(null) == true,
+        property.name,
+        property.label ?? property.name,
+        defaultValue: property.resolve(null) == true,
       );
     case 'combobox':
-      final options = p.values;
-      final def = p.resolve(null);
+      final options = property.values;
+      final defaultValue = property.resolve(null);
       return EffectParam.combobox(
-        p.name,
-        p.label ?? p.name,
+        property.name,
+        property.label ?? property.name,
         options: options,
-        defaultValue: def is String && options.contains(def)
-            ? def
+        defaultValue: defaultValue is String && options.contains(defaultValue)
+            ? defaultValue
             : (options.isEmpty ? '' : options.first),
       );
     default:
@@ -302,27 +305,27 @@ class _ParamControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = param;
+    final declaration = param;
     final strings = context.strings;
-    final label = paramLabel(strings, p.id, p.label);
-    switch (p.type) {
+    final label = paramLabel(strings, declaration.id, declaration.label);
+    switch (declaration.type) {
       case EffectParamType.number:
-        final v = values.number(p.id);
+        final value = values.number(declaration.id);
         return PanelSlider(
           label: label,
-          valueText: v.round().toString(),
-          value: v,
-          min: p.min!,
-          max: p.max!,
+          valueText: value.round().toString(),
+          value: value,
+          min: declaration.min!,
+          max: declaration.max!,
           enabled: enabled,
           onChanged: onChanged,
         );
       case EffectParamType.hue:
-        final v = values.number(p.id);
+        final value = values.number(declaration.id);
         return PanelSlider(
           label: label,
-          valueText: '${v.round()}°',
-          value: v,
+          valueText: '${value.round()}°',
+          value: value,
           min: 0,
           max: 360,
           background: _hueGradient,
@@ -332,52 +335,29 @@ class _ParamControl extends StatelessWidget {
         return PanelRow(
           label: label,
           control: ColorSwatchButton(
-            color: values.color(p.id),
+            color: values.color(declaration.id),
             onChanged: (c) => onChanged(c.toHex()),
           ),
         );
       case EffectParamType.boolean:
         return PanelRow(
           label: label,
-          control: Switch(value: values.boolean(p.id), onChanged: onChanged),
+          control: Switch(
+            value: values.boolean(declaration.id),
+            onChanged: onChanged,
+          ),
         );
       case EffectParamType.combobox:
         return PanelRow(
           label: label,
           control: PanelDropdown<String>(
-            value: values.option(p.id),
-            items: p.options,
+            value: values.option(declaration.id),
+            items: declaration.options,
             labelOf: (s) => strings.lighting.optionLabel(s),
             onChanged: onChanged,
           ),
         );
     }
-  }
-}
-
-/// Fixed-color panel for one device.
-class FixedColorPanel extends ConsumerWidget {
-  const FixedColorPanel({super.key, required this.id});
-  final LightDeviceId id;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cfg = ref.watch(lightingProvider.select((c) => c.device(id)));
-    final strings = context.strings;
-    return WeCard(
-      flat: true,
-      title: strings.lighting.fixedColorTitle(
-        deviceLabel(strings, id, ref.watch(fanGroupNamesProvider)),
-      ),
-      child: ColorPicker(
-        color: cfg.fixedColor,
-        onChanged: (c) => ref
-            .read(lightingProvider.notifier)
-            .update(
-              (s) => s.withDevice(id, s.device(id).copyWith(fixedColor: c)),
-            ),
-      ),
-    );
   }
 }
 

@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/i18n/app_strings.dart';
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
-import '../../../core/ui/widgets.dart';
+import '../../../core/ui/we_card.dart';
 import '../../devices/devices.dart';
 import '../application/lighting_controller.dart';
 import '../domain/led_layout.dart';

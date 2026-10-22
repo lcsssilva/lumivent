@@ -3,7 +3,7 @@
 /// this file.
 library;
 
-export 'application/effects_controller.dart'
+export 'application/installed_effects_controller.dart'
     show
         InstalledEffectsController,
         effectImporterProvider,

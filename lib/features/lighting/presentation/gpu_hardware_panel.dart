@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
-import '../../../core/ui/widgets.dart';
+import '../../../core/ui/we_card.dart';
 import '../application/lighting_controller.dart';
 import '../domain/lighting_config.dart';
 import 'labels.dart';

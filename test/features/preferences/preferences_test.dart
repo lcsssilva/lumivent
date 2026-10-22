@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/preferences/domain/preferences.dart';
 import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
-import 'package:lumivent/features/preferences/infrastructure/preferences_store.dart';
+import 'package:lumivent/features/preferences/infrastructure/json_preferences_repository.dart';
 
 void main() {
   test('JSON round trip', () {

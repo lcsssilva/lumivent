@@ -7,8 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/domain/effect_compat.dart';
 import 'package:lumivent/features/lighting/domain/effect_library.dart';
 import 'package:lumivent/features/lighting/domain/installed_effect.dart';
-import 'package:lumivent/features/lighting/infrastructure/effect_importer.dart';
-import 'package:lumivent/features/lighting/infrastructure/effect_library.dart';
+import 'package:lumivent/features/lighting/infrastructure/file_effect_importer.dart';
+import 'package:lumivent/features/lighting/infrastructure/file_effect_library.dart';
 
 String effectHtml(
   String title, {

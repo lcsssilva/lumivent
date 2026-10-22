@@ -2,13 +2,13 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 
 import '../../core/persistence/config_store.dart';
 import '../devices/devices.dart' show Alv2HubProxy;
-import 'application/effects_controller.dart';
+import 'application/installed_effects_controller.dart';
 import 'application/lighting_controller.dart';
 import 'application/lighting_engine_module.dart';
 import 'domain/lighting_config.dart';
 import 'infrastructure/device_light_outputs.dart';
-import 'infrastructure/effect_importer.dart';
-import 'infrastructure/effect_library.dart';
+import 'infrastructure/file_effect_importer.dart';
+import 'infrastructure/file_effect_library.dart';
 import 'infrastructure/json_lighting_config_repository.dart';
 import 'infrastructure/logind_power_watcher.dart';
 import 'infrastructure/html_effects/runtime.dart';

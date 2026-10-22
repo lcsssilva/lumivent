@@ -11,7 +11,7 @@ import 'package:archive/archive.dart';
 import '../domain/effect_library.dart';
 import '../domain/effect_meta.dart';
 import '../domain/installed_effect.dart';
-import 'effect_library.dart';
+import 'file_effect_library.dart';
 
 const _maxHtmlBytes = 4 * 1024 * 1024;
 const _maxZipBytes = 64 * 1024 * 1024;
