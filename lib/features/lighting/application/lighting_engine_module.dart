@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import '../../../core/engine/engine_host.dart';
-import '../domain/frame_composer.dart';
 import '../domain/hardware_equivalents.dart';
-import '../domain/hardware_timing.dart';
 import '../domain/light_device.dart';
 import '../domain/light_outputs.dart';
 import '../domain/lighting_config.dart';
@@ -12,10 +10,15 @@ import '../domain/power_events.dart';
 import '../domain/rgb.dart';
 import 'device_health_monitor.dart';
 import 'lighting_engine_commands.dart';
+import 'lighting_frame_compositor.dart';
 import 'lighting_frame_deduplicator.dart';
+import 'lighting_hardware_applier.dart';
+import 'lighting_hardware_state.dart';
 import 'lighting_latency_model.dart';
 import 'lighting_messages.dart';
 import 'lighting_reconciler.dart';
+import 'lighting_status_reporter.dart';
+import 'lighting_trace.dart';
 import 'output_scheduler.dart';
 
 /// Lighting module part that runs in the engine.
@@ -41,6 +44,13 @@ import 'output_scheduler.dart';
 /// * [stop] stops timers and the power watcher but does **not** turn the LEDs
 ///   off: they stay as they were when the app exits.
 ///
+/// Responsibilities keep their own files: what the hardware holds lives in
+/// [LightingHardwareState] and the mode writes in
+/// [LightingHardwareApplier] ([lighting_hardware_applier.dart]); frame
+/// composition in [LightingFrameCompositor]; status emission in
+/// [LightingStatusReporter]; lane pacing in [OutputScheduler]; and the
+/// coalescing/retry of config changes in [LightingReconciler].
+///
 /// Stop order: the engine stops modules in reverse list order, and the AL V2
 /// hub is released by monitoring. `buildEngineModules` lists lighting last,
 /// so it stops first (no frame after the hub closes), then fans (final safe
@@ -64,6 +74,26 @@ class LightingEngineModule implements EngineModule {
     _config = _derive(initial);
     _latency = LightingLatencyModel();
     _deduplicator = LightingFrameDeduplicator(resendEvery);
+    _hardware = LightingHardwareState(_deduplicator);
+    _compositor = LightingFrameCompositor(leadOf: _leadSeconds);
+    _hardwareApplier = LightingHardwareApplier(
+      state: _hardware,
+      onFansDown: _fansDown,
+      onBoardDown: _boardDown,
+      onGpuDown: _gpuDown,
+      onBreathingStarted: () => _compositor.anchorBreathing(_seconds(now())),
+      trace: _traceFans,
+      stopped: () => _stopped,
+      now: () => now(),
+    );
+    _status = LightingStatusReporter(
+      emit: (event) => _emit(event),
+      now: () => now(),
+      outputs: () => _outputs,
+      health: () => _health,
+      lanes: () => _lanes,
+      leadOf: _leadSeconds,
+    );
     _scheduler = OutputScheduler(
       now: now,
       fps: () => _fps,
@@ -71,7 +101,7 @@ class LightingEngineModule implements EngineModule {
       canSend: (family) =>
           _blocking[family]! == 0 &&
           switch (family) {
-            OutputFamily.fans => _fansReady && !_fanMerged,
+            OutputFamily.fans => _fansReady && !_hardware.fanMerged,
             OutputFamily.ite => _boardReady,
             OutputFamily.ram => true,
             OutputFamily.gpu => _gpuReady,
@@ -88,16 +118,10 @@ class LightingEngineModule implements EngineModule {
           OutputFamily.gpu => _sendGpu(out, at, epoch),
         };
       },
-      onStarted: (at) {
-        _frames = 0;
-        _fpsWindowStart = at;
-      },
-      onStopped: () {
-        _measuredFps = 0;
-        _emitStatus(force: true);
-      },
-      onTickStart: () => _frames++,
-      onTickEnd: _updateFps,
+      onStarted: _status.loopStarted,
+      onStopped: _status.loopStopped,
+      onTickStart: _status.tickStarted,
+      onTickEnd: _status.updateFps,
       onError: _log,
     );
   }
@@ -167,19 +191,12 @@ class LightingEngineModule implements EngineModule {
   /// (phase 4 checklist, step 8).
   static const hardwareResendDelay = Duration(seconds: 1);
 
-  /// Engine time (seconds, see [_seconds]) at which the firmware `Breathing`
-  /// started, or `null` when the fans are not running it. The canvas devices
-  /// are composed against this instant so they breathe in phase (see
-  /// [breathingEffectTime]).
-  double? _breathingSince;
-
-  /// Colors sampled from the current HTML effect (UI isolate), and the
-  /// effect they belong to. Frames from another effect are stale and dropped.
-  Map<LightDeviceId, List<Rgb>>? _pixels;
-  String? _pixelsEffect;
-  final _frameComposer = FrameComposer();
-  late final LightingLatencyModel _latency;
   late final LightingFrameDeduplicator _deduplicator;
+  late final LightingHardwareState _hardware;
+  late final LightingHardwareApplier _hardwareApplier;
+  late final LightingFrameCompositor _compositor;
+  late final LightingStatusReporter _status;
+  late final LightingLatencyModel _latency;
 
   late final OutputScheduler _scheduler;
   Map<OutputFamily, OutputLane> get _lanes => _scheduler.lanes;
@@ -205,6 +222,8 @@ class LightingEngineModule implements EngineModule {
   bool _powerOff = false;
   bool _isOff = false;
 
+  bool get _shouldBeOff => _config.argbOff || _powerOff;
+
   final _health = DeviceHealthMonitor();
 
   bool get _fansReady => _health.fansReady;
@@ -213,59 +232,21 @@ class LightingEngineModule implements EngineModule {
   set _boardReady(bool value) => _health.boardReady = value;
   bool get _gpuReady => _health.gpuReady;
   set _gpuReady(bool value) => _health.gpuReady = value;
-  Set<LightDeviceId> get _ramDown => _health.ramDown;
   Map<LightDeviceId, DateTime> get _ramRetryAt => _health.ramRetryAt;
   DateTime get _nextRetry => _health.nextRetry;
   set _nextRetry(DateTime value) => _health.nextRetry = value;
-
-  // What the hardware currently holds.
-  List<int>? _appliedQty;
-
-  /// Merge order the hub holds; `initFans` resets it to the default.
-  List<int>? _appliedMergeOrder;
-  final _applied = <Object, Object?>{};
-  bool _fanMerged = false;
-
-  // FPS and status.
-  int _frames = 0;
-  late DateTime _fpsWindowStart;
-  double _measuredFps = 0;
-  LightingStatus? _lastStatus;
-  Map<OutputFamily, LoopStats> _loops = const {};
-  DateTime _lastFpsEmit = DateTime.fromMillisecondsSinceEpoch(0);
-
-  bool get _shouldBeOff => _config.argbOff || _powerOff;
-
-  /// Current send-time estimate of [family] (EMA of the measured durations,
-  /// clamped to 0-150 ms).
-  Duration latencyOf(OutputFamily family) => _latency.latencyOf(family);
-
-  void _observe(OutputFamily family, Duration took) =>
-      _latency.observe(family, took);
-
-  /// Delay of the AL V2 firmware between receiving a canvas frame and showing
-  /// it. Measured on hardware (2026-10-19, `tool/hw_test_fase4.dart sync`):
-  /// with the fans streamed first, the case/board/RAM had to be sent ~150 ms
-  /// after the fan send completed for both to change at the same instant.
-  /// How far ahead of "now" a family must be composed. Synchronous outputs
-  /// (ITE, RAM) show the colors when the send ends, so the lead is the send
-  /// time. The fans show a frame only [fanDisplayLatencyMs] after the whole
-  /// send, so their lead is the send time plus that delay. The GPU applies the
-  /// effect when the write lands, before the controller's 120 ms pause, so
-  /// only the write part of its measured send time is a lead.
-  double _leadSeconds(OutputFamily family) =>
-      _latency.leadSeconds(family, gpuFrameGap);
 
   // ── EngineModule ────────────────────────────────────────────────────────
 
   @override
   void start(void Function(EngineEvent) emit) {
     _emit = emit;
-    _startedAt = _fpsWindowStart = now();
-    _breathingSince = null;
+    _startedAt = now();
+    _status.loopStarted(_startedAt);
+    _compositor.clearBreathing();
     _config = _derive(_user);
     _emit(ArgbStateChanged(_config.argbOff));
-    _emitStatus();
+    _status.emitStatus();
     unawaited(_startWatcher());
     unawaited(_run(_startup));
   }
@@ -285,8 +266,7 @@ class LightingEngineModule implements EngineModule {
         }
       case SetHtmlEffectFrame(:final effectId, :final pixels):
         if (effectId == _config.effectId) {
-          _pixelsEffect = effectId;
-          _pixels = pixels;
+          _compositor.accept(effectId, pixels);
         }
       case IdentifyFanGroup(:final group):
         _identify(group);
@@ -413,7 +393,7 @@ class LightingEngineModule implements EngineModule {
   void _setConfig(LightingConfig nextUser) {
     if (nextUser == _user) return;
     _user = nextUser;
-    if (_trace) {
+    if (lightingTrace) {
       final fans = [
         for (final id in LightDeviceId.values.where((d) => d.isFan))
           '${id.hubGroup}:${nextUser.device(id).enabled ? 'on' : 'off'}/'
@@ -431,11 +411,8 @@ class LightingEngineModule implements EngineModule {
     }
     final prev = _config;
     _config = next;
-    if (prev.effectId != next.effectId) {
-      _pixels = null;
-      _pixelsEffect = null;
-    }
-    if (!_usesFirmwareBreathing(next)) _breathingSince = null;
+    if (prev.effectId != next.effectId) _compositor.invalidate();
+    if (!_compositor.usesFirmwareBreathing(next)) _compositor.clearBreathing();
     if (prev.argbOff != next.argbOff) {
       _emit(ArgbStateChanged(next.argbOff));
       unawaited(_run(next.argbOff ? _turnOff : _restore));
@@ -449,21 +426,6 @@ class LightingEngineModule implements EngineModule {
   /// equivalents of [withAutoHardware].
   LightingConfig _derive(LightingConfig user) => withAutoHardware(user);
 
-  /// Whether any enabled fan group runs the firmware `Breathing` for the
-  /// current effect: only then the canvas devices follow the firmware clock.
-  bool _usesFirmwareBreathing(LightingConfig c) {
-    if (c.effectId != 'breathing') return false;
-    for (final id in LightDeviceId.values.where((d) => d.isFan)) {
-      final d = c.device(id);
-      if (d.enabled &&
-          d.mode == LightMode.hardware &&
-          c.alv2Hardware[id.hubGroup!].mode == 'Breathing') {
-        return true;
-      }
-    }
-    return false;
-  }
-
   /// Several config commands in a row (pointer moves) become one job, which
   /// reads the latest config when it runs.
   void _scheduleReconcile() => _reconciler.schedule(() => _run(_reconcile));
@@ -475,13 +437,14 @@ class LightingEngineModule implements EngineModule {
     final out = _outputs;
     if (out == null) return;
     if (!_fansReady) {
-      final qty = _quantity(_config);
+      final qty = LightingHardwareState.quantityOf(_config);
       final ok = await _gated([OutputFamily.fans], () => out.initFans(qty));
       if (_stopped) return;
       if (ok) {
-        _appliedQty = qty;
-        _appliedMergeOrder = LightingConfig.defaultMergeOrder;
-        _forgetFans();
+        _hardware
+          ..appliedQuantity = qty
+          ..appliedMergeOrder = LightingConfig.defaultMergeOrder
+          ..forgetFans();
         _fansReady = true;
       } else {
         _nextRetry = now().add(retryEvery);
@@ -491,7 +454,7 @@ class LightingEngineModule implements EngineModule {
       final ok = await _gated([OutputFamily.ite], () => out.initBoard());
       if (_stopped) return;
       if (ok) {
-        _forgetBoard();
+        _hardware.forgetBoard();
         _boardReady = true;
       } else {
         _nextRetry = now().add(retryEvery);
@@ -502,7 +465,7 @@ class LightingEngineModule implements EngineModule {
       final ok = await _gated([OutputFamily.gpu], () => out.initGpu());
       if (_stopped) return;
       if (ok) {
-        _forgetGpu();
+        _hardware.forgetGpu();
         _gpuReady = true;
         _resetGpuBackoff();
       } else {
@@ -513,7 +476,7 @@ class LightingEngineModule implements EngineModule {
         );
       }
     }
-    _emitStatus();
+    _status.emitStatus();
   }
 
   void _resetGpuBackoff() => _health.resetGpuBackoff();
@@ -540,17 +503,17 @@ class LightingEngineModule implements EngineModule {
       _fansReady = fansOff;
       _boardReady = boardOff;
       _gpuReady = gpuOff;
-      _ramDown
+      _health.ramDown
         ..clear()
         ..addAll(ramOk ? const [] : [LightDeviceId.ram1, LightDeviceId.ram2]);
-      _forgetFans();
-      _forgetBoard();
-      _forgetGpu();
+      _hardware.forgetFans();
+      _hardware.forgetBoard();
+      _hardware.forgetGpu();
       _deduplicator.clear();
-      _breathingSince = null;
-      _pixels = null;
-      _pixelsEffect = null;
-      _emitStatus();
+      _compositor
+        ..clearBreathing()
+        ..invalidate();
+      _status.emitStatus();
     });
   }
 
@@ -568,14 +531,14 @@ class LightingEngineModule implements EngineModule {
       _isOff = false;
       _ioEpoch++;
       _deduplicator.clear();
-      _breathingSince = null;
-      _pixels = null;
-      _pixelsEffect = null;
+      _compositor
+        ..clearBreathing()
+        ..invalidate();
       _config = _derive(_user);
       _fansReady = false;
       _boardReady = false;
       _gpuReady = false;
-      _ramDown.clear();
+      _health.ramDown.clear();
       _ramRetryAt.clear();
       // Resume/restore may have fixed the bus: identify the GPU right away.
       _resetGpuBackoff();
@@ -589,56 +552,7 @@ class LightingEngineModule implements EngineModule {
     });
   }
 
-  void _forgetFans() {
-    for (final id in LightDeviceId.values.where((d) => d.isFan)) {
-      _applied.remove(id);
-      _deduplicator.forget(id);
-    }
-    _applied
-      ..remove(_mergeKey)
-      ..remove(_group0Key);
-    _fanMerged = false;
-  }
-
-  void _forgetBoard() {
-    for (final z in boardZoneIds) {
-      _applied.remove(z);
-    }
-    _deduplicator
-      ..forget(LightDeviceId.motherboard)
-      ..forget(LightDeviceId.chassis);
-  }
-
-  void _forgetGpu() {
-    _applied.remove(LightDeviceId.gpu);
-    _deduplicator
-      ..forget(LightDeviceId.gpu)
-      ..forgetGpu();
-  }
-
   // ── Hardware modes ──────────────────────────────────────────────────────
-
-  static const _mergeKey = 'merge';
-  static const _group0Key = 'group0';
-
-  List<int> _quantity(LightingConfig c) => [0, ...c.fanQuantity.skip(1)];
-
-  /// Merge needs: the toggle on, a merge variant of the mode, at least one
-  /// enabled fan group, and every enabled group in hardware mode. Otherwise it
-  /// is ignored and the groups follow their own modes. Disabled groups inside
-  /// an active merge cannot be turned off separately (the merge covers all
-  /// ports) and receive no canvas frames.
-  bool _mergeWanted(LightingConfig c, LightOutputs out) {
-    if (!c.alv2Merge || !out.supportsFanMerge(c.alv2MergeMode)) return false;
-    // Judged on the user's modes: groups that only run a derived firmware
-    // mode do not turn the merge on.
-    final enabled = [
-      for (final id in LightDeviceId.values)
-        if (id.isFan && _user.device(id).enabled) _user.device(id),
-    ];
-    return enabled.isNotEmpty &&
-        enabled.every((d) => d.mode == LightMode.hardware);
-  }
 
   /// Compares the config with what the hardware holds and sends the
   /// difference. Idempotent. A failure drops the family so the retry redoes it.
@@ -651,34 +565,29 @@ class LightingEngineModule implements EngineModule {
     await _reconciler.reconcile(
       active: out != null && !_shouldBeOff,
       hardwareResend: hardwareResend,
-      forgetHardwareModes: _forgetHardwareModes,
+      forgetHardwareModes: _hardware.forgetHardwareModes,
       fansReady: () => _fansReady,
-      reconcileFans: () =>
-          _gated([OutputFamily.fans], () => _reconcileFans(_config, out!)),
+      reconcileFans: () => _gated(
+        [OutputFamily.fans],
+        () => _hardwareApplier.reconcileFans(
+          config: _config,
+          user: _user,
+          out: out!,
+        ),
+      ),
       boardReady: () => _boardReady,
-      reconcileBoard: () =>
-          _gated([OutputFamily.ite], () => _reconcileBoard(_config, out!)),
+      reconcileBoard: () => _gated([
+        OutputFamily.ite,
+      ], () => _hardwareApplier.reconcileBoard(config: _config, out: out!)),
       gpuReady: () => _gpuReady,
-      reconcileGpu: () =>
-          _gated([OutputFamily.gpu], () => _reconcileGpu(_config, out!)),
+      reconcileGpu: () => _gated([
+        OutputFamily.gpu,
+      ], () => _hardwareApplier.reconcileGpu(config: _config, out: out!)),
       isStopped: () => _stopped,
-      emitStatus: _emitStatus,
+      emitStatus: _status.emitStatus,
       syncTimer: _syncTimer,
       scheduleHardwareResend: _scheduleHardwareResend,
     );
-  }
-
-  /// Forgets only the hardware-mode signatures, keeping quantities and canvas
-  /// frames: the next reconcile writes the modes again.
-  void _forgetHardwareModes() {
-    for (final id in LightDeviceId.values.where((d) => d.isFan)) {
-      _applied.remove(id);
-    }
-    _applied.remove(_mergeKey);
-    for (final z in boardZoneIds) {
-      _applied.remove(z);
-    }
-    _applied.remove(LightDeviceId.gpu);
   }
 
   /// Sends the hardware modes once more [hardwareResendDelay] after a change.
@@ -691,231 +600,46 @@ class LightingEngineModule implements EngineModule {
     });
   }
 
-  bool _changed(Object key, Object? sig) =>
-      !_applied.containsKey(key) || _applied[key] != sig;
-
-  /// Returns whether a hardware mode (merge or group mode) was written.
-  Future<bool> _reconcileFans(LightingConfig c, LightOutputs out) async {
-    var sent = false;
-    final qty = _quantity(c);
-    final appliedQty = _appliedQty;
-    if (appliedQty == null || !_sameInts(appliedQty, qty)) {
-      // The service resends every port after a quantity change (AL-V2 §4).
-      final ok = await out.setFanQuantity(qty);
-      if (_stopped) return sent;
-      if (!ok) {
-        _fansDown();
-        return sent;
-      }
-      _appliedQty = qty;
-      _forgetFans();
-    }
-
-    final merged = _mergeWanted(c, out);
-    final appliedOrder = _appliedMergeOrder;
-    if (merged &&
-        (appliedOrder == null || !_sameInts(appliedOrder, c.alv2MergeOrder))) {
-      final ok = await out.setFanMergeOrder(c.alv2MergeOrder);
-      if (_stopped) return sent;
-      if (!ok) {
-        _fansDown();
-        return sent;
-      }
-      _appliedMergeOrder = c.alv2MergeOrder;
-      // The effect is sent again so it starts on the new path.
-      _applied.remove(_mergeKey);
-    }
-    final mergeSig = merged
-        ? ('merge', c.alv2MergeMode, c.alv2Hardware[0])
-        : null;
-    if (_changed(_mergeKey, mergeSig)) {
-      // The merge config lives in the unused group-0 slot of the hardware list.
-      if (merged) {
-        final ok = await out.setFanMerge(c.alv2MergeMode, c.alv2Hardware[0]);
-        if (_stopped) return sent;
-        if (!ok) {
-          _fansDown();
-          return sent;
-        }
-        sent = true;
-        _traceFans('merge ${c.alv2MergeMode} order ${c.alv2MergeOrder}');
-      } else {
-        _traceFans('merge off');
-      }
-      _applied[_mergeKey] = mergeSig;
-    }
-    _fanMerged = merged;
-
-    // Hub group 0 is empty and always off, except port 0 inside a merge.
-    final g0 = merged ? 'merge' : 'off';
-    if (_changed(_group0Key, g0)) {
-      if (!merged) {
-        final ok = await out.turnFanGroupOff(0);
-        if (_stopped) return sent;
-        if (!ok) {
-          _fansDown();
-          return sent;
-        }
-        _traceFans('fan group 0 off');
-      }
-      _applied[_group0Key] = g0;
-    }
-
-    for (final id in LightDeviceId.values.where((d) => d.isFan)) {
-      final d = c.device(id);
-      final g = id.hubGroup!;
-      final (String, Alv2HardwareConfig?) sig = merged
-          ? ('merged', null)
-          : d.mode != LightMode.hardware
-          ? ('frame', null)
-          : !d.enabled
-          ? ('off', null)
-          : ('mode', c.alv2Hardware[g]);
-      if (!_changed(id, sig)) continue;
-      _deduplicator.forget(id);
-      final ok = switch (sig.$1) {
-        'off' => await out.turnFanGroupOff(g),
-        'mode' => await out.setFanHardware(g, sig.$2!),
-        _ => true,
-      };
-      if (_stopped) return sent;
-      if (!ok) {
-        _fansDown();
-        return sent;
-      }
-      if (sig.$1 != 'mode') _traceFans('fan group $g ${sig.$1}');
-      if (sig.$1 == 'mode') {
-        sent = true;
-        final m = sig.$2!;
-        _traceFans(
-          'fan group $g ${m.mode} speed ${m.speed} brightness ${m.brightness} '
-          'left ${m.directionLeft} colors '
-          '${m.colors.take(2).map((c) => c.toHex()).join(',')}',
-        );
-        // A Breathing mode starts its own clock now: the canvas follows it.
-        if (sig.$2!.mode == 'Breathing' && c.effectId == 'breathing') {
-          _breathingSince = _seconds(now());
-        }
-      }
-      _applied[id] = sig;
-    }
-    return sent;
-  }
-
-  void _traceFans(String what) {
-    if (_trace) {
-      stderr.writeln('lighting: ${_seconds(now()).toStringAsFixed(3)} s $what');
-    }
-  }
-
-  /// Returns whether any zone effect was written.
-  Future<bool> _reconcileBoard(LightingConfig c, LightOutputs out) async {
-    final d = c.device(LightDeviceId.motherboard);
-    // Zones whose hardware effect changed go out in a single batch.
-    final batch = <int, BoardZoneConfig>{};
-    final sigs = <int, Object?>{};
-    for (final z in boardZoneIds) {
-      final (String, BoardZoneConfig?) sig = d.mode != LightMode.hardware
-          ? ('frame', null)
-          : !d.enabled
-          ? ('off', null)
-          : ('mode', c.boardZones[z]);
-      if (!_changed(z, sig)) continue;
-      _deduplicator.forget(LightDeviceId.motherboard);
-      switch (sig.$1) {
-        case 'off':
-          batch[z] = const BoardZoneConfig(
-            mode: BoardEffectMode.static,
-            color: Rgb.black,
-          );
-          sigs[z] = sig;
-        case 'mode':
-          batch[z] = sig.$2!;
-          sigs[z] = sig;
-        default:
-          _applied[z] = sig;
-      }
-    }
-    if (batch.isEmpty) return false;
-    final ok = await out.setBoardZones(batch);
-    if (_stopped) return false;
-    if (!ok) {
-      _boardDown();
-      return false;
-    }
-    _applied.addAll(sigs);
-    return true;
-  }
-
   void _fansDown() {
     _fansReady = false;
-    _forgetFans();
+    _hardware.forgetFans();
     _nextRetry = now().add(retryEvery);
     _syncRetry();
-    _emitStatus();
-  }
-
-  /// Returns whether a GPU hardware effect was written.
-  Future<bool> _reconcileGpu(LightingConfig c, LightOutputs out) async {
-    final d = c.device(LightDeviceId.gpu);
-    final (String, GpuHardwareConfig?) sig = d.mode != LightMode.hardware
-        ? ('frame', null)
-        : !d.enabled
-        ? ('off', null)
-        : ('mode', c.gpuHardware);
-    if (!_changed(LightDeviceId.gpu, sig)) return false;
-    // Frame mode must resend its color on the next tick; hardware/off must not
-    // be considered already applied by the old frame.
-    _deduplicator.forgetGpu();
-    var ok = true;
-    var hardware = false;
-    switch (sig.$1) {
-      case 'off':
-        ok = await out.turnGpuOff();
-      case 'mode':
-        ok = await out.setGpuHardware(sig.$2!);
-        hardware = true;
-      default:
-        break;
-    }
-    if (_stopped) return false;
-    if (!ok) {
-      _gpuDown();
-      return false;
-    }
-    _applied[LightDeviceId.gpu] = sig;
-    return hardware;
+    _status.emitStatus();
   }
 
   void _boardDown() {
     _boardReady = false;
-    _forgetBoard();
+    _hardware.forgetBoard();
     _nextRetry = now().add(retryEvery);
     _syncRetry();
-    _emitStatus();
+    _status.emitStatus();
   }
 
   void _gpuDown() {
     _gpuReady = false;
-    _forgetGpu();
+    _hardware.forgetGpu();
     _nextRetry = now().add(retryEvery);
     _syncRetry();
-    _emitStatus();
+    _status.emitStatus();
   }
 
   void _identify(int group) {
     final out = _outputs;
     final id = LightDeviceId.forHubGroup(group);
     if (out == null || id == null || !_fansReady || _shouldBeOff) return;
-    final merge = _fanMerged;
+    final merge = _hardware.fanMerged;
     unawaited(
       out
           .identifyFanGroup(group, merge: merge)
           .then((_) {
             // The ping overwrote the effect: send it again (merge included).
-            _applied.remove(id);
-            _deduplicator.forget(id);
-            if (merge) _applied.remove(_mergeKey);
+            _hardware
+              ..forget(id)
+              ..forgetFrameColors(id);
+            if (merge) {
+              _hardware.forget(LightingHardwareState.mergeKey);
+            }
             if (!_stopped && !_shouldBeOff) _scheduleReconcile();
           })
           .catchError((Object e) => _log('identify: $e')),
@@ -981,25 +705,28 @@ class LightingEngineModule implements EngineModule {
   double _seconds(DateTime at) =>
       at.difference(_startedAt).inMicroseconds / 1e6;
 
-  /// Sampled colors to use for canvas devices, when they belong to the effect
-  /// the engine is actually showing.
-  Map<LightDeviceId, List<Rgb>>? get _activePixels =>
-      _pixelsEffect == _config.effectId ? _pixels : null;
+  /// Delay of the AL V2 firmware between receiving a canvas frame and showing
+  /// it. Measured on hardware (2026-10-19, `tool/hw_test_fase4.dart sync`):
+  /// with the fans streamed first, the case/board/RAM had to be sent ~150 ms
+  /// after the fan send completed for both to change at the same instant.
+  /// How far ahead of "now" a family must be composed. Synchronous outputs
+  /// (ITE, RAM) show the colors when the send ends, so the lead is the send
+  /// time. The fans show a frame only [fanDisplayLatencyMs] after the whole
+  /// send, so their lead is the send time plus that delay. The GPU applies the
+  /// effect when the write lands, before the controller's 120 ms pause, so
+  /// only the write part of its measured send time is a lead.
+  double _leadSeconds(OutputFamily family) =>
+      _latency.leadSeconds(family, gpuFrameGap);
 
-  /// [showAt] (effect seconds) as the canvas devices must evaluate it so a
-  /// firmware `Breathing` keeps its phase with the fans.
-  double _composeTime(double showAt) {
-    final since = _breathingSince;
-    final values = _config.effectValuesFor();
-    if (since == null || values == null || _config.effectId != 'breathing') {
-      return showAt;
-    }
-    return breathingEffectTime(
-      showAt: showAt,
-      anchor: since,
-      period: alv2BreathingPeriod(values.number('speed')),
-    );
-  }
+  /// Current send-time estimate of [family] (EMA of the measured durations,
+  /// clamped to 0-150 ms).
+  Duration latencyOf(OutputFamily family) => _latency.latencyOf(family);
+
+  void _observe(OutputFamily family, Duration took) =>
+      _latency.observe(family, took);
+
+  void _traceFans(String what) =>
+      traceLighting('${_seconds(now()).toStringAsFixed(3)} s $what');
 
   /// Minimum interval between frame starts of [family]. The ITE one is capped
   /// by the tick period so a high fps setting is not throttled.
@@ -1020,14 +747,11 @@ class LightingEngineModule implements EngineModule {
   /// Composes and sends the due fan groups. A frame dropped by a priority
   /// turn-off is not a driver failure.
   Future<bool> _sendFans(LightOutputs out, DateTime at, int epoch) async {
-    final t = _seconds(at);
-    final lead = _leadSeconds(OutputFamily.fans);
-    final frame = _frameComposer.compose(
+    final frame = _compositor.composeFrame(
       _config,
-      t,
       only: _fanIds,
-      pixels: _activePixels,
-      timeFor: (_) => _composeTime(t + lead),
+      seconds: _seconds(at),
+      family: OutputFamily.fans,
     );
     final fans = <int, List<Rgb>>{};
     for (final MapEntry(key: id, value: leds) in frame.entries) {
@@ -1064,7 +788,12 @@ class LightingEngineModule implements EngineModule {
     final lane = _lanes[OutputFamily.ite]!;
     for (final id in const [LightDeviceId.chassis, LightDeviceId.motherboard]) {
       final at = now();
-      final leds = _compose(id, at, OutputFamily.ite);
+      final leds = _compositor.composeDevice(
+        _config,
+        id: id,
+        seconds: _seconds(at),
+        family: OutputFamily.ite,
+      );
       if (leds == null || !_deduplicator.shouldSendColors(id, leds, at)) {
         continue;
       }
@@ -1080,9 +809,9 @@ class LightingEngineModule implements EngineModule {
       final took = now().difference(at);
       _observe(OutputFamily.ite, took);
       lane.record(took);
-      if (_trace && id == LightDeviceId.chassis) {
-        stderr.writeln(
-          'lighting: ${_seconds(at).toStringAsFixed(3)} s chassis '
+      if (lightingTrace && id == LightDeviceId.chassis) {
+        traceLighting(
+          '${_seconds(at).toStringAsFixed(3)} s chassis '
           '${leds.first.toHex()} took ${took.inMilliseconds} ms',
         );
       }
@@ -1100,7 +829,12 @@ class LightingEngineModule implements EngineModule {
       final at = now();
       final retryAt = _ramRetryAt[id];
       if (retryAt != null && at.isBefore(retryAt)) continue;
-      final leds = _compose(id, at, OutputFamily.ram);
+      final leds = _compositor.composeDevice(
+        _config,
+        id: id,
+        seconds: _seconds(at),
+        family: OutputFamily.ram,
+      );
       if (leds == null || !_deduplicator.shouldSendColors(id, leds, at)) {
         continue;
       }
@@ -1114,12 +848,12 @@ class LightingEngineModule implements EngineModule {
         wrote = true;
         _deduplicator.recordColors(id, leds, at);
         _ramRetryAt.remove(id);
-        if (_ramDown.remove(id)) _emitStatus();
+        if (_health.ramDown.remove(id)) _status.emitStatus();
       } else {
         _deduplicator.forget(id);
         _ramRetryAt[id] = at.add(retryEvery);
-        _ramDown.add(id);
-        _emitStatus();
+        _health.ramDown.add(id);
+        _status.emitStatus();
       }
     }
     if (wrote) lane.countFrame();
@@ -1138,11 +872,9 @@ class LightingEngineModule implements EngineModule {
         ? Rgb.black
         : d.mode == LightMode.fixed
         ? d.fixedColor
-        : _frameComposer.averageCanvasColor(
+        : _compositor.gpuAverage(
             _config,
-            LightDeviceId.gpu,
-            _composeTime(_seconds(at) + _leadSeconds(OutputFamily.gpu)),
-            pixels: _activePixels,
+            seconds: _seconds(at) + _leadSeconds(OutputFamily.gpu),
           );
     if (!_deduplicator.shouldSendGpu(color, brightness, at)) return false;
 
@@ -1168,147 +900,5 @@ class LightingEngineModule implements EngineModule {
   static int _gpuBrightness(double brightness) =>
       (brightness * 10).round().clamp(1, 10);
 
-  /// Colors of one device for the instant [family] will show them.
-  List<Rgb>? _compose(LightDeviceId id, DateTime at, OutputFamily family) {
-    final t = _seconds(at);
-    final lead = _leadSeconds(family);
-    return _frameComposer.compose(
-      _config,
-      t,
-      only: {id},
-      pixels: _activePixels,
-      timeFor: (_) => _composeTime(t + lead),
-    )[id];
-  }
-
-  // ── Status ──────────────────────────────────────────────────────────────
-
-  // Optional timing trace on stderr (LUMIVENT_LIGHTING_TRACE=1), for tuning the
-  // latency compensation on real hardware.
-  static final _trace = Platform.environment['LUMIVENT_LIGHTING_TRACE'] == '1';
-
-  void _updateFps(DateTime at) {
-    final elapsed = at.difference(_fpsWindowStart);
-    if (elapsed < const Duration(seconds: 1)) return;
-    _loops = {
-      for (final MapEntry(key: f, value: lane) in _lanes.entries)
-        f: LoopStats(
-          fps: (lane.frames * 10000000 / elapsed.inMicroseconds).round() / 10,
-          sendMs: lane.frames == 0
-              ? null
-              : (lane.sendUs / lane.frames / 100).round() / 10,
-        ),
-    };
-    if (_trace) {
-      String stats(OutputFamily f) {
-        final lane = _lanes[f]!;
-        return '${f.name} ${lane.frames} frames avg '
-            '${_loops[f]!.sendMs ?? '-'} ms';
-      }
-
-      stderr.writeln(
-        'lighting: ticks $_frames, ${stats(OutputFamily.fans)}, '
-        'fan lead ${(_leadSeconds(OutputFamily.fans) * 1000).toStringAsFixed(0)} ms, '
-        '${stats(OutputFamily.ite)}, ${stats(OutputFamily.ram)}, '
-        '${stats(OutputFamily.gpu)}',
-      );
-    }
-    for (final lane in _lanes.values) {
-      lane.resetStats();
-    }
-    _measuredFps = (_frames * 1000000 / elapsed.inMicroseconds).roundToDouble();
-    _frames = 0;
-    _fpsWindowStart = at;
-    _emitStatus();
-  }
-
-  Map<LightDeviceId, LightOutputStatus> _deviceStatus() {
-    final out = _outputs;
-    LightOutputStatus status(LightDeviceId id) {
-      if (!id.isSupported) {
-        return const LightOutputStatus(
-          LightOutputState.unsupported,
-          issue: LightOutputIssue.unsupported,
-        );
-      }
-      if (out == null) {
-        return const LightOutputStatus(LightOutputState.unavailable);
-      }
-      final (up, reason) = switch (id) {
-        _ when id.isFan => (_fansReady, LightOutputIssue.hub),
-        LightDeviceId.chassis ||
-        LightDeviceId.motherboard => (_boardReady, LightOutputIssue.ite),
-        LightDeviceId.gpu => (_gpuReady, LightOutputIssue.gpu),
-        _ => (!_ramDown.contains(id), LightOutputIssue.ram),
-      };
-      if (up) return const LightOutputStatus(LightOutputState.ok);
-      final blocked = out.blockedReason(id);
-      if (id == LightDeviceId.gpu) {
-        // The GPU guard has its own explanation (missing adapter, permission,
-        // failed identification read, SSID mismatch); do not call it a
-        // generic "safety block".
-        return LightOutputStatus(
-          LightOutputState.unavailable,
-          issue: LightOutputIssue.gpu,
-          args: blocked == null ? const [] : [blocked],
-        );
-      }
-      return LightOutputStatus(
-        LightOutputState.unavailable,
-        issue: blocked == null ? reason : LightOutputIssue.blocked,
-        args: blocked == null ? const [] : [blocked],
-      );
-    }
-
-    return {for (final id in LightDeviceId.values) id: status(id)};
-  }
-
-  /// Emits only when a device status changed or the FPS changed; the FPS
-  /// goes out at most once per second ([force] skips that limit).
-  void _emitStatus({bool force = false}) {
-    final at = now();
-    final devices = _deviceStatus();
-    final last = _lastStatus;
-    final fpsDue =
-        force || at.difference(_lastFpsEmit) >= const Duration(seconds: 1);
-    final fps = fpsDue ? _measuredFps : (last?.fps ?? 0);
-    final loops = fpsDue ? _loops : (last?.loops ?? const {});
-    if (last != null &&
-        fps == last.fps &&
-        _sameLoops(loops, last.loops) &&
-        _sameStatus(last.devices, devices)) {
-      return;
-    }
-    if (fps != (last?.fps ?? 0) ||
-        !_sameLoops(loops, last?.loops ?? const {})) {
-      _lastFpsEmit = at;
-    }
-    _emit(_lastStatus = LightingStatus(devices, fps: fps, loops: loops));
-  }
-
   void _log(String message) => stderr.writeln('lighting: $message');
-}
-
-bool _sameInts(List<int> a, List<int> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
-bool _sameLoops(
-  Map<OutputFamily, LoopStats> a,
-  Map<OutputFamily, LoopStats> b,
-) => a.length == b.length && a.entries.every((e) => b[e.key] == e.value);
-
-bool _sameStatus(
-  Map<LightDeviceId, LightOutputStatus> a,
-  Map<LightDeviceId, LightOutputStatus> b,
-) {
-  if (a.length != b.length) return false;
-  for (final e in a.entries) {
-    if (b[e.key] != e.value) return false;
-  }
-  return true;
 }

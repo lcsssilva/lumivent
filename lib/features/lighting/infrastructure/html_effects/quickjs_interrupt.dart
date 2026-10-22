@@ -145,11 +145,29 @@ void _loadQuickJsSettings() {
 /// Throws [UnsupportedError] when the native limits cannot be installed:
 /// running an effect without them could exhaust or hang the app.
 QuickJsRuntime2 newInterruptibleQuickJs() {
-  final before = runtimeOpaques.keys.toSet();
+  // flutter_js registers every native runtime in `runtimeOpaques` by the
+  // runtime's native pointer. After a runtime is freed, the allocator can
+  // hand the same address to the next runtime (observed in the test run), so
+  // the new registration must be detected by comparing the mapped opaque
+  // objects, not by a set difference of keys: a reused address overwrites the
+  // map entry in place and leaves no new key behind. Without this, any load
+  // that follows a failed load would wrongly report that the limits could
+  // not be installed.
+  final registered = Map.of(runtimeOpaques);
   final js = QuickJsRuntime2();
   // The native runtime is created lazily on the first evaluation.
-  js.evaluate('0');
-  final created = runtimeOpaques.keys.where((k) => !before.contains(k));
+  try {
+    js.evaluate('0');
+  } on Object {
+    js.dispose();
+    rethrow;
+  }
+  final created = <Pointer<Void>>[];
+  runtimeOpaques.forEach((key, opaque) {
+    if (!identical(registered[key], opaque)) {
+      created.add(key.cast<Void>());
+    }
+  });
   try {
     _loadQuickJsSettings();
   } on Object {
@@ -167,7 +185,7 @@ QuickJsRuntime2 newInterruptibleQuickJs() {
     js.dispose();
     throw UnsupportedError('could not install the QuickJS resource limits');
   }
-  final runtime = created.single.cast<Void>();
+  final runtime = created.single;
   try {
     setMemoryLimit(runtime, _memoryLimitBytes);
     setMaxStackSize(runtime, _stackLimitBytes);

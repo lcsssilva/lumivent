@@ -278,6 +278,12 @@ Future<void> _hubWorkerMain(SendPort toEngine) async {
 
 /// Asynchronous face of the hub for the engine isolate. Same semantics as
 /// [Alv2Hub], with every call answered by the worker.
+///
+/// One instance is created by the engine composition and shared by monitoring
+/// (RPM), fans (duty), and lighting (frames). Only the monitoring source
+/// releases it, and the engine stops modules in reverse order, so lighting and
+/// fans stop before the hub closes. Calls never throw: an unavailable worker
+/// answers `false` (or a `null` RPM); driver and spawn errors go to stderr.
 class Alv2HubProxy {
   Alv2HubProxy(this._link);
 
