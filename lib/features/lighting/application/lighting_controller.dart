@@ -67,7 +67,9 @@ class LightingController extends Notifier<LightingConfig> {
   void _save() => ref
       .read(lightingRepositoryProvider)
       .save(state)
-      .catchError((Object e) => debugPrint('failed to save lighting: $e'));
+      // The store names the section and notifies the user; the cause and
+      // stack trace are logged for troubleshooting.
+      .catchError((Object e, StackTrace s) => debugPrint('$e\n$s'));
 }
 
 final lightingProvider = NotifierProvider<LightingController, LightingConfig>(

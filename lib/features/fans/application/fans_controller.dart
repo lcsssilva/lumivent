@@ -40,7 +40,9 @@ class FansController extends Notifier<FansConfig> {
   void _save() => ref
       .read(fansRepositoryProvider)
       .save(state)
-      .catchError((Object e) => debugPrint('failed to save fans: $e'));
+      // The store names the section and notifies the user; the cause and
+      // stack trace are logged for troubleshooting.
+      .catchError((Object e, StackTrace s) => debugPrint('$e\n$s'));
 }
 
 final fansProvider = NotifierProvider<FansController, FansConfig>(
