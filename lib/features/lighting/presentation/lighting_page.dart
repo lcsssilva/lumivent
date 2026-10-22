@@ -56,7 +56,7 @@ class _LightingPageState extends ConsumerState<LightingPage>
     super.dispose();
   }
 
-  Widget _argbBanner(LightingConfig cfg) {
+  Widget _argbBanner() {
     final l = context.strings.lighting;
     return Container(
       key: const ValueKey('argb-off-banner'),
@@ -286,7 +286,7 @@ class _LightingPageState extends ConsumerState<LightingPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (cfg.argbOff) ...[_argbBanner(cfg), const SizedBox(height: gap)],
+          if (cfg.argbOff) ...[_argbBanner(), const SizedBox(height: gap)],
           _globalCard(cfg, context.strings),
           const SizedBox(height: gap),
           DeviceList(

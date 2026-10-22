@@ -1,5 +1,4 @@
 // Right column (hardware mode): firmware mode panel for AL V2 fan groups.
-// Extracted from `hardware_panels.dart` when the three panels were split.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,11 +7,11 @@ import '../../../core/i18n/app_strings.dart';
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
+import '../../devices/devices.dart';
 import '../application/lighting_controller.dart';
 import '../domain/led_layout.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
-import '../../devices/devices.dart';
 import 'labels.dart';
 import 'panel_controls.dart';
 

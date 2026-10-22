@@ -4,13 +4,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'board_hardware_panel.dart';
-import 'fan_hardware_panel.dart';
-import 'gpu_hardware_panel.dart';
 import '../application/lighting_controller.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
+import 'board_hardware_panel.dart';
 import 'effect_panel.dart';
+import 'fan_hardware_panel.dart';
+import 'gpu_hardware_panel.dart';
 
 class LightingModePanel extends ConsumerWidget {
   const LightingModePanel({super.key, required this.deviceId});
