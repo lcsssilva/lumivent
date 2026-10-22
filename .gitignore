@@ -60,5 +60,8 @@ app.*.map.json
 # published. Public documentation lives in the root .md files.
 /docs/
 
-# Configuração local do Claude Code
+# Local configuration of the agent tools
 /.claude/
+AGENTS.md
+CLAUDE.md
+opencode.json
