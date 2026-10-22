@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -27,11 +28,99 @@ String effectHtml(
 </html>
 ''';
 
+// Unix modes used by the handcrafted zips (Dart has no octal literals):
+// S_IFREG | 0644, S_IFLNK | 0777 and S_IFDIR | 0777.
+const regularFileMode = 33188, symlinkMode = 41471, directoryMode = 16895;
+
+/// One entry for a zip built [handcraftedZip].
+typedef RawZipEntry = ({
+  String name,
+  int mode,
+  int method,
+  Uint8List data,
+  int declaredSize,
+});
+
+/// Builds a store/deflate zip by hand so entry type bits and declared sizes
+/// can be crafted: the high-level encoder cannot write symlinks.
+Uint8List handcraftedZip(List<RawZipEntry> entries) {
+  final local = BytesBuilder();
+  final central = BytesBuilder();
+  var offset = 0;
+  for (final entry in entries) {
+    final name = latin1.encode(entry.name);
+    final crc = getCrc32(entry.data);
+    final localHeader = ByteData(30)
+      ..setUint32(0, 0x04034b50, Endian.little)
+      ..setUint16(4, 20, Endian.little)
+      ..setUint16(6, 0, Endian.little)
+      ..setUint16(8, entry.method, Endian.little)
+      ..setUint16(10, 0, Endian.little)
+      ..setUint16(12, 0, Endian.little)
+      ..setUint32(14, crc, Endian.little)
+      ..setUint32(18, entry.data.length, Endian.little)
+      ..setUint32(22, entry.declaredSize, Endian.little)
+      ..setUint16(26, name.length, Endian.little)
+      ..setUint16(28, 0, Endian.little);
+    local
+      ..add(localHeader.buffer.asUint8List())
+      ..add(name)
+      ..add(entry.data);
+    final centralHeader = ByteData(46)
+      ..setUint32(0, 0x02014b50, Endian.little)
+      ..setUint16(4, 0x031e, Endian.little)
+      ..setUint16(6, 20, Endian.little)
+      ..setUint16(8, 0, Endian.little)
+      ..setUint16(10, entry.method, Endian.little)
+      ..setUint16(12, 0, Endian.little)
+      ..setUint16(14, 0, Endian.little)
+      ..setUint32(16, crc, Endian.little)
+      ..setUint32(20, entry.data.length, Endian.little)
+      ..setUint32(24, entry.declaredSize, Endian.little)
+      ..setUint16(28, name.length, Endian.little)
+      ..setUint16(30, 0, Endian.little)
+      ..setUint16(32, 0, Endian.little)
+      ..setUint16(34, 0, Endian.little)
+      ..setUint16(36, 0, Endian.little)
+      ..setUint32(38, entry.mode << 16, Endian.little)
+      ..setUint32(42, offset, Endian.little);
+    central
+      ..add(centralHeader.buffer.asUint8List())
+      ..add(name);
+    offset += 30 + name.length + entry.data.length;
+  }
+  final eocd = ByteData(22)
+    ..setUint32(0, 0x06054b50, Endian.little)
+    ..setUint16(4, 0, Endian.little)
+    ..setUint16(6, 0, Endian.little)
+    ..setUint16(8, entries.length, Endian.little)
+    ..setUint16(10, entries.length, Endian.little)
+    ..setUint32(12, central.length, Endian.little)
+    ..setUint32(16, offset, Endian.little)
+    ..setUint16(20, 0, Endian.little);
+  return (BytesBuilder()
+        ..add(local.takeBytes())
+        ..add(central.takeBytes())
+        ..add(eocd.buffer.asUint8List()))
+      .takeBytes();
+}
+
+RawZipEntry storedHtml(
+  String name,
+  String content, {
+  int mode = regularFileMode,
+}) => (
+  name: name,
+  mode: mode,
+  method: 0,
+  data: Uint8List.fromList(latin1.encode(content)),
+  declaredSize: latin1.encode(content).length,
+);
+
 void main() {
   late Directory temp;
   late FileEffectLibrary library;
   late FileEffectImporter importer;
-
   setUp(() {
     temp = Directory.systemTemp.createTempSync('lumivent-effects-test-');
     library = FileEffectLibrary(Directory('${temp.path}/effects'));
@@ -172,6 +261,83 @@ void main() {
     expect(report.issues, hasLength(1));
     expect(report.issues.single.detail, contains('size limit'));
   });
+
+  test('rejects symlink entries before reading their payloads', () async {
+    // Old decoders read the symlink target as content during decoding,
+    // importing the target text as if it were the HTML of the entry.
+    final zip = File('${temp.path}/links.zip')
+      ..writeAsBytesSync(
+        handcraftedZip([
+          storedHtml('Good/effect.html', effectHtml('Good')),
+          storedHtml(
+            'Bomb/effect.html',
+            'Pointed/effect.html',
+            mode: symlinkMode,
+          ),
+        ]),
+      );
+
+    final report = await importer.importPaths([zip.path]);
+
+    expect(report.imported, 1);
+    expect((await library.list()).single.id, 'good');
+    expect(report.issues, hasLength(1));
+    expect(report.issues.single.path, 'Bomb/effect.html');
+    expect(report.issues.single.detail, contains('not supported'));
+  });
+
+  test('never decompresses the payload of a rejected symlink', () async {
+    // A compressed payload that would exceed the HTML limit if decoded:
+    // the rejection above must happen before any decompression.
+    final zeros = Uint8List(32 * 1024 * 1024);
+    final deflated = ZLibCodec(raw: true).encoder.convert(zeros) as Uint8List;
+    final zip = File('${temp.path}/bomb.zip')
+      ..writeAsBytesSync(
+        handcraftedZip([
+          storedHtml('Good/effect.html', effectHtml('Good')),
+          (
+            name: 'Bomb/effect.html',
+            mode: symlinkMode,
+            method: 8,
+            data: deflated,
+            declaredSize: zeros.length,
+          ),
+        ]),
+      );
+
+    final report = await importer.importPaths([zip.path]);
+
+    expect(report.imported, 1);
+    expect((await library.list()).single.id, 'good');
+    expect(report.issues, hasLength(1));
+    expect(report.issues.single.path, 'Bomb/effect.html');
+    // The entry was rejected by type, not decoded and refused by size.
+    expect(report.issues.single.detail, contains('not supported'));
+    expect(report.issues.single.detail, isNot(contains('size limit')));
+  });
+
+  test(
+    'skips entries whose mode names a directory before reading them',
+    () async {
+      final zip = File('${temp.path}/modes.zip')
+        ..writeAsBytesSync(
+          handcraftedZip([
+            storedHtml('Good/effect.html', effectHtml('Good')),
+            storedHtml(
+              'Dird/effect.html',
+              effectHtml('Dird'),
+              mode: directoryMode,
+            ),
+          ]),
+        );
+
+      final report = await importer.importPaths([zip.path]);
+
+      expect(report.imported, 1);
+      expect((await library.list()).single.id, 'good');
+      expect(report.issues, isEmpty);
+    },
+  );
 
   test(
     'reports invalid paths and unsafe ZIP entries without aborting',

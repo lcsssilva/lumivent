@@ -274,13 +274,27 @@ class FileEffectImporter implements EffectImporter {
     return report;
   }
 
+  /// Unix file types that name regular files: no type bits, or S_IFREG.
+  static const Set<int> _regularEntryTypes = {0x0000, 0x8000};
+  static const int _unixDirectoryType = 0x4000;
+
   Future<ImportReport> _importZip(File file) async {
     final report = ImportReport();
-    final Archive archive;
+    final Uint8List bytes;
     try {
-      archive = ZipDecoder().decodeBytes(
-        await _readBounded(file, _maxZipBytes),
+      bytes = await _readBounded(file, _maxZipBytes);
+    } on Object catch (e) {
+      report.issues.add(
+        ImportIssue(ImportIssueKind.invalidZip, path: file.path, detail: '$e'),
       );
+      return report;
+    }
+    // Only the central directory is read here. Archiver versions that decode
+    // entries eagerly would decompress symlink targets and other payload
+    // while building the archive object, before the limits below apply.
+    final ZipDirectory directory;
+    try {
+      directory = ZipDirectory()..read(InputMemoryStream(bytes));
     } on Object catch (e) {
       report.issues.add(
         ImportIssue(ImportIssueKind.invalidZip, path: file.path, detail: '$e'),
@@ -293,15 +307,32 @@ class FileEffectImporter implements EffectImporter {
         .replaceAll(RegExp(r'\.zip$', caseSensitive: false), '');
     var found = 0;
     var totalHtmlBytes = 0;
-    for (final entry in archive) {
-      if (!entry.isFile) continue;
-      final name = entry.name.replaceAll('\\', '/');
+    for (final header in directory.fileHeaders) {
+      final zipFile = header.file;
+      if (zipFile == null) continue;
+      final name = header.filename.replaceAll('\\', '/');
       if (name.startsWith('/') || name.split('/').contains('..')) continue;
       final lower = name.toLowerCase();
       if (!lower.endsWith('.html') && !lower.endsWith('.htm')) continue;
+      // Symlinks, devices and other non-regular entries are never HTML:
+      // they are rejected before their payload is read or decompressed.
+      final entryType = (header.externalFileAttributes >> 16) & 0xf000;
+      if (entryType == _unixDirectoryType) continue;
+      if (!_regularEntryTypes.contains(entryType)) {
+        report.issues.add(
+          ImportIssue(
+            ImportIssueKind.unknown,
+            path: name,
+            detail:
+                'Zip entry type is not supported (reported as a symlink '
+                'or non-regular file)',
+          ),
+        );
+        continue;
+      }
       found++;
       try {
-        final size = entry.size;
+        final size = header.uncompressedSize;
         if (size < 0 ||
             size > _maxHtmlBytes ||
             totalHtmlBytes + size > _maxZipHtmlBytes) {
@@ -323,7 +354,9 @@ class FileEffectImporter implements EffectImporter {
         final base = parts.length > 1 ? parts[parts.length - 2] : zipBase;
         // `effect.html` is the standard name: the folder names the effect.
         final isEffect = parts.last.toLowerCase() == 'effect.html';
-        final content = entry.content;
+        // Decompression also stops at the declared size inside the archive
+        // library; the declared size is bounded by the check above.
+        final content = zipFile.readBytes();
         if (content.length > _maxHtmlBytes) {
           report.issues.add(
             ImportIssue(
