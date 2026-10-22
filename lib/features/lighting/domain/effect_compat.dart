@@ -1,7 +1,11 @@
 // Static compatibility check of an HTML/Canvas effect (plan §5.4): what the
 // effect script asks from the host that this app does not provide.
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import 'effect_meta.dart';
+
+part 'effect_compat.freezed.dart';
 
 enum EffectSupport {
   /// Everything the script uses is available (or safely stubbed).
@@ -18,24 +22,18 @@ enum EffectSupport {
 /// the catalog (`LightingStrings.compatibilityIssue`).
 enum EffectIssue { capture, pixels, audio, images, api }
 
-class EffectCompatibility {
-  const EffectCompatibility(this.support, this.issues);
+@freezed
+abstract class EffectCompatibility with _$EffectCompatibility {
+  const factory EffectCompatibility(
+    EffectSupport support,
 
-  final EffectSupport support;
+    /// Missing features, without user-facing text.
+    List<EffectIssue> issues,
+  ) = _EffectCompatibility;
+}
 
-  /// Missing features, without user-facing text.
-  final List<EffectIssue> issues;
-
+extension EffectCompatibilityX on EffectCompatibility {
   bool get canRun => support != EffectSupport.unsupported;
-
-  @override
-  bool operator ==(Object other) =>
-      other is EffectCompatibility &&
-      other.support == support &&
-      _sameIssues(other.issues, issues);
-
-  @override
-  int get hashCode => Object.hash(support, Object.hashAll(issues));
 }
 
 /// APIs that make an effect unusable with this runtime.
@@ -79,12 +77,4 @@ EffectCompatibility analyzeEffect(EffectSource effect) {
 
 void _append(List<EffectIssue> list, EffectIssue value) {
   if (!list.contains(value)) list.add(value);
-}
-
-bool _sameIssues(List<EffectIssue> a, List<EffectIssue> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }

@@ -5,30 +5,28 @@ import 'package:lumivent/core/i18n/app_strings_scope.dart';
 import 'package:lumivent/core/i18n/ui_language.dart';
 import 'package:lumivent/features/lighting/domain/native_effects.dart';
 import 'package:lumivent/features/preferences/domain/preferences.dart';
+import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
 
 void main() {
   group('language', () {
     test('English is the default for new and invalid configurations', () {
       expect(const Preferences().language, AppLanguage.en);
-      expect(Preferences.fromJson(const {}).language, AppLanguage.en);
+      expect(decodePreferences(const {}).language, AppLanguage.en);
       expect(
-        Preferences.fromJson(const {'language': 'fr'}).language,
+        decodePreferences(const {'language': 'fr'}).language,
         AppLanguage.en,
       );
+      expect(decodePreferences(const {'language': 1}).language, AppLanguage.en);
       expect(
-        Preferences.fromJson(const {'language': 1}).language,
-        AppLanguage.en,
-      );
-      expect(
-        Preferences.fromJson(const {'language': 'pt'}).language,
+        decodePreferences(const {'language': 'pt'}).language,
         AppLanguage.pt,
       );
     });
 
     test('the preference round-trips through JSON', () {
       const prefs = Preferences(language: AppLanguage.pt);
-      expect(Preferences.fromJson(prefs.toJson()), prefs);
-      expect(prefs.toJson()['language'], 'pt');
+      expect(decodePreferences(encodePreferences(prefs)), prefs);
+      expect(encodePreferences(prefs)['language'], 'pt');
     });
 
     test('catalogs expose the matching locale and separators', () {

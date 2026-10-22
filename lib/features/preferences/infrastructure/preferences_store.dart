@@ -1,5 +1,6 @@
 import '../../../core/persistence/config_store.dart';
 import '../domain/preferences.dart';
+import 'preferences_codec.dart';
 
 /// Stores preferences in the `preferences` section of config.json.
 class JsonPreferencesRepository implements PreferencesRepository {
@@ -9,9 +10,9 @@ class JsonPreferencesRepository implements PreferencesRepository {
   final ConfigStore _store;
 
   @override
-  Preferences load() => Preferences.fromJson(_store.section(section));
+  Preferences load() => decodePreferences(_store.section(section));
 
   @override
   Future<void> save(Preferences preferences) =>
-      _store.saveSection(section, preferences.toJson());
+      _store.saveSection(section, encodePreferences(preferences));
 }

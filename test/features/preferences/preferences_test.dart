@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/preferences/domain/preferences.dart';
+import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
 import 'package:lumivent/features/preferences/infrastructure/preferences_store.dart';
 
 void main() {
@@ -12,11 +13,11 @@ void main() {
       temperatureUnit: TemperatureUnit.fahrenheit,
       effectsFps: 60,
     );
-    expect(Preferences.fromJson(p.toJson()), p);
+    expect(decodePreferences(encodePreferences(p)), p);
   });
 
   test('missing, unknown, or wrongly typed fields use defaults', () {
-    final p = Preferences.fromJson({
+    final p = decodePreferences({
       'closeToTray': 'sim',
       'temperatureUnit': 'kelvin',
       'effectsFps': 144,

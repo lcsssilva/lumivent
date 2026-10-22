@@ -18,6 +18,7 @@ import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/devices/devices.dart';
 import 'package:lumivent/features/fans/fans.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
+import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
 import 'package:lumivent/features/preferences/preferences.dart';
 import 'package:lumivent/features/system/system.dart';
 
@@ -116,7 +117,7 @@ void main() {
     // the language-switch test below.
     await store.saveSection(
       'preferences',
-      const Preferences(language: AppLanguage.pt).toJson(),
+      encodePreferences(const Preferences(language: AppLanguage.pt)),
     );
     engine = FakeEngine();
     autostart = FakeAutostart();
@@ -393,7 +394,7 @@ void main() {
     await tester.runAsync(
       () => store.saveSection(
         'preferences',
-        const Preferences(language: AppLanguage.en).toJson(),
+        encodePreferences(const Preferences(language: AppLanguage.en)),
       ),
     );
     await pumpApp(tester);
