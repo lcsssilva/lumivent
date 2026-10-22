@@ -4,6 +4,7 @@ import 'package:lumivent/features/lighting/domain/frame_composer.dart';
 import 'package:lumivent/features/lighting/domain/led_layout.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/infrastructure/lighting_codec.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/presentation/labels.dart';
 
@@ -197,7 +198,7 @@ void main() {
                   ),
                 },
               );
-      final back = LightingConfig.fromJson(c.toJson());
+      final back = decodeLightingConfig(encodeLightingConfig(c));
       expect(back, c);
       expect(back.hashCode, c.hashCode);
       expect(LightingConfig(), isNot(c));
@@ -206,7 +207,7 @@ void main() {
     test('merge order: default, round trip and invalid values', () {
       expect(LightingConfig().alv2MergeOrder, [0, 1, 2, 3]);
       final c = LightingConfig(alv2MergeOrder: const [0, 1, 3, 2]);
-      final back = LightingConfig.fromJson(c.toJson());
+      final back = decodeLightingConfig(encodeLightingConfig(c));
       expect(back.alv2MergeOrder, [0, 1, 3, 2]);
       expect(back, c);
       expect(c, isNot(LightingConfig()));
@@ -218,23 +219,24 @@ void main() {
         [0, 1, 2, '3'],
         '0123',
       ]) {
-        expect(
-          LightingConfig.fromJson({'alv2MergeOrder': bad}).alv2MergeOrder,
-          [0, 1, 2, 3],
-          reason: '$bad',
-        );
+        expect(decodeLightingConfig({'alv2MergeOrder': bad}).alv2MergeOrder, [
+          0,
+          1,
+          2,
+          3,
+        ], reason: '$bad');
       }
     });
 
     test('legacy configuration', () {
-      final c = LightingConfig.fromJson({'argbOff': true});
+      final c = decodeLightingConfig({'argbOff': true});
       expect(c.argbOff, isTrue);
       expect(c.brightness, 1);
       expect(c.fanQuantity, [0, 3, 3, 1]);
     });
 
     test('wrong and unknown types are tolerated', () {
-      final c = LightingConfig.fromJson({
+      final c = decodeLightingConfig({
         'argbOff': 'sim',
         'brightness': 7,
         'offOnSleep': 3,
@@ -282,7 +284,7 @@ void main() {
       expect(ch.placement.w, greaterThanOrEqualTo(1));
       expect(c.boardZones[0x22]!.mode, BoardEffectMode.static);
       expect(c.boardZones[0x22]!.speed, 9);
-      expect(LightingConfig.fromJson(const {}), LightingConfig());
+      expect(decodeLightingConfig(const {}), LightingConfig());
     });
   });
 

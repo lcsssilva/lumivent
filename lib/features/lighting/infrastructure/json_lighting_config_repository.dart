@@ -1,5 +1,6 @@
 import '../../../core/persistence/config_store.dart';
 import '../domain/lighting_config.dart';
+import 'lighting_codec.dart';
 
 /// Stores configuration in the `lighting` section of config.json. Also reads the
 /// old config `{"argbOff": true}`.
@@ -10,9 +11,9 @@ class JsonLightingConfigRepository implements LightingConfigRepository {
   final ConfigStore _store;
 
   @override
-  LightingConfig load() => LightingConfig.fromJson(_store.section(section));
+  LightingConfig load() => decodeLightingConfig(_store.section(section));
 
   @override
   Future<void> save(LightingConfig config) =>
-      _store.saveSection(section, config.toJson());
+      _store.saveSection(section, encodeLightingConfig(config));
 }

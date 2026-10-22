@@ -19,6 +19,7 @@ import '../domain/effect_meta.dart';
 import '../domain/hardware_equivalents.dart';
 import '../domain/installed_effect.dart';
 import '../domain/light_device.dart';
+import '../domain/lighting_config.dart';
 import '../domain/native_effects.dart';
 import '../domain/rgb.dart';
 import 'color_picker.dart';

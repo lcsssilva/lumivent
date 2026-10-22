@@ -7,11 +7,15 @@
 // names (firmware mode strings) and [BoardEffectMode]; the byte tables belong to
 // the device drivers.
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import 'hardware_timing.dart';
 import 'light_device.dart';
 import 'lighting_config.dart';
 import 'native_effects.dart';
 import 'rgb.dart';
+
+part 'hardware_equivalents.freezed.dart';
 
 /// Firmware mode chosen for the **Varredura** effect.
 ///
@@ -33,29 +37,20 @@ const colorWaveFirmwareMode = 'Taichi';
 const fixedSpeedEffects = {'scanner'};
 
 /// Hardware configuration equivalent to the current global effect.
-class HardwareEquivalent {
-  const HardwareEquivalent({required this.fans, required this.board, this.gpu});
+@freezed
+abstract class HardwareEquivalent with _$HardwareEquivalent {
+  const factory HardwareEquivalent({
+    /// For every fan group in Canvas.
+    required Alv2HardwareConfig fans,
 
-  /// For every fan group in Canvas.
-  final Alv2HardwareConfig fans;
+    /// For every motherboard zone, when the board is in Canvas; `null` when the
+    /// firmware has no equivalent for the zones (they stay in Canvas).
+    required BoardZoneConfig? board,
 
-  /// For every motherboard zone, when the board is in Canvas; `null` when the
-  /// firmware has no equivalent for the zones (they stay in Canvas).
-  final BoardZoneConfig? board;
-
-  /// For the GPU, when the firmware has a matching effect; `null` leaves it in
-  /// Canvas (average color).
-  final GpuHardwareConfig? gpu;
-
-  @override
-  bool operator ==(Object other) =>
-      other is HardwareEquivalent &&
-      other.fans == fans &&
-      other.board == board &&
-      other.gpu == gpu;
-
-  @override
-  int get hashCode => Object.hash(fans, board, gpu);
+    /// For the GPU, when the firmware has a matching effect; `null` leaves it
+    /// in Canvas (average color).
+    GpuHardwareConfig? gpu,
+  }) = _HardwareEquivalent;
 }
 
 /// Hardware equivalent of the effect in [c], or `null` when it has none

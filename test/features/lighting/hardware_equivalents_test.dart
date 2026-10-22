@@ -3,6 +3,7 @@ import 'package:lumivent/features/lighting/domain/frame_composer.dart';
 import 'package:lumivent/features/lighting/domain/hardware_equivalents.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/infrastructure/lighting_codec.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 
 LightingConfig cfg(
@@ -129,13 +130,16 @@ void main() {
 
   test('autoHardware defaults to true and survives JSON', () {
     expect(LightingConfig().autoHardware, isTrue);
-    expect(LightingConfig.fromJson(const {}).autoHardware, isTrue);
+    expect(decodeLightingConfig(const {}).autoHardware, isTrue);
     expect(
-      LightingConfig.fromJson(const {'autoHardware': 'x'}).autoHardware,
+      decodeLightingConfig(const {'autoHardware': 'x'}).autoHardware,
       isTrue,
     );
     final off = LightingConfig(autoHardware: false);
-    expect(LightingConfig.fromJson(off.toJson()).autoHardware, isFalse);
+    expect(
+      decodeLightingConfig(encodeLightingConfig(off)).autoHardware,
+      isFalse,
+    );
     expect(off == LightingConfig(), isFalse);
   });
 

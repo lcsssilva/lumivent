@@ -8,6 +8,7 @@ import 'package:lumivent/core/engine/engine_host.dart';
 import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/fans/fans.dart';
+import 'package:lumivent/features/lighting/infrastructure/lighting_codec.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
 import 'package:lumivent/features/preferences/preferences.dart';
 
@@ -97,7 +98,7 @@ void main() {
     final exported = await store('exported');
     await exported.saveSection(
       'lighting',
-      LightingConfig(argbOff: true).toJson(),
+      encodeLightingConfig(LightingConfig(argbOff: true)),
     );
     await importConfig(s, exportConfig(exported));
     container.read(lightingProvider.notifier).reload();

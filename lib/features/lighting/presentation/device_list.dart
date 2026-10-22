@@ -14,6 +14,7 @@ import '../application/lighting_controller.dart';
 import '../application/lighting_messages.dart';
 import '../domain/hardware_equivalents.dart';
 import '../domain/light_device.dart';
+import '../domain/lighting_config.dart';
 import 'labels.dart';
 import 'panel_controls.dart';
 
