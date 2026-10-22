@@ -10,6 +10,7 @@ import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/fans/fans.dart';
 import 'package:lumivent/features/lighting/infrastructure/lighting_codec.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
+import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
 import 'package:lumivent/features/preferences/preferences.dart';
 
 import '../fakes.dart';
@@ -43,6 +44,46 @@ void main() {
       'argbOff': false,
     });
   });
+
+  test(
+    'coordinator applies an import and reloads the imported modules',
+    () async {
+      final s = await store('coordinator');
+      final engine = FakeEngine();
+      final container = ProviderContainer(
+        overrides: [
+          configStoreProvider.overrideWithValue(s),
+          engineProvider.overrideWithValue(engine),
+          ...PreferencesModule.overrides(s),
+          ...LightingModule.overrides(s),
+          ...FansModule.overrides(s),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final exported = await store('coordinator-exported');
+      await exported.saveSection(
+        'preferences',
+        encodePreferences(const Preferences(effectsFps: 15)),
+      );
+      await exported.saveSection(
+        'lighting',
+        encodeLightingConfig(LightingConfig(argbOff: true)),
+      );
+
+      final transfer = container.read(configTransferProvider);
+      final sections = await transfer.importText(exportConfig(exported));
+
+      expect(sections, ['preferences', 'lighting']);
+      expect(container.read(preferencesProvider).effectsFps, 15);
+      expect(container.read(lightingProvider).argbOff, isTrue);
+      expect(
+        engine.sent.whereType<SetLightingConfig>().last.config.argbOff,
+        isTrue,
+      );
+      expect(transfer.backupPath, endsWith('.before-import'));
+    },
+  );
 
   test('unknown sections are ignored, missing ones are kept', () async {
     final s = await store('s');

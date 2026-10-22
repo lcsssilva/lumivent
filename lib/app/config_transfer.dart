@@ -6,8 +6,13 @@
 // change applies without restarting the app.
 import 'dart:convert';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../core/i18n/app_strings.dart';
 import '../core/persistence/config_store.dart';
+import '../features/fans/fans.dart';
+import '../features/lighting/lighting.dart';
+import '../features/preferences/preferences.dart';
 
 /// Module sections an import may replace.
 const transferableSections = ['preferences', 'lighting', 'fans'];
@@ -61,3 +66,42 @@ Future<List<String>> importConfig(
   await store.replaceSections(sections, backupSuffix: importBackupSuffix);
   return sections.keys.toList();
 }
+
+/// Applies an imported configuration and reloads the modules whose section it
+/// replaced. The widget layer only picks the file and reports the result.
+class ConfigTransfer {
+  ConfigTransfer(this._ref);
+
+  final Ref _ref;
+
+  /// Path of the copy taken before the last import (shown to the user).
+  String get backupPath =>
+      '${_ref.read(configStoreProvider).file.path}.$importBackupSuffix';
+
+  /// Imports [text] and returns the module sections it replaced.
+  ///
+  /// Reloading a module resends its configuration to the engine, so an import
+  /// applies without restarting the app.
+  Future<List<String>> importText(
+    String text, {
+    AppStrings strings = AppStrings.en,
+  }) async {
+    final sections = await importConfig(
+      _ref.read(configStoreProvider),
+      text,
+      strings: strings,
+    );
+    if (sections.contains('preferences')) {
+      _ref.read(preferencesProvider.notifier).reload();
+    }
+    if (sections.contains('lighting')) {
+      _ref.read(lightingProvider.notifier).reload();
+    }
+    if (sections.contains('fans')) {
+      _ref.read(fansProvider.notifier).reload();
+    }
+    return sections;
+  }
+}
+
+final configTransferProvider = Provider<ConfigTransfer>(ConfigTransfer.new);

@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/i18n/catalogs/explore_strings.dart';
+import '../../../core/ui/async_action.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../../lighting/lighting.dart';
@@ -25,13 +26,13 @@ class ExplorePage extends ConsumerStatefulWidget {
   ConsumerState<ExplorePage> createState() => _ExplorePageState();
 }
 
-class _ExplorePageState extends ConsumerState<ExplorePage> {
+class _ExplorePageState extends ConsumerState<ExplorePage>
+    with AsyncActionMixin<ExplorePage> {
   final _query = TextEditingController();
   final _thumbs = <String, Future<Uint8List?>>{};
   SupportFilter _support = SupportFilter.all;
   String? _tag;
   String? _publisher;
-  bool _busy = false;
   @override
   void dispose() {
     _query.dispose();
@@ -51,10 +52,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       );
   }
 
-  Future<void> _run(Future<ImportReport> Function() action) async {
-    if (_busy) return;
+  Future<void> _run(Future<ImportReport> Function() action) => run(() async {
     final strings = context.strings;
-    setState(() => _busy = true);
     try {
       final report = await action();
       _thumbs.clear();
@@ -77,10 +76,8 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       );
     } on Object catch (e) {
       _tell(strings.explore.importFailed('$e'), error: true);
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
-  }
+  });
 
   Future<void> _importFiles() async {
     final strings = context.strings.explore;
@@ -220,7 +217,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
       children: [
         Row(
           children: [
-            if (_busy)
+            if (isRunning)
               const Padding(
                 padding: EdgeInsets.only(right: 12),
                 child: SizedBox(
@@ -237,7 +234,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                 children: [
                   OutlinedButton.icon(
                     key: const Key('import-files'),
-                    onPressed: _busy ? null : _importFiles,
+                    onPressed: isRunning ? null : _importFiles,
                     icon: const Icon(
                       Icons.insert_drive_file_outlined,
                       size: 18,
@@ -246,13 +243,13 @@ class _ExplorePageState extends ConsumerState<ExplorePage> {
                   ),
                   OutlinedButton.icon(
                     key: const Key('import-folder'),
-                    onPressed: _busy ? null : _importFolder,
+                    onPressed: isRunning ? null : _importFolder,
                     icon: const Icon(Icons.folder_open_outlined, size: 18),
                     label: Text(e.folder),
                   ),
                   FilledButton.tonalIcon(
                     key: const Key('import-windows-cache'),
-                    onPressed: _busy ? null : _importWindowsCache,
+                    onPressed: isRunning ? null : _importWindowsCache,
                     icon: const Icon(Icons.desktop_windows_outlined, size: 18),
                     label: Text(e.importFromWindows),
                   ),

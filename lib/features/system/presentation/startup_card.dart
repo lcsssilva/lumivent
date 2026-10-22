@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/app_strings_scope.dart';
+import '../../../core/ui/async_action.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
 import '../application/system_controller.dart';
@@ -14,14 +15,10 @@ class StartupCard extends ConsumerStatefulWidget {
   ConsumerState<StartupCard> createState() => _StartupCardState();
 }
 
-class _StartupCardState extends ConsumerState<StartupCard> {
-  bool _busy = false;
-
-  Future<void> _set(bool on) async {
-    setState(() => _busy = true);
-    await ref.read(autostartProvider.notifier).setEnabled(on);
-    if (mounted) setState(() => _busy = false);
-  }
+class _StartupCardState extends ConsumerState<StartupCard>
+    with AsyncActionMixin<StartupCard> {
+  Future<void> _set(bool on) =>
+      run(() => ref.read(autostartProvider.notifier).setEnabled(on));
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +52,7 @@ class _StartupCardState extends ConsumerState<StartupCard> {
         ),
         control: Switch(
           value: state?.enabled ?? false,
-          onChanged: _busy || autostart.isLoading ? null : _set,
+          onChanged: isRunning || autostart.isLoading ? null : _set,
         ),
       ),
     );

@@ -6,10 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/app_strings_scope.dart';
 import '../../core/persistence/config_store.dart';
+import '../../core/ui/async_action.dart';
 import '../../core/ui/widgets.dart';
-import '../../features/fans/fans.dart';
-import '../../features/lighting/lighting.dart';
-import '../../features/preferences/preferences.dart';
 import '../config_transfer.dart';
 
 /// Export/import of the whole configuration. An import applies at once: the
@@ -21,29 +19,25 @@ class ConfigTransferCard extends ConsumerStatefulWidget {
   ConsumerState<ConfigTransferCard> createState() => _ConfigTransferCardState();
 }
 
-class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard> {
-  bool _busy = false;
-
+class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard>
+    with AsyncActionMixin<ConfigTransferCard> {
   void _tell(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _run(Future<void> Function() job) async {
+  Future<void> _run(Future<void> Function() job) => run(() async {
     final strings = context.strings;
-    setState(() => _busy = true);
     try {
       await job();
     } on ConfigWriteFailure {
-      // The shell already notifies every configuration write failure; this
-      // card would only show the same problem a second time.
+      // The shell notifies every configuration write failure; this card would
+      // only show the same problem a second time.
     } on Object catch (e) {
       _tell(e is FormatException ? e.message : strings.shell.failed('$e'));
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
-  }
+  });
 
   Future<void> _export() => _run(() async {
     final s = context.strings.shell;
@@ -67,16 +61,9 @@ class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard> {
     );
     if (file == null) return;
     final text = utf8.decode(await file.readAsBytes());
-    final store = ref.read(configStoreProvider);
-    final sections = await importConfig(store, text, strings: strings);
-    if (sections.contains('preferences')) {
-      ref.read(preferencesProvider.notifier).reload();
-    }
-    if (sections.contains('lighting')) {
-      ref.read(lightingProvider.notifier).reload();
-    }
-    if (sections.contains('fans')) ref.read(fansProvider.notifier).reload();
-    _tell(s.importedBackupAt('${store.file.path}.$importBackupSuffix'));
+    final transfer = ref.read(configTransferProvider);
+    await transfer.importText(text, strings: strings);
+    _tell(s.importedBackupAt(transfer.backupPath));
   });
 
   @override
@@ -91,12 +78,12 @@ class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             OutlinedButton(
-              onPressed: _busy ? null : _export,
+              onPressed: isRunning ? null : _export,
               child: Text(s.export),
             ),
             const SizedBox(width: 8),
             OutlinedButton(
-              onPressed: _busy ? null : _import,
+              onPressed: isRunning ? null : _import,
               child: Text(s.import),
             ),
           ],
