@@ -11,6 +11,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../../../core/engine/engine_host.dart';
 import '../../monitoring/monitoring.dart';
@@ -23,60 +24,36 @@ import 'effects_controller.dart';
 import 'lighting_controller.dart';
 import 'lighting_messages.dart';
 
+part 'html_effect_runner.freezed.dart';
+
 /// Why the HTML effect is not running. The presentation maps it to the
 /// catalog (`LightingStrings.effectLoadFailed`/`effectPaused`/...).
 
 enum HtmlEffectIssue { loadFailed, paused, unsupported }
 
-class HtmlEffectStatus {
-  const HtmlEffectStatus({
-    this.effectId,
-    this.loading = false,
-    this.paused = false,
-    this.issue,
-    this.issueArgs = const [],
-    this.error,
-    this.fps = 0,
-    this.frameMs = 0,
-  });
-
-  /// Global effect id (`html:<id>`) currently rendered.
-  final String? effectId;
-  final bool loading;
-
-  /// Stopped because frames take too long (an effect stuck in a loop).
-  final bool paused;
-
-  /// Reason the effect is not running; [error] carries technical detail.
-  final HtmlEffectIssue? issue;
-  final List<String> issueArgs;
-  final String? error;
-
-  /// Measured render FPS and mean frame time of the last second.
-  final double fps;
-  final double frameMs;
-
-  bool get running => effectId != null && !loading && !paused && issue == null;
-
-  HtmlEffectStatus copyWith({
+@freezed
+abstract class HtmlEffectStatus with _$HtmlEffectStatus {
+  const factory HtmlEffectStatus({
+    /// Global effect id (`html:<id>`) currently rendered.
     String? effectId,
-    bool? loading,
-    bool? paused,
+    @Default(false) bool loading,
+
+    /// Stopped because frames take too long (an effect stuck in a loop).
+    @Default(false) bool paused,
+
+    /// Reason the effect is not running; [error] carries technical detail.
     HtmlEffectIssue? issue,
-    List<String>? issueArgs,
+    @Default(<String>[]) List<String> issueArgs,
     String? error,
-    double? fps,
-    double? frameMs,
-  }) => HtmlEffectStatus(
-    effectId: effectId ?? this.effectId,
-    loading: loading ?? this.loading,
-    paused: paused ?? this.paused,
-    issue: issue ?? this.issue,
-    issueArgs: issueArgs ?? this.issueArgs,
-    error: error ?? this.error,
-    fps: fps ?? this.fps,
-    frameMs: frameMs ?? this.frameMs,
-  );
+
+    /// Measured render FPS and mean frame time of the last second.
+    @Default(0) double fps,
+    @Default(0) double frameMs,
+  }) = _HtmlEffectStatus;
+}
+
+extension HtmlEffectStatusX on HtmlEffectStatus {
+  bool get running => effectId != null && !loading && !paused && issue == null;
 }
 
 /// Longest accepted frame. Above this for [maxSlowFrames] in a row the effect

@@ -4,6 +4,10 @@
 // The fan and lighting drivers (phases 3 and 4) build on this model; it only
 // contains each device's identity and access state.
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'device.freezed.dart';
+
 enum DeviceStatus {
   /// Found and responding.
   ok,
@@ -52,65 +56,27 @@ enum DeviceIssue {
 }
 
 /// Immutable device snapshot, safe to send between isolates.
-class DeviceInfo {
-  const DeviceInfo({
-    required this.id,
-    required this.kind,
-    required this.label,
-    required this.model,
-    required this.status,
-    this.slot,
-    this.detail,
-    this.issue,
-    this.issueArg,
-  });
+@freezed
+abstract class DeviceInfo with _$DeviceInfo {
+  const factory DeviceInfo({
+    /// Stable between runs (used by configuration in future phases).
+    required String id,
+    required DeviceKind kind,
+    required DeviceLabel label,
 
-  /// Stable between runs (used by configuration in future phases).
-  final String id;
-  final DeviceKind kind;
-  final DeviceLabel label;
+    /// Memory slot for [DeviceLabel.memoryModule] (1-based).
+    int? slot,
+    required String model,
+    required DeviceStatus status,
 
-  /// Memory slot for [DeviceLabel.memoryModule] (1-based).
-  final int? slot;
-  final String model;
-  final DeviceStatus status;
+    /// Firmware, node path, or a neutral technical error.
+    String? detail,
 
-  /// Firmware, node path, or a neutral technical error.
-  final String? detail;
-
-  /// Actionable issue and its data (for example the bus that did not respond).
-  final DeviceIssue? issue;
-  final String? issueArg;
-
-  @override
-  bool operator ==(Object other) =>
-      other is DeviceInfo &&
-      other.id == id &&
-      other.kind == kind &&
-      other.label == label &&
-      other.slot == slot &&
-      other.model == model &&
-      other.status == status &&
-      other.detail == detail &&
-      other.issue == issue &&
-      other.issueArg == issueArg;
-
-  @override
-  int get hashCode => Object.hash(
-    id,
-    kind,
-    label,
-    slot,
-    model,
-    status,
-    detail,
-    issue,
-    issueArg,
-  );
-
-  @override
-  String toString() =>
-      '$id: ${status.name}${detail == null ? '' : ' ($detail)'}';
+    /// Actionable issue and its data (for example the bus that did not
+    /// respond).
+    DeviceIssue? issue,
+    String? issueArg,
+  }) = _DeviceInfo;
 }
 
 /// Result of a full scan.

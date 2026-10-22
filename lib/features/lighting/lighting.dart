@@ -45,7 +45,12 @@ export 'domain/effect_library.dart'
 export 'domain/effect_meta.dart' show EffectProperty, EffectSource, parseEffect;
 export 'domain/effect_runtime.dart' show EffectFrame;
 export 'domain/installed_effect.dart'
-    show EffectOrigin, InstalledEffect, htmlEffectId, htmlEffectSlugOf;
+    show
+        EffectOrigin,
+        InstalledEffect,
+        InstalledEffectX,
+        htmlEffectId,
+        htmlEffectSlugOf;
 export 'domain/led_layout.dart';
 export 'domain/light_device.dart';
 export 'domain/lighting_config.dart';

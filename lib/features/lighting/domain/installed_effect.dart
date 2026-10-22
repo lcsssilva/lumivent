@@ -1,8 +1,12 @@
 // Lighting module domain (pure Dart): installed HTML/Canvas effects
 // files (plan §5.2). The library stores `effect.html` plus this metadata.
 
+import 'package:freezed_annotation/freezed_annotation.dart';
+
 import 'effect_compat.dart';
 import 'effect_meta.dart';
+
+part 'installed_effect.freezed.dart';
 
 /// Prefix of an installed effect inside `LightingConfig.effectId`.
 const htmlEffectPrefix = 'html:';
@@ -19,50 +23,30 @@ String? htmlEffectSlugOf(String effectId) =>
 /// Where an installed effect came from (shown in the Explore page).
 enum EffectOrigin { file, folder, zip, windowsCache }
 
-class InstalledEffect {
-  const InstalledEffect({
-    required this.id,
-    required this.title,
-    required this.source,
-    required this.compatibility,
-    this.publisher,
-    this.description,
-    this.origin = EffectOrigin.file,
-    this.importedAt,
-    this.tags = const [],
-    this.hasThumbnail = false,
-  });
+@freezed
+abstract class InstalledEffect with _$InstalledEffect {
+  const factory InstalledEffect({
+    /// Folder name inside the effects directory.
+    required String id,
+    required String title,
+    required EffectSource source,
+    required EffectCompatibility compatibility,
+    String? publisher,
+    String? description,
+    @Default(EffectOrigin.file) EffectOrigin origin,
+    DateTime? importedAt,
 
-  /// Folder name inside the effects directory.
-  final String id;
-  final String title;
-  final EffectSource source;
-  final EffectCompatibility compatibility;
-  final String? publisher, description;
-  final EffectOrigin origin;
-  final DateTime? importedAt;
+    /// Extra catalog metadata (type, tags) when imported from a Windows cache.
+    @Default(<String>[]) List<String> tags,
+    @Default(false) bool hasThumbnail,
+  }) = _InstalledEffect;
+}
 
-  /// Extra catalog metadata (type, tags) when imported from a Windows cache.
-  final List<String> tags;
-  final bool hasThumbnail;
-
+extension InstalledEffectX on InstalledEffect {
   /// `LightingConfig.effectId` of this effect.
   String get effectId => htmlEffectId(id);
 
   bool get canRun => compatibility.canRun;
-
-  InstalledEffect copyWith({bool? hasThumbnail}) => InstalledEffect(
-    id: id,
-    title: title,
-    source: source,
-    compatibility: compatibility,
-    publisher: publisher,
-    description: description,
-    origin: origin,
-    importedAt: importedAt,
-    tags: tags,
-    hasThumbnail: hasThumbnail ?? this.hasThumbnail,
-  );
 }
 
 /// Metadata written next to `effect.html` (no script, no derived fields).
