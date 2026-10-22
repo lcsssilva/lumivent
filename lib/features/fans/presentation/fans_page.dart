@@ -14,73 +14,6 @@ import '../domain/fan_group.dart';
 import '../domain/fan_response.dart';
 import 'fan_curve_editor.dart';
 
-String _temp(double? c, TemperatureUnit unit) => c == null
-    ? '—'
-    : unit == TemperatureUnit.fahrenheit
-    ? '${(c * 9 / 5 + 32).round()} °F'
-    : '${c.round()} °C';
-
-/// Display name of [g], falling back to the catalog's default group name.
-String _groupLabel(AppStrings strings, FanGroupConfig g) =>
-    g.name.trim().isEmpty ? strings.common.groupName(g.group) : g.name;
-
-String _presetLabel(AppStrings strings, FanPreset p) => switch (p) {
-  FanPreset.quiet => strings.fans.presetQuiet,
-  FanPreset.standard => strings.fans.presetStandard,
-  FanPreset.high => strings.fans.presetHigh,
-  FanPreset.full => strings.fans.presetFull,
-  FanPreset.fixed => strings.fans.presetFixed,
-  FanPreset.user1 => strings.fans.presetUser1,
-  FanPreset.user2 => strings.fans.presetUser2,
-  FanPreset.user3 => strings.fans.presetUser3,
-  FanPreset.user4 => strings.fans.presetUser4,
-  FanPreset.custom => strings.fans.presetCustom,
-};
-
-/// Short label used in the chart.
-String _sourceLabel(AppStrings strings, FanTempSource s) => switch (s) {
-  FanTempSource.cpuTctl => strings.fans.sourceCpuTctl,
-  FanTempSource.gpuJunction => strings.fans.sourceGpuJunction,
-  FanTempSource.gpuEdge => strings.fans.sourceGpuEdge,
-  FanTempSource.boardSystem1 => strings.fans.sourceSystem1,
-  FanTempSource.boardSystem2 => strings.fans.sourceSystem2,
-  FanTempSource.boardPch => strings.fans.sourcePch,
-  FanTempSource.boardCpuSocket => strings.fans.sourceCpuSocket,
-  FanTempSource.boardVrm => strings.fans.sourceVrm,
-  FanTempSource.boardPciex16 => strings.fans.sourcePciex16,
-  FanTempSource.boardPciex4 => strings.fans.sourcePciex4,
-};
-
-/// Name in the source list: motherboard sensors are grouped under "Motherboard".
-String _sourceMenuLabel(AppStrings strings, FanTempSource s) => s.isBoard
-    ? '${strings.fans.motherboardPrefix} · ${_sourceLabel(strings, s)}'
-    : _sourceLabel(strings, s);
-
-String _sourceMetric(FanTempSource s) => switch (s) {
-  FanTempSource.cpuTctl => Metrics.cpuTctl,
-  FanTempSource.gpuJunction => Metrics.gpuJunction,
-  FanTempSource.gpuEdge => Metrics.gpuEdge,
-  FanTempSource.boardSystem1 => 'board.system1',
-  FanTempSource.boardSystem2 => 'board.system2',
-  FanTempSource.boardPch => 'board.pch',
-  FanTempSource.boardCpuSocket => 'board.cpu',
-  FanTempSource.boardVrm => 'board.vrm',
-  FanTempSource.boardPciex16 => 'board.pciex16',
-  FanTempSource.boardPciex4 => 'board.pciex4',
-};
-
-String _responseLabel(AppStrings strings, FanResponse r) => switch (r) {
-  FanResponse.fast => strings.fans.responseFast,
-  FanResponse.normal => strings.fans.responseNormal,
-  FanResponse.smooth => strings.fans.responseSmooth,
-};
-
-String _responseHint(AppStrings strings, FanResponse r) => switch (r) {
-  FanResponse.fast => strings.fans.responseFastHint,
-  FanResponse.normal => strings.fans.responseNormalHint,
-  FanResponse.smooth => strings.fans.responseSmoothHint,
-};
-
 /// AL V2 fan speed: groups, presets, options, and curve editor.
 class FansPage extends ConsumerStatefulWidget {
   const FansPage({super.key});
@@ -134,179 +67,362 @@ class _FansPageState extends ConsumerState<FansPage> {
           (temp: s[metric]!, rpm: s[Metrics.alv2Rpm(index)]!),
     ];
 
+    void applyToAll() {
+      controller.applyCurveToAll(index);
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(f.appliedToAll(_groupLabel(strings, group)))),
+      );
+    }
+
+    void updateGroup(FanGroupConfig g) => controller.updateGroup(g);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(WeSizes.unit * 3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  f.groupsTitle,
-                  style: const TextStyle(
-                    color: WeColors.muted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              Tooltip(
-                message: f.applyAllTooltip(_groupLabel(strings, group)),
-                child: FilledButton.tonalIcon(
-                  key: const ValueKey('opt-apply-all'),
-                  icon: const Icon(Icons.copy_all, size: 18),
-                  label: Text(f.applyAllLabel(_groupLabel(strings, group))),
-                  onPressed: () {
-                    controller.applyCurveToAll(index);
-                    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          f.appliedToAll(_groupLabel(strings, group)),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
+          _groupsHeaderRow(
+            strings: strings,
+            group: group,
+            onApplyAll: applyToAll,
           ),
           const SizedBox(height: WeSizes.unit * 1.5),
-          Row(
+          _groupTilesRow(
+            config: config,
+            present: present,
+            latest: latest,
+            selected: index,
+            onGroupTap: (g) => setState(() => _selected = g),
+            strings: strings,
+          ),
+          const SizedBox(height: WeSizes.unit * 2),
+          _headerCard(
+            index: index,
+            group: group,
+            rpm: rpm,
+            status: gStatus,
+            hubOk: status?.hubOk,
+            onName: (n) => controller.updateGroup(
+              group.copyWith(name: n.trim().isEmpty ? group.name : n.trim()),
+            ),
+            onSize: (s) => controller.updateGroup(group.copyWith(size: s)),
+          ),
+          const SizedBox(height: WeSizes.unit * 2),
+          _speedCurveCard(
+            strings: strings,
+            group: group,
+            temp: temp,
+            rpm: rpm,
+            status: gStatus,
+            tempLabel: tempLabel,
+            trace: trace,
+            onPresetChanged: controller.updateGroup,
+            onCurveChanged: (g) => controller.updateGroup(g, persist: false),
+            onCommit: controller.persist,
+          ),
+          const SizedBox(height: WeSizes.unit * 2),
+          _groupOptionsCard(
+            strings: strings,
+            group: group,
+            latest: latest,
+            unit: unit,
+            onGroupChanged: updateGroup,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Display temperature in the user's unit: `null` renders an em dash.
+  String _temp(double? c, TemperatureUnit unit) => c == null
+      ? '—'
+      : unit == TemperatureUnit.fahrenheit
+      ? '${(c * 9 / 5 + 32).round()} °F'
+      : '${c.round()} °C';
+
+  /// Display name of [g], falling back to the catalog's default group name.
+  String _groupLabel(AppStrings strings, FanGroupConfig g) =>
+      g.name.trim().isEmpty ? strings.common.groupName(g.group) : g.name;
+
+  /// Short label of a curve preset in the UI.
+  String _presetLabel(AppStrings strings, FanPreset p) => switch (p) {
+    FanPreset.quiet => strings.fans.presetQuiet,
+    FanPreset.standard => strings.fans.presetStandard,
+    FanPreset.high => strings.fans.presetHigh,
+    FanPreset.full => strings.fans.presetFull,
+    FanPreset.fixed => strings.fans.presetFixed,
+    FanPreset.user1 => strings.fans.presetUser1,
+    FanPreset.user2 => strings.fans.presetUser2,
+    FanPreset.user3 => strings.fans.presetUser3,
+    FanPreset.user4 => strings.fans.presetUser4,
+    FanPreset.custom => strings.fans.presetCustom,
+  };
+
+  /// Label of a temperature source in the UI.
+  String _sourceLabel(AppStrings strings, FanTempSource s) => switch (s) {
+    FanTempSource.cpuTctl => strings.fans.sourceCpuTctl,
+    FanTempSource.gpuJunction => strings.fans.sourceGpuJunction,
+    FanTempSource.gpuEdge => strings.fans.sourceGpuEdge,
+    FanTempSource.boardSystem1 => strings.fans.sourceSystem1,
+    FanTempSource.boardSystem2 => strings.fans.sourceSystem2,
+    FanTempSource.boardPch => strings.fans.sourcePch,
+    FanTempSource.boardCpuSocket => strings.fans.sourceCpuSocket,
+    FanTempSource.boardVrm => strings.fans.sourceVrm,
+    FanTempSource.boardPciex16 => strings.fans.sourcePciex16,
+    FanTempSource.boardPciex4 => strings.fans.sourcePciex4,
+  };
+
+  /// Name in the source list: motherboard sensors are grouped under "Motherboard".
+  String _sourceMenuLabel(AppStrings strings, FanTempSource s) => s.isBoard
+      ? '${strings.fans.motherboardPrefix} · ${_sourceLabel(strings, s)}'
+      : _sourceLabel(strings, s);
+
+  /// Metric id that carries the source temperature.
+  String _sourceMetric(FanTempSource s) => switch (s) {
+    FanTempSource.cpuTctl => Metrics.cpuTctl,
+    FanTempSource.gpuJunction => Metrics.gpuJunction,
+    FanTempSource.gpuEdge => Metrics.gpuEdge,
+    FanTempSource.boardSystem1 => 'board.system1',
+    FanTempSource.boardSystem2 => 'board.system2',
+    FanTempSource.boardPch => 'board.pch',
+    FanTempSource.boardCpuSocket => 'board.cpu',
+    FanTempSource.boardVrm => 'board.vrm',
+    FanTempSource.boardPciex16 => 'board.pciex16',
+    FanTempSource.boardPciex4 => 'board.pciex4',
+  };
+
+  /// Short label of a fan response mode in the UI.
+  String _responseLabel(AppStrings strings, FanResponse r) => switch (r) {
+    FanResponse.fast => strings.fans.responseFast,
+    FanResponse.normal => strings.fans.responseNormal,
+    FanResponse.smooth => strings.fans.responseSmooth,
+  };
+
+  /// Hint of a fan response mode in the UI.
+  String _responseHint(AppStrings strings, FanResponse r) => switch (r) {
+    FanResponse.fast => strings.fans.responseFastHint,
+    FanResponse.normal => strings.fans.responseNormalHint,
+    FanResponse.smooth => strings.fans.responseSmoothHint,
+  };
+
+  /// Row with the groups title and the "apply to all" action.
+  Widget _groupsHeaderRow({
+    required AppStrings strings,
+    required FanGroupConfig group,
+    required VoidCallback onApplyAll,
+  }) {
+    final f = strings.fans;
+    final groupLabel = _groupLabel(strings, group);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            f.groupsTitle,
+            style: const TextStyle(
+              color: WeColors.muted,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        Tooltip(
+          message: f.applyAllTooltip(groupLabel),
+          child: FilledButton.tonalIcon(
+            key: const ValueKey('opt-apply-all'),
+            icon: const Icon(Icons.copy_all, size: 18),
+            label: Text(f.applyAllLabel(groupLabel)),
+            onPressed: onApplyAll,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Row with one tile per hub group.
+  Widget _groupTilesRow({
+    required FansConfig config,
+    required List<bool> present,
+    required SensorSample? latest,
+    required int selected,
+    required void Function(int) onGroupTap,
+    required AppStrings strings,
+  }) {
+    return Row(
+      children: [
+        for (var g = 0; g < fanGroupCount; g++) ...[
+          if (g > 0) const SizedBox(width: WeSizes.unit * 2),
+          Expanded(
+            child: _GroupTile(
+              config: config[g],
+              rpm: latest?[Metrics.alv2Rpm(g)],
+              hasFan: present[g],
+              selected: g == selected,
+              label: _groupLabel(strings, config[g]),
+              onTap: () => onGroupTap(g),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Card with the selected group: name, size, and live status.
+  Widget _headerCard({
+    required int index,
+    required FanGroupConfig group,
+    required double? rpm,
+    required FanGroupStatus? status,
+    required bool? hubOk,
+    required ValueChanged<String> onName,
+    required ValueChanged<FanSize> onSize,
+  }) {
+    return WeCard(
+      child: _Header(
+        key: ValueKey('header-$index'),
+        group: group,
+        rpm: rpm,
+        status: status,
+        hubOk: hubOk,
+        onName: onName,
+        onSize: onSize,
+      ),
+    );
+  }
+
+  /// Card with the speed curve: preset chips, editor, and drag hint.
+  Widget _speedCurveCard({
+    required AppStrings strings,
+    required FanGroupConfig group,
+    required double? temp,
+    required double? rpm,
+    required FanGroupStatus? status,
+    required String? tempLabel,
+    required List<({double temp, double rpm})> trace,
+    required ValueChanged<FanGroupConfig> onPresetChanged,
+    required ValueChanged<FanGroupConfig> onCurveChanged,
+    required VoidCallback onCommit,
+  }) {
+    final f = strings.fans;
+    return WeCard(
+      title: f.speedCurve,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              for (var g = 0; g < fanGroupCount; g++) ...[
-                if (g > 0) const SizedBox(width: WeSizes.unit * 2),
-                Expanded(
-                  child: _GroupTile(
-                    config: config[g],
-                    rpm: latest?[Metrics.alv2Rpm(g)],
-                    hasFan: present[g],
-                    selected: g == index,
-                    onTap: () => setState(() => _selected = g),
-                  ),
+              for (final p in [
+                FanPreset.quiet,
+                FanPreset.standard,
+                FanPreset.high,
+                FanPreset.full,
+                FanPreset.fixed,
+                FanPreset.user1,
+                FanPreset.user2,
+                FanPreset.user3,
+                FanPreset.user4,
+                FanPreset.custom,
+              ])
+                ChoiceChip(
+                  key: ValueKey('preset-${p.name}'),
+                  label: Text(_presetLabel(strings, p)),
+                  selected: group.preset == p,
+                  showCheckmark: false,
+                  onSelected: (_) => onPresetChanged(group.copyWith(preset: p)),
                 ),
-              ],
             ],
           ),
           const SizedBox(height: WeSizes.unit * 2),
-          WeCard(
-            child: _Header(
-              key: ValueKey('header-$index'),
-              group: group,
+          FanCurveEditor(
+            key: const ValueKey('fan-curve-editor'),
+            group: group,
+            live: FanCurveLive(
+              temp: temp,
               rpm: rpm,
-              status: gStatus,
-              hubOk: status?.hubOk,
-              onName: (n) => controller.updateGroup(
-                group.copyWith(name: n.trim().isEmpty ? group.name : n.trim()),
+              duty: status?.duty,
+              tempLabel: tempLabel,
+              trace: trace,
+            ),
+            onChanged: onCurveChanged,
+            onCommit: onCommit,
+          ),
+          const SizedBox(height: WeSizes.unit),
+          Text(
+            group.preset == FanPreset.fixed
+                ? f.dragFixedHint
+                : f.dragHint(FanPresets.maxPoints),
+            style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Card with the group options: start/stop, temperature source, response.
+  Widget _groupOptionsCard({
+    required AppStrings strings,
+    required FanGroupConfig group,
+    required SensorSample? latest,
+    required TemperatureUnit unit,
+    required void Function(FanGroupConfig) onGroupChanged,
+  }) {
+    final f = strings.fans;
+    final sourceOptions =
+        <({FanTempSource source, String label, String value})>[
+          for (final s in FanTempSource.values)
+            if (!s.isBoard ||
+                s == group.source ||
+                latest?[_sourceMetric(s)] != null)
+              (
+                source: s,
+                label: _sourceMenuLabel(strings, s),
+                value: _temp(latest?[_sourceMetric(s)], unit),
               ),
-              onSize: (s) => controller.updateGroup(group.copyWith(size: s)),
+        ];
+    return WeCard(
+      title: f.groupOptions,
+      child: Column(
+        children: [
+          SettingRow(
+            title: f.startStop,
+            subtitle: Text(f.startStopHint),
+            control: Switch(
+              key: const ValueKey('opt-startstop'),
+              value: group.startStop,
+              onChanged: (v) => onGroupChanged(group.copyWith(startStop: v)),
             ),
           ),
-          const SizedBox(height: WeSizes.unit * 2),
-          WeCard(
-            title: f.speedCurve,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final p in [
-                      FanPreset.quiet,
-                      FanPreset.standard,
-                      FanPreset.high,
-                      FanPreset.full,
-                      FanPreset.fixed,
-                      FanPreset.user1,
-                      FanPreset.user2,
-                      FanPreset.user3,
-                      FanPreset.user4,
-                      FanPreset.custom,
-                    ])
-                      ChoiceChip(
-                        key: ValueKey('preset-${p.name}'),
-                        label: Text(_presetLabel(strings, p)),
-                        selected: group.preset == p,
-                        showCheckmark: false,
-                        onSelected: (_) =>
-                            controller.updateGroup(group.copyWith(preset: p)),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: WeSizes.unit * 2),
-                FanCurveEditor(
-                  key: const ValueKey('fan-curve-editor'),
-                  group: group,
-                  live: FanCurveLive(
-                    temp: temp,
-                    rpm: rpm,
-                    duty: gStatus?.duty,
-                    tempLabel: tempLabel,
-                    trace: trace,
-                  ),
-                  onChanged: (g) => controller.updateGroup(g, persist: false),
-                  onCommit: controller.persist,
-                ),
-                const SizedBox(height: WeSizes.unit),
-                Text(
-                  group.preset == FanPreset.fixed
-                      ? f.dragFixedHint
-                      : f.dragHint(FanPresets.maxPoints),
-                  style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
-                ),
-              ],
+          const Divider(),
+          SettingRow(
+            title: f.temperatureSource,
+            subtitle: Text(f.temperatureSourceHint),
+            control: _SourcePicker(
+              key: const ValueKey('opt-source'),
+              selected: group.source,
+              options: sourceOptions,
+              onChanged: (FanTempSource? s) {
+                if (s != null) onGroupChanged(group.copyWith(source: s));
+              },
             ),
           ),
-          const SizedBox(height: WeSizes.unit * 2),
-          WeCard(
-            title: f.groupOptions,
-            child: Column(
-              children: [
-                SettingRow(
-                  title: f.startStop,
-                  subtitle: Text(f.startStopHint),
-                  control: Switch(
-                    key: const ValueKey('opt-startstop'),
-                    value: group.startStop,
-                    onChanged: (v) =>
-                        controller.updateGroup(group.copyWith(startStop: v)),
+          const Divider(),
+          SettingRow(
+            title: f.temperatureResponse,
+            subtitle: Text(_responseHint(strings, group.response)),
+            control: SegmentedButton<FanResponse>(
+              key: const ValueKey('opt-response'),
+              showSelectedIcon: false,
+              segments: [
+                for (final r in FanResponse.values)
+                  ButtonSegment(
+                    value: r,
+                    label: Text(_responseLabel(strings, r)),
                   ),
-                ),
-                const Divider(),
-                SettingRow(
-                  title: f.temperatureSource,
-                  subtitle: Text(f.temperatureSourceHint),
-                  control: _SourcePicker(
-                    key: const ValueKey('opt-source'),
-                    selected: group.source,
-                    latest: latest,
-                    unit: unit,
-                    onChanged: (s) =>
-                        controller.updateGroup(group.copyWith(source: s)),
-                  ),
-                ),
-                const Divider(),
-                SettingRow(
-                  title: f.temperatureResponse,
-                  subtitle: Text(_responseHint(strings, group.response)),
-                  control: SegmentedButton<FanResponse>(
-                    key: const ValueKey('opt-response'),
-                    showSelectedIcon: false,
-                    segments: [
-                      for (final r in FanResponse.values)
-                        ButtonSegment(
-                          value: r,
-                          label: Text(_responseLabel(strings, r)),
-                        ),
-                    ],
-                    selected: {group.response},
-                    onSelectionChanged: (r) => controller.updateGroup(
-                      group.copyWith(response: r.first),
-                    ),
-                  ),
-                ),
               ],
+              selected: {group.response},
+              onSelectionChanged: (r) =>
+                  onGroupChanged(group.copyWith(response: r.first)),
             ),
           ),
         ],
@@ -321,40 +437,36 @@ class _SourcePicker extends StatelessWidget {
   const _SourcePicker({
     super.key,
     required this.selected,
-    required this.latest,
-    required this.unit,
+    required this.options,
     required this.onChanged,
   });
 
   final FanTempSource selected;
-  final SensorSample? latest;
-  final TemperatureUnit unit;
+  final List<({FanTempSource source, String label, String value})> options;
   final ValueChanged<FanTempSource> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final strings = context.strings;
-    final sources = [
-      for (final s in FanTempSource.values)
-        if (!s.isBoard || s == selected || latest?[_sourceMetric(s)] != null) s,
-    ];
-    Widget row(FanTempSource s) => Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(_sourceMenuLabel(strings, s)),
-        const SizedBox(width: WeSizes.unit * 1.5),
-        Text(
-          _temp(latest?[_sourceMetric(s)], unit),
-          style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
-        ),
-      ],
-    );
     return DropdownButton<FanTempSource>(
       value: selected,
       underline: const SizedBox.shrink(),
       borderRadius: BorderRadius.circular(WeSizes.radius),
       items: [
-        for (final s in sources) DropdownMenuItem(value: s, child: row(s)),
+        for (final o in options)
+          DropdownMenuItem(
+            value: o.source,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(o.label),
+                const SizedBox(width: WeSizes.unit * 1.5),
+                Text(
+                  o.value,
+                  style: const TextStyle(color: WeColors.muted, fontSize: 12.5),
+                ),
+              ],
+            ),
+          ),
       ],
       onChanged: (s) {
         if (s != null) onChanged(s);
@@ -369,6 +481,7 @@ class _GroupTile extends StatelessWidget {
     required this.rpm,
     required this.hasFan,
     required this.selected,
+    required this.label,
     required this.onTap,
   });
 
@@ -376,6 +489,7 @@ class _GroupTile extends StatelessWidget {
   final double? rpm;
   final bool hasFan;
   final bool selected;
+  final String label;
   final VoidCallback onTap;
 
   @override
@@ -405,7 +519,7 @@ class _GroupTile extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        _groupLabel(strings, config),
+                        label,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),

@@ -563,30 +563,41 @@ class LightingEngineModule implements EngineModule {
   Future<void> _reconcile({bool hardwareResend = false}) async {
     final out = _outputs;
     await _reconciler.reconcile(
-      active: out != null && !_shouldBeOff,
-      hardwareResend: hardwareResend,
-      forgetHardwareModes: _hardware.forgetHardwareModes,
-      fansReady: () => _fansReady,
-      reconcileFans: () => _gated(
-        [OutputFamily.fans],
-        () => _hardwareApplier.reconcileFans(
-          config: _config,
-          user: _user,
-          out: out!,
-        ),
+      LightingReconcileJob(
+        active: out != null && !_shouldBeOff,
+        hardwareResend: hardwareResend,
+        forgetHardwareModes: _hardware.forgetHardwareModes,
+        families: [
+          HardwareFamilyJob(
+            ready: () => _fansReady,
+            reconcile: () => _gated(
+              [OutputFamily.fans],
+              () => _hardwareApplier.reconcileFans(
+                config: _config,
+                user: _user,
+                out: out!,
+              ),
+            ),
+          ),
+          HardwareFamilyJob(
+            ready: () => _boardReady,
+            reconcile: () => _gated(
+              [OutputFamily.ite],
+              () => _hardwareApplier.reconcileBoard(config: _config, out: out!),
+            ),
+          ),
+          HardwareFamilyJob(
+            ready: () => _gpuReady,
+            reconcile: () => _gated([
+              OutputFamily.gpu,
+            ], () => _hardwareApplier.reconcileGpu(config: _config, out: out!)),
+          ),
+        ],
+        isStopped: () => _stopped,
+        emitStatus: _status.emitStatus,
+        syncTimer: _syncTimer,
+        scheduleHardwareResend: _scheduleHardwareResend,
       ),
-      boardReady: () => _boardReady,
-      reconcileBoard: () => _gated([
-        OutputFamily.ite,
-      ], () => _hardwareApplier.reconcileBoard(config: _config, out: out!)),
-      gpuReady: () => _gpuReady,
-      reconcileGpu: () => _gated([
-        OutputFamily.gpu,
-      ], () => _hardwareApplier.reconcileGpu(config: _config, out: out!)),
-      isStopped: () => _stopped,
-      emitStatus: _status.emitStatus,
-      syncTimer: _syncTimer,
-      scheduleHardwareResend: _scheduleHardwareResend,
     );
   }
 

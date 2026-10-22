@@ -211,125 +211,145 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
     LightingConfig cfg,
   ) {
     final strings = context.strings;
-    final e = strings.explore;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            if (isRunning)
-              const Padding(
-                padding: EdgeInsets.only(right: 12),
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            Expanded(
-              child: Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  OutlinedButton.icon(
-                    key: const Key('import-files'),
-                    onPressed: isRunning ? null : _importFiles,
-                    icon: const Icon(
-                      Icons.insert_drive_file_outlined,
-                      size: 18,
-                    ),
-                    label: Text(e.importEffect),
-                  ),
-                  OutlinedButton.icon(
-                    key: const Key('import-folder'),
-                    onPressed: isRunning ? null : _importFolder,
-                    icon: const Icon(Icons.folder_open_outlined, size: 18),
-                    label: Text(e.folder),
-                  ),
-                  FilledButton.tonalIcon(
-                    key: const Key('import-windows-cache'),
-                    onPressed: isRunning ? null : _importWindowsCache,
-                    icon: const Icon(Icons.desktop_windows_outlined, size: 18),
-                    label: Text(e.importFromWindows),
-                  ),
-                ],
-              ),
+        _buildToolbar(strings.explore),
+        const SizedBox(height: WeSizes.unit * 2),
+        _buildFilters(availableTags(all), availablePublishers(all)),
+        const SizedBox(height: WeSizes.unit * 2),
+        Expanded(child: _buildContent(installed, all, visible, cfg)),
+      ],
+    );
+  }
+
+  Widget _buildToolbar(ExploreStrings e) {
+    return Row(
+      children: [
+        if (isRunning)
+          const Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
-          ],
-        ),
-        const SizedBox(height: WeSizes.unit * 2),
-        _Filters(
-          controller: _query,
-          support: _support,
-          tag: _tag,
-          publisher: _publisher,
-          tags: availableTags(all),
-          publishers: availablePublishers(all),
-          onQuery: () => setState(() {}),
-          onSupport: (v) => setState(() => _support = v),
-          onTag: (v) => setState(() => _tag = v),
-          onPublisher: (v) => setState(() => _publisher = v),
-        ),
-        const SizedBox(height: WeSizes.unit * 2),
+          ),
         Expanded(
-          child: installed.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(
-              child: WeCard(
-                title: e.libraryReadFailed,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${strings.common.technicalDetails}: $err',
-                      style: const TextStyle(color: WeColors.muted),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: () => ref.invalidate(installedEffectsProvider),
-                      child: Text(strings.common.retry),
-                    ),
-                  ],
-                ),
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                key: const Key('import-files'),
+                onPressed: isRunning ? null : _importFiles,
+                icon: const Icon(Icons.insert_drive_file_outlined, size: 18),
+                label: Text(e.importEffect),
               ),
-            ),
-            data: (_) {
-              if (all.isEmpty) return const _EmptyState();
-              if (visible.isEmpty) {
-                return Center(
-                  child: Text(
-                    e.noMatch,
-                    style: const TextStyle(color: WeColors.muted),
-                  ),
-                );
-              }
-              return GridView.builder(
-                key: const Key('explore-grid'),
-                padding: const EdgeInsets.only(bottom: 8),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 268,
-                  mainAxisExtent: 312,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: visible.length,
-                itemBuilder: (context, i) {
-                  final effect = visible[i];
-                  return _EffectCard(
-                    key: ValueKey('effect-card-${effect.id}'),
-                    effect: effect,
-                    applied: cfg.effectId == effect.effectId,
-                    thumbnail: effect.hasThumbnail ? _thumbnail(effect) : null,
-                    onApply: effect.canRun ? () => _apply(effect) : null,
-                    onRemove: () => _remove(effect),
-                  );
-                },
-              );
-            },
+              OutlinedButton.icon(
+                key: const Key('import-folder'),
+                onPressed: isRunning ? null : _importFolder,
+                icon: const Icon(Icons.folder_open_outlined, size: 18),
+                label: Text(e.folder),
+              ),
+              FilledButton.tonalIcon(
+                key: const Key('import-windows-cache'),
+                onPressed: isRunning ? null : _importWindowsCache,
+                icon: const Icon(Icons.desktop_windows_outlined, size: 18),
+                label: Text(e.importFromWindows),
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildFilters(List<String> tags, List<String> publishers) {
+    return _Filters(
+      controller: _query,
+      support: _support,
+      tag: _tag,
+      publisher: _publisher,
+      tags: tags,
+      publishers: publishers,
+      onQuery: () => setState(() {}),
+      onSupport: (v) => setState(() => _support = v),
+      onTag: (v) => setState(() => _tag = v),
+      onPublisher: (v) => setState(() => _publisher = v),
+    );
+  }
+
+  Widget _buildContent(
+    AsyncValue<List<InstalledEffect>> installed,
+    List<InstalledEffect> all,
+    List<InstalledEffect> visible,
+    LightingConfig cfg,
+  ) {
+    final e = context.strings.explore;
+    return installed.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => _buildLibraryError(e, err),
+      data: (_) => _buildGrid(all, visible, cfg, e),
+    );
+  }
+
+  Widget _buildLibraryError(ExploreStrings e, Object err) {
+    return Center(
+      child: WeCard(
+        title: e.libraryReadFailed,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${context.strings.common.technicalDetails}: $err',
+              style: const TextStyle(color: WeColors.muted),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: () => ref.invalidate(installedEffectsProvider),
+              child: Text(context.strings.common.retry),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGrid(
+    List<InstalledEffect> all,
+    List<InstalledEffect> visible,
+    LightingConfig cfg,
+    ExploreStrings e,
+  ) {
+    if (all.isEmpty) return const _EmptyState();
+    if (visible.isEmpty) {
+      return Center(
+        child: Text(e.noMatch, style: const TextStyle(color: WeColors.muted)),
+      );
+    }
+    return GridView.builder(
+      key: const Key('explore-grid'),
+      padding: const EdgeInsets.only(bottom: 8),
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 268,
+        mainAxisExtent: 312,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: visible.length,
+      itemBuilder: (context, i) {
+        final effect = visible[i];
+        return _EffectCard(
+          key: ValueKey('effect-card-${effect.id}'),
+          effect: effect,
+          applied: cfg.effectId == effect.effectId,
+          thumbnail: effect.hasThumbnail ? _thumbnail(effect) : null,
+          onApply: effect.canRun ? () => _apply(effect) : null,
+          onRemove: () => _remove(effect),
+        );
+      },
     );
   }
 }

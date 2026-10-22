@@ -1,5 +1,5 @@
-// Right column (hardware mode): firmware mode panel for AL V2 fan groups,
-// per-zone effects for the motherboard, and the GPU effect panel.
+// Right column (hardware mode): firmware mode panel for AL V2 fan groups.
+// Extracted from `hardware_panels.dart` when the three panels were split.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,11 +8,11 @@ import '../../../core/i18n/app_strings.dart';
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/widgets.dart';
-import '../../devices/devices.dart';
 import '../application/lighting_controller.dart';
 import '../domain/led_layout.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
+import '../../devices/devices.dart';
 import 'labels.dart';
 import 'panel_controls.dart';
 
@@ -328,175 +328,4 @@ class FanHardwarePanel extends ConsumerWidget {
     q[group] = n;
     return s.copyWith(fanQuantity: q);
   });
-}
-
-class GpuHardwarePanel extends ConsumerWidget {
-  const GpuHardwarePanel({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cfg = ref.watch(lightingProvider);
-    final controller = ref.read(lightingProvider.notifier);
-    final strings = context.strings;
-    final l = strings.lighting;
-    final hw = cfg.gpuHardware;
-    final colors = [
-      for (var i = 0; i < hw.effect.colors; i++)
-        i < hw.colors.length
-            ? hw.colors[i]
-            : GpuHardwareConfig.defaultColors[i %
-                  GpuHardwareConfig.defaultColors.length],
-    ];
-
-    void setHw(GpuHardwareConfig Function(GpuHardwareConfig) f) =>
-        controller.update((c) => c.copyWith(gpuHardware: f(c.gpuHardware)));
-
-    return WeCard(
-      flat: true,
-      title: l.hardwareTitle(l.graphicsCard),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PanelRow(
-            label: l.mode,
-            control: PanelDropdown<GpuEffect>(
-              key: const ValueKey('gpu-mode'),
-              value: hw.effect,
-              items: GpuEffect.values,
-              labelOf: (e) => gpuEffectLabel(strings, e),
-              onChanged: (e) => setHw((h) => h.copyWith(effect: e)),
-            ),
-          ),
-          if (hw.effect.hasSpeed)
-            PanelSlider(
-              label: l.speed,
-              valueText: '${hw.speed}/10',
-              value: hw.speed.toDouble(),
-              min: 0,
-              max: 10,
-              divisions: 10,
-              onChanged: (v) => setHw((h) => h.copyWith(speed: v.round())),
-            ),
-          if (hw.effect.hasBrightness)
-            PanelSlider(
-              label: l.brightness,
-              valueText: '${hw.brightness}/10',
-              value: hw.brightness.toDouble(),
-              min: 0,
-              max: 10,
-              divisions: 10,
-              onChanged: (v) => setHw((h) => h.copyWith(brightness: v.round())),
-            ),
-          if (hw.effect == GpuEffect.colorShift)
-            PanelRow(
-              label: l.colorsCount(8),
-              control: Wrap(
-                spacing: 6,
-                children: [
-                  for (var i = 0; i < colors.length; i++)
-                    ColorSwatchButton(
-                      key: ValueKey('gpu-color-$i'),
-                      color: colors[i],
-                      size: 24,
-                      onChanged: (c) => setHw((h) {
-                        final next = [...colors];
-                        next[i] = c;
-                        return h.copyWith(colors: next);
-                      }),
-                    ),
-                ],
-              ),
-            )
-          else if (hw.effect != GpuEffect.off)
-            PanelRow(
-              label: l.color,
-              control: ColorSwatchButton(
-                key: const ValueKey('gpu-color'),
-                color: hw.color,
-                onChanged: (c) => setHw((h) => h.copyWith(color: c)),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              l.gpuNote,
-              style: const TextStyle(color: WeColors.muted, fontSize: 12),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class BoardHardwarePanel extends ConsumerWidget {
-  const BoardHardwarePanel({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cfg = ref.watch(lightingProvider);
-    final controller = ref.read(lightingProvider.notifier);
-    final strings = context.strings;
-    final l = strings.lighting;
-
-    void setZone(int z, BoardZoneConfig Function(BoardZoneConfig) f) =>
-        controller.update(
-          (c) =>
-              c.copyWith(boardZones: {...c.boardZones, z: f(c.boardZones[z]!)}),
-        );
-
-    return WeCard(
-      flat: true,
-      title: l.boardHardwareTitle,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final z in boardZoneIds) ...[
-            Text(
-              boardZoneLabel(strings, z),
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            PanelRow(
-              label: l.mode,
-              control: PanelDropdown<BoardEffectMode>(
-                key: ValueKey('board-mode-$z'),
-                value: cfg.boardZones[z]!.mode,
-                items: BoardEffectMode.values,
-                labelOf: (m) => boardModeLabel(strings, m),
-                onChanged: (m) => setZone(z, (b) => b.copyWith(mode: m)),
-              ),
-            ),
-            PanelRow(
-              label: l.color,
-              control: ColorSwatchButton(
-                key: ValueKey('board-color-$z'),
-                color: cfg.boardZones[z]!.color,
-                onChanged: (c) => setZone(z, (b) => b.copyWith(color: c)),
-              ),
-            ),
-            PanelSlider(
-              label: l.speed,
-              valueText: '${cfg.boardZones[z]!.speed}',
-              value: cfg.boardZones[z]!.speed.toDouble(),
-              min: 0,
-              max: 9,
-              divisions: 9,
-              onChanged: (v) => setZone(z, (b) => b.copyWith(speed: v.round())),
-            ),
-            PanelSlider(
-              label: l.brightness,
-              valueText: '${cfg.boardZones[z]!.brightness}',
-              value: cfg.boardZones[z]!.brightness.toDouble(),
-              min: 0,
-              max: 9,
-              divisions: 9,
-              onChanged: (v) =>
-                  setZone(z, (b) => b.copyWith(brightness: v.round())),
-            ),
-            if (z != boardZoneIds.last) const Divider(height: 24),
-          ],
-        ],
-      ),
-    );
-  }
 }
