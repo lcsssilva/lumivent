@@ -69,12 +69,8 @@ build() {
 package() {
   cd "$startdir"
 
-  local bundle
-  case "$CARCH" in
-    x86_64) bundle='build/linux/x64/release/bundle' ;;
-    aarch64) bundle='build/linux/arm64/release/bundle' ;;
-    *) error "arquitetura não suportada: $CARCH" ;;
-  esac
+  # arch=('x86_64') only: makepkg refuses other architectures before this.
+  local bundle='build/linux/x64/release/bundle'
 
   # Bundle do Flutter: binário, data/ e lib/ têm de ficar juntos.
   install -d "$pkgdir/usr/lib/lumivent"
