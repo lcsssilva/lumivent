@@ -1,7 +1,9 @@
 import '../domain/frame_composer.dart';
+import '../domain/hardware_equivalents.dart';
 import '../domain/hardware_timing.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
+import '../domain/native_effects.dart';
 import '../domain/rgb.dart';
 import 'lighting_messages.dart';
 
@@ -48,12 +50,12 @@ class LightingFrameCompositor {
   /// Whether any enabled fan group runs the firmware `Breathing` for the
   /// current effect: only then the canvas devices follow the firmware clock.
   bool usesFirmwareBreathing(LightingConfig c) {
-    if (c.effectId != 'breathing') return false;
+    if (c.effectId != breathingEffectId) return false;
     for (final id in LightDeviceId.values.where((d) => d.isFan)) {
       final d = c.device(id);
       if (d.enabled &&
           d.mode == LightMode.hardware &&
-          c.alv2Hardware[id.hubGroup!].mode == 'Breathing') {
+          c.alv2Hardware[id.hubGroup!].mode == breathingFirmwareMode) {
         return true;
       }
     }
@@ -69,7 +71,9 @@ class LightingFrameCompositor {
   double showTime(LightingConfig config, double showAt) {
     final since = _breathingSince;
     final values = config.effectValuesFor();
-    if (since == null || values == null || config.effectId != 'breathing') {
+    if (since == null ||
+        values == null ||
+        config.effectId != breathingEffectId) {
       return showAt;
     }
     return breathingEffectTime(

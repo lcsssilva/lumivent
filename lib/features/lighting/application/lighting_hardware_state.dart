@@ -2,16 +2,6 @@ import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 import 'lighting_frame_deduplicator.dart';
 
-/// Compares two integer lists by value (config lists are new instances after
-/// every config change).
-bool sameInts(List<int> a, List<int> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
 /// What the hardware currently holds: the resolved signatures per device and
 /// per pseudo-slot, plus the fan quantity/merge state.
 ///

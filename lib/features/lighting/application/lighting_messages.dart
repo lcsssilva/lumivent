@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show listEquals;
+
 import '../../../core/engine/engine_host.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
@@ -87,18 +89,10 @@ class LightOutputStatus {
       other is LightOutputStatus &&
       other.state == state &&
       other.issue == issue &&
-      _sameArgs(other.args, args);
+      listEquals(other.args, args);
 
   @override
   int get hashCode => Object.hash(state, issue, Object.hashAll(args));
-}
-
-bool _sameArgs(List<String> a, List<String> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }
 
 /// Output families with their own send latency and frame lane (see

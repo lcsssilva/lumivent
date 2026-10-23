@@ -32,6 +32,10 @@ const scannerFirmwareMode = 'Scan';
 /// Taichi 4; Taichi wins because it has speed and direction in the firmware.
 const colorWaveFirmwareMode = 'Taichi';
 
+/// Firmware mode of the **Breathing** effect (`breathingEffectId`): the
+/// canvas devices lock their phase to it.
+const breathingFirmwareMode = 'Breathing';
+
 /// Effects whose firmware mode has no speed control; the canvas runs at the
 /// firmware's fixed pace instead ([firmwareFixedEffectSpeed]).
 const fixedSpeedEffects = {'scanner'};
@@ -132,13 +136,13 @@ HardwareEquivalent? hardwareEquivalentOf(LightingConfig c) {
         board: board(BoardEffectMode.colorCycle),
         gpu: gpu(GpuEffect.cycle),
       );
-    case 'breathing':
+    case breathingEffectId:
       // The board has no matching firmware mode: the ITE `Pulse` runs 1–3,4 s
       // (2 × wT0 + 200 ms, measured 2026-10-20) against 3,3–11,6 s on the
       // fans, and keeps running when resent while the fans restart. The zones
       // stay in Canvas and breathe on the app clock with the fans.
       return HardwareEquivalent(
-        fans: fans('Breathing', color: values.color('color')),
+        fans: fans(breathingFirmwareMode, color: values.color('color')),
         board: null,
         gpu: gpu(GpuEffect.pulse, color: values.color('color')),
       );
