@@ -9,12 +9,30 @@ import '../../../core/ui/we_card.dart';
 import '../../../core/ui/setting_row.dart';
 import '../../monitoring/monitoring.dart';
 import '../../preferences/preferences.dart';
+import '../application/fan_temp_metric.dart';
 import '../application/fans_controller.dart';
 import '../application/fans_messages.dart';
 import '../domain/fan_curve.dart';
 import '../domain/fan_group.dart';
 import '../domain/fan_response.dart';
 import 'fan_curve_editor.dart';
+
+/// Last 60 readings that have both the temperature and RPM metrics.
+List<({double temp, double rpm})> _recentTrace(
+  SensorHistory history,
+  String tempMetric,
+  String rpmMetric,
+) {
+  final samples = history.samples;
+  final recent = samples.length > 60
+      ? samples.sublist(samples.length - 60)
+      : samples;
+  return [
+    for (final s in recent)
+      if (s[tempMetric] != null && s[rpmMetric] != null)
+        (temp: s[tempMetric]!, rpm: s[rpmMetric]!),
+  ];
+}
 
 /// AL V2 fan speed: groups, presets, options, and curve editor.
 class FansPage extends ConsumerStatefulWidget {
@@ -50,24 +68,17 @@ class _FansPageState extends ConsumerState<FansPage> {
 
     final latest = history.latest;
     final rpm = latest?[Metrics.alv2Rpm(index)];
-    final metric = _sourceMetric(group.source);
+    final metric = fanTempMetric(group.source);
     final raw = latest?[metric];
     final temp = gStatus?.temp ?? raw;
-    final rawNow = gStatus?.rawTemp ?? raw;
-    final differs =
-        temp != null && rawNow != null && (rawNow - temp).abs() >= .5;
-    final tempLabel = temp == null
-        ? null
-        : '${_sourceLabel(strings, group.source)} ${_temp(temp, unit)}'
-              '${differs ? ' ${f.nowTemperature(_temp(rawNow, unit))}' : ''}';
-    final recent = history.samples.length > 60
-        ? history.samples.sublist(history.samples.length - 60)
-        : history.samples;
-    final trace = [
-      for (final s in recent)
-        if (s[metric] != null && s[Metrics.alv2Rpm(index)] != null)
-          (temp: s[metric]!, rpm: s[Metrics.alv2Rpm(index)]!),
-    ];
+    final tempLabel = _tempLabel(
+      strings,
+      source: group.source,
+      temp: temp,
+      rawTemp: gStatus?.rawTemp ?? raw,
+      unit: unit,
+    );
+    final trace = _recentTrace(history, metric, Metrics.alv2Rpm(index));
 
     void applyToAll() {
       controller.applyCurveToAll(index);
@@ -135,12 +146,22 @@ class _FansPageState extends ConsumerState<FansPage> {
     );
   }
 
-  /// Display temperature in the user's unit: `null` renders an em dash.
-  String _temp(double? c, TemperatureUnit unit) => c == null
-      ? '—'
-      : unit == TemperatureUnit.fahrenheit
-      ? '${(c * 9 / 5 + 32).round()} °F'
-      : '${c.round()} °C';
+  /// Chart caption: source, temperature, and the raw reading when it differs
+  /// from the filtered one. `null` without a temperature.
+  String? _tempLabel(
+    AppStrings strings, {
+    required FanTempSource source,
+    required double? temp,
+    required double? rawTemp,
+    required TemperatureUnit unit,
+  }) {
+    if (temp == null) return null;
+    final differs = rawTemp != null && (rawTemp - temp).abs() >= .5;
+    final now = differs
+        ? ' ${strings.fans.nowTemperature(formatTemp(rawTemp, unit))}'
+        : '';
+    return '${_sourceLabel(strings, source)} ${formatTemp(temp, unit)}$now';
+  }
 
   /// Display name of [g], falling back to the catalog's default group name.
   String _groupLabel(AppStrings strings, FanGroupConfig g) =>
@@ -178,20 +199,6 @@ class _FansPageState extends ConsumerState<FansPage> {
   String _sourceMenuLabel(AppStrings strings, FanTempSource s) => s.isBoard
       ? '${strings.fans.motherboardPrefix} · ${_sourceLabel(strings, s)}'
       : _sourceLabel(strings, s);
-
-  /// Metric id that carries the source temperature.
-  String _sourceMetric(FanTempSource s) => switch (s) {
-    FanTempSource.cpuTctl => Metrics.cpuTctl,
-    FanTempSource.gpuJunction => Metrics.gpuJunction,
-    FanTempSource.gpuEdge => Metrics.gpuEdge,
-    FanTempSource.boardSystem1 => 'board.system1',
-    FanTempSource.boardSystem2 => 'board.system2',
-    FanTempSource.boardPch => 'board.pch',
-    FanTempSource.boardCpuSocket => 'board.cpu',
-    FanTempSource.boardVrm => 'board.vrm',
-    FanTempSource.boardPciex16 => 'board.pciex16',
-    FanTempSource.boardPciex4 => 'board.pciex4',
-  };
 
   /// Short label of a fan response mode in the UI.
   String _responseLabel(AppStrings strings, FanResponse r) => switch (r) {
@@ -375,11 +382,11 @@ class _FansPageState extends ConsumerState<FansPage> {
           for (final s in FanTempSource.values)
             if (!s.isBoard ||
                 s == group.source ||
-                latest?[_sourceMetric(s)] != null)
+                latest?[fanTempMetric(s)] != null)
               (
                 source: s,
                 label: _sourceMenuLabel(strings, s),
-                value: _temp(latest?[_sourceMetric(s)], unit),
+                value: formatTemp(latest?[fanTempMetric(s)], unit),
               ),
         ];
     return WeCard(
@@ -527,7 +534,7 @@ class _GroupTile extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${config.size.maxRpm == 2000 ? 120 : 140} mm',
+                      '${config.size.diameterMm} mm',
                       style: const TextStyle(
                         color: WeColors.muted,
                         fontSize: 12,

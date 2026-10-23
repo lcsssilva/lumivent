@@ -5,10 +5,15 @@ import 'dart:math' as math;
 
 /// Fan size: defines os limites de RPM da curva.
 enum FanSize {
-  mm120(maxRpm: 2000, minRpm: 250),
-  mm140(maxRpm: 1600, minRpm: 200);
+  mm120(diameterMm: 120, maxRpm: 2000, minRpm: 250),
+  mm140(diameterMm: 140, maxRpm: 1600, minRpm: 200);
 
-  const FanSize({required this.maxRpm, required this.minRpm});
+  const FanSize({
+    required this.diameterMm,
+    required this.maxRpm,
+    required this.minRpm,
+  });
+  final int diameterMm;
   final int maxRpm;
   final int minRpm;
 }

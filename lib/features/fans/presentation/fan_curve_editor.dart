@@ -92,11 +92,14 @@ class _FanCurveEditorState extends State<FanCurveEditor> {
     final percent = plot.percentAt(p.dy).roundToDouble();
     var temp = pts[index].temp;
     if (!_fixed) {
-      final lo = index == 0 ? 0.0 : pts[index - 1].temp + _minGap;
-      final hi = index == pts.length - 1
+      final minTemp = index == 0 ? 0.0 : pts[index - 1].temp + _minGap;
+      final maxTemp = index == pts.length - 1
           ? 100.0
           : pts[index + 1].temp - _minGap;
-      temp = plot.tempAt(p.dx).roundToDouble().clamp(lo, math.max(lo, hi));
+      temp = plot
+          .tempAt(p.dx)
+          .roundToDouble()
+          .clamp(minTemp, math.max(minTemp, maxTemp));
     }
     final next = FanPoint(temp, percent);
     if (next == pts[index]) return;

@@ -45,18 +45,28 @@ abstract final class Metrics {
   /// Composite temperature of an SSD (`nvme0`, `nvme1`…).
   static String ssdTemp(String controller) => 'ssd.$controller';
 
+  // Board temperature IDs, named so consumers do not depend on the position
+  // in [boardTemps].
+  static const boardSystem1 = 'board.system1';
+  static const boardPch = 'board.pch';
+  static const boardCpuSocket = 'board.cpu';
+  static const boardPciex16 = 'board.pciex16';
+  static const boardVrm = 'board.vrm';
+  static const boardPciex4 = 'board.pciex4';
+  static const boardSystem2 = 'board.system2';
+
   /// Board temperatures, in the order of the protocol notes
   /// (§2.5): 0–5 on IT8689E, 6–8 on IT8792E.
   static const boardTemps = [
-    MetricDef('board.system1', 'System 1', MetricUnit.celsius),
-    MetricDef('board.pch', 'PCH', MetricUnit.celsius),
-    MetricDef('board.cpu', 'CPU (socket)', MetricUnit.celsius),
-    MetricDef('board.pciex16', 'PCIEX16', MetricUnit.celsius),
-    MetricDef('board.vrm', 'VRM MOS', MetricUnit.celsius),
+    MetricDef(boardSystem1, 'System 1', MetricUnit.celsius),
+    MetricDef(boardPch, 'PCH', MetricUnit.celsius),
+    MetricDef(boardCpuSocket, 'CPU (socket)', MetricUnit.celsius),
+    MetricDef(boardPciex16, 'PCIEX16', MetricUnit.celsius),
+    MetricDef(boardVrm, 'VRM MOS', MetricUnit.celsius),
     MetricDef('board.ec1', 'EC_TEMP1', MetricUnit.celsius),
-    MetricDef('board.pciex4', 'PCIEX4', MetricUnit.celsius),
+    MetricDef(boardPciex4, 'PCIEX4', MetricUnit.celsius),
     MetricDef('board.ec2', 'EC_TEMP2', MetricUnit.celsius),
-    MetricDef('board.system2', 'System 2', MetricUnit.celsius),
+    MetricDef(boardSystem2, 'System 2', MetricUnit.celsius),
   ];
 
   /// Read-only motherboard fan connectors, in protocol notes §2.5 order: 0–4 on IT8689E,
