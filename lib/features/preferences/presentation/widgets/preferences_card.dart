@@ -1,22 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_card.dart';
 import '../../../../core/ui/setting_row.dart';
-import '../../application/preferences_notifier.dart';
 import '../../domain/preferences.dart';
 
-class PreferencesCard extends ConsumerWidget {
-  const PreferencesCard({super.key, required this.trayAvailable});
+class PreferencesCard extends StatelessWidget {
+  const PreferencesCard({
+    super.key,
+    required this.preferences,
+    required this.trayAvailable,
+    required this.onChanged,
+  });
+
+  final Preferences preferences;
 
   /// Without a system tray, closing the window exits the app and the option is locked.
   final bool trayAvailable;
 
+  /// Applies a change to the preferences.
+  final ValueChanged<Preferences Function(Preferences)> onChanged;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(preferencesProvider);
-    final preferences = ref.read(preferencesProvider.notifier);
+  Widget build(BuildContext context) {
+    final prefs = preferences;
     final s = context.strings.settings;
     return WeCard(
       title: s.preferences,
@@ -36,7 +43,7 @@ class PreferencesCard extends ConsumerWidget {
               ],
               selected: {prefs.language},
               onSelectionChanged: (v) =>
-                  preferences.change((p) => p.copyWith(language: v.first)),
+                  onChanged((p) => p.copyWith(language: v.first)),
             ),
           ),
           const Divider(height: 16),
@@ -48,7 +55,7 @@ class PreferencesCard extends ConsumerWidget {
             control: Switch(
               value: prefs.closeToTray && trayAvailable,
               onChanged: trayAvailable
-                  ? (v) => preferences.change((p) => p.copyWith(closeToTray: v))
+                  ? (v) => onChanged((p) => p.copyWith(closeToTray: v))
                   : null,
             ),
           ),
@@ -68,9 +75,8 @@ class PreferencesCard extends ConsumerWidget {
                 ),
               ],
               selected: {prefs.temperatureUnit},
-              onSelectionChanged: (s) => preferences.change(
-                (p) => p.copyWith(temperatureUnit: s.first),
-              ),
+              onSelectionChanged: (s) =>
+                  onChanged((p) => p.copyWith(temperatureUnit: s.first)),
             ),
           ),
           const Divider(height: 16),
@@ -85,7 +91,7 @@ class PreferencesCard extends ConsumerWidget {
               ],
               selected: {prefs.effectsFps},
               onSelectionChanged: (s) =>
-                  preferences.change((p) => p.copyWith(effectsFps: s.first)),
+                  onChanged((p) => p.copyWith(effectsFps: s.first)),
             ),
           ),
         ],

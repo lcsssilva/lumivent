@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
@@ -8,9 +7,7 @@ import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_card.dart';
 import '../../../lighting/lighting.dart'
     show LightOutputStatus, outputIssueLabel;
-import '../../application/runtime_checks.dart';
 import '../../application/hub_argb_sync_data.dart';
-import '../../application/diagnostics_providers.dart';
 import '../../domain/diagnostics.dart';
 import '../../domain/udev_rules_data.dart';
 import '../../domain/board_sensors_data.dart';
@@ -21,15 +18,14 @@ import '../../domain/loop_sample.dart';
 import '../../domain/lighting_loop_data.dart';
 import '../../domain/diagnostic_check.dart';
 
-class DiagnosticsCard extends ConsumerWidget {
-  const DiagnosticsCard({super.key});
+class DiagnosticsCard extends StatelessWidget {
+  const DiagnosticsCard({super.key, required this.checks});
+
+  /// Environment checks followed by the checks of the running engine.
+  final List<DiagnosticCheck> checks;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final checks = [
-      ...ref.watch(diagnosticsProvider),
-      ...ref.watch(runtimeChecksProvider),
-    ];
+  Widget build(BuildContext context) {
     final strings = context.strings;
     return WeCard(
       title: strings.settings.permissionsAndSystem,

@@ -5,7 +5,7 @@ import '../../../core/ui/we_sizes.dart';
 import '../../../features/devices/devices.dart';
 import '../../../features/preferences/preferences.dart';
 import '../../../features/system/system.dart';
-import '../../desktop/desktop_actions.dart';
+import '../view_models/settings_view_model.dart';
 import '../widgets/about_card.dart';
 import '../widgets/config_transfer_card.dart';
 
@@ -15,7 +15,8 @@ class SettingsView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final trayAvailable = ref.watch(desktopActionsProvider).trayAvailable;
+    final ui = ref.watch(settingsViewModelProvider);
+    final viewModel = ref.read(settingsViewModelProvider.notifier);
     const gap = SizedBox(height: WeSizes.unit * 2);
     return ListView(
       padding: const EdgeInsets.all(WeSizes.unit * 3),
@@ -26,15 +27,29 @@ class SettingsView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const StartupCard(),
+                StartupCard(
+                  autostart: ui.autostart,
+                  location: ui.autostartLocation,
+                  onChanged: viewModel.setAutostart,
+                ),
                 gap,
-                PreferencesCard(trayAvailable: trayAvailable),
+                PreferencesCard(
+                  preferences: ui.preferences,
+                  trayAvailable: ui.trayAvailable,
+                  onChanged: viewModel.changePreferences,
+                ),
                 gap,
-                const ConfigTransferCard(),
+                ConfigTransferCard(
+                  exportConfiguration: viewModel.exportConfiguration,
+                  importConfiguration: viewModel.importConfiguration,
+                ),
                 gap,
-                const DevicesCard(),
+                DevicesCard(
+                  snapshot: ui.devices,
+                  onRescan: viewModel.rescanDevices,
+                ),
                 gap,
-                const DiagnosticsCard(),
+                DiagnosticsCard(checks: ui.checks),
                 gap,
                 const AboutCard(),
               ],

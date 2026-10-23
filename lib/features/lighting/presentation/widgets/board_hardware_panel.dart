@@ -1,11 +1,9 @@
 // Right column (hardware mode): motherboard (ITE) effect panel.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_card.dart';
-import '../../application/lighting_notifier.dart';
 import '../../domain/lighting_config.dart';
 import '../../domain/board_zone_config.dart';
 import '../lighting_labels.dart';
@@ -14,18 +12,24 @@ import 'panel_row.dart';
 import 'panel_dropdown.dart';
 import 'color_swatch_button.dart';
 
-class BoardHardwarePanel extends ConsumerWidget {
-  const BoardHardwarePanel({super.key});
+class BoardHardwarePanel extends StatelessWidget {
+  const BoardHardwarePanel({
+    super.key,
+    required this.config,
+    required this.onEdit,
+  });
+
+  final LightingConfig config;
+  final ValueChanged<LightingConfigEdit> onEdit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cfg = ref.watch(lightingProvider);
-    final lighting = ref.read(lightingProvider.notifier);
+  Widget build(BuildContext context) {
+    final cfg = config;
     final strings = context.strings;
     final l = strings.lighting;
 
     void setZone(int z, BoardZoneConfig Function(BoardZoneConfig) f) =>
-        lighting.update((c) => c.withBoardZone(z, f));
+        onEdit((c) => c.withBoardZone(z, f));
 
     return WeCard(
       flat: true,

@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/ui/we_colors.dart';
 import '../../../core/ui/we_sizes.dart';
 import '../../../features/devices/devices.dart';
 import '../../navigation/app_route.dart';
-import '../../navigation/route_notifier.dart';
 import 'sidebar_brand.dart';
 import 'sidebar_nav_item.dart';
 
-class Sidebar extends ConsumerWidget {
-  const Sidebar({super.key});
+class Sidebar extends StatelessWidget {
+  const Sidebar({
+    super.key,
+    required this.route,
+    required this.devices,
+    required this.onRoute,
+  });
+
+  final AppRoute route;
+
+  /// Last device detection, `null` while the first scan runs.
+  final DeviceSnapshot? devices;
+  final ValueChanged<AppRoute> onRoute;
 
   static const _main = [
     AppRoute.monitoring,
@@ -20,9 +29,8 @@ class Sidebar extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final route = ref.watch(routeProvider);
-    void go(AppRoute r) => ref.read(routeProvider.notifier).go(r);
+  Widget build(BuildContext context) {
+    void go(AppRoute r) => onRoute(r);
 
     return Container(
       width: WeSizes.sidebarWidth,
@@ -35,7 +43,7 @@ class Sidebar extends ConsumerWidget {
           for (final r in _main)
             SidebarNavItem(route: r, selected: r == route, onTap: () => go(r)),
           const Spacer(),
-          const DeviceSummary(),
+          DeviceSummary(snapshot: devices),
           const Divider(height: 24),
           SidebarNavItem(
             route: AppRoute.settings,

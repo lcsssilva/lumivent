@@ -1,14 +1,12 @@
 // Right column (hardware mode): firmware mode panel for AL V2 fan groups.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_card.dart';
 import '../../../devices/devices.dart';
-import '../../application/lighting_notifier.dart';
 import '../../domain/fan_mode_name.dart';
 import '../../domain/led_layout.dart';
 import '../../domain/light_device.dart';
@@ -29,25 +27,40 @@ List<String> _mergeBases() => [
   for (final n in _modeNames(Alv2LightScope.merge)) mergeModeBase(n),
 ];
 
-class FanHardwarePanel extends ConsumerWidget {
-  const FanHardwarePanel({super.key, required this.id});
+class FanHardwarePanel extends StatelessWidget {
+  const FanHardwarePanel({
+    super.key,
+    required this.id,
+    required this.config,
+    required this.fanGroupNames,
+    required this.onEdit,
+    required this.onIdentify,
+  });
+
   final LightDeviceId id;
+  final LightingConfig config;
+
+  /// Names of the hub groups 0–3.
+  final List<String> fanGroupNames;
+  final ValueChanged<LightingConfigEdit> onEdit;
+
+  /// Pings a hub group (1–3).
+  final ValueChanged<int> onIdentify;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final group = id.hubGroup!;
-    final cfg = ref.watch(lightingProvider);
-    final lighting = ref.read(lightingProvider.notifier);
+    final cfg = config;
     final hw = cfg.alv2Hardware[group];
     final qty = cfg.fanQuantity[group];
     final mode = Alv2LightMode.byName(hw.mode);
-    final groupNames = ref.watch(fanGroupNamesProvider);
+    final groupNames = fanGroupNames;
     final order = cfg.alv2MergeOrder;
     final strings = context.strings;
     final l = strings.lighting;
 
     void setHw(Alv2HardwareConfig Function(Alv2HardwareConfig) f) =>
-        lighting.update((c) => c.withAlv2Hardware(group, f));
+        onEdit((c) => c.withAlv2Hardware(group, f));
 
     // The merge effect lives in slot 0 (the hub has no fans there). The config
     // stores the base name (`Runway`); the `_Merge` variant is only mapped here.
@@ -58,7 +71,7 @@ class FanHardwarePanel extends ConsumerWidget {
     );
     final merge = cfg.alv2Hardware[0];
     void setMerge(Alv2HardwareConfig Function(Alv2HardwareConfig) f) =>
-        lighting.update((c) => c.withAlv2Hardware(0, f));
+        onEdit((c) => c.withAlv2Hardware(0, f));
 
     final scope = hw.scope == Alv2Scope.whole
         ? Alv2LightScope.whole
@@ -69,7 +82,7 @@ class FanHardwarePanel extends ConsumerWidget {
       title: l.hardwareTitle(deviceLabel(strings, id, groupNames)),
       trailing: OutlinedButton(
         key: const ValueKey('identify'),
-        onPressed: () => lighting.identify(group),
+        onPressed: () => onIdentify(group),
         child: Text(l.identify),
       ),
       child: Column(
@@ -131,9 +144,7 @@ class FanHardwarePanel extends ConsumerWidget {
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.remove),
                   onPressed: qty > 0
-                      ? () => lighting.update(
-                          (c) => c.withFanQuantity(group, qty - 1),
-                        )
+                      ? () => onEdit((c) => c.withFanQuantity(group, qty - 1))
                       : null,
                 ),
                 Text('$qty', key: const ValueKey('fan-qty')),
@@ -142,9 +153,7 @@ class FanHardwarePanel extends ConsumerWidget {
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.add),
                   onPressed: qty < maxFansPerGroup
-                      ? () => lighting.update(
-                          (c) => c.withFanQuantity(group, qty + 1),
-                        )
+                      ? () => onEdit((c) => c.withFanQuantity(group, qty + 1))
                       : null,
                 ),
               ],
@@ -155,8 +164,7 @@ class FanHardwarePanel extends ConsumerWidget {
             control: Switch(
               key: const ValueKey('hw-merge'),
               value: cfg.alv2Merge,
-              onChanged: (v) =>
-                  lighting.update((c) => c.copyWith(alv2Merge: v)),
+              onChanged: (v) => onEdit((c) => c.copyWith(alv2Merge: v)),
             ),
           ),
           if (cfg.alv2Merge) ...[
@@ -167,8 +175,7 @@ class FanHardwarePanel extends ConsumerWidget {
                 value: mergeBase,
                 items: mergeBases,
                 labelOf: firmwareModeLabel,
-                onChanged: (m) =>
-                    lighting.update((c) => c.copyWith(alv2MergeMode: m)),
+                onChanged: (m) => onEdit((c) => c.copyWith(alv2MergeMode: m)),
               ),
             ),
             // Group 0 is empty and stays first; groups 1–3 follow the path
@@ -194,7 +201,7 @@ class FanHardwarePanel extends ConsumerWidget {
                           tooltip: strings.common.before,
                           icon: const Icon(Icons.arrow_upward, size: 18),
                           onPressed: i > 1
-                              ? () => lighting.update(
+                              ? () => onEdit(
                                   (c) => c.withMergeOrderSwapped(i, i - 1),
                                 )
                               : null,
@@ -205,7 +212,7 @@ class FanHardwarePanel extends ConsumerWidget {
                           tooltip: strings.common.after,
                           icon: const Icon(Icons.arrow_downward, size: 18),
                           onPressed: i < order.length - 1
-                              ? () => lighting.update(
+                              ? () => onEdit(
                                   (c) => c.withMergeOrderSwapped(i, i + 1),
                                 )
                               : null,

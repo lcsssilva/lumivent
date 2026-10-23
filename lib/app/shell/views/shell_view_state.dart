@@ -13,18 +13,27 @@ class _ShellViewState extends ConsumerState<ShellView> {
         SnackBar(content: Text(context.strings.common.configWriteFailed)),
       );
     });
-    final route = ref.watch(routeProvider);
+    final ui = ref.watch(shellViewModelProvider);
+    final viewModel = ref.read(shellViewModelProvider.notifier);
+    final route = ui.route;
     return Scaffold(
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Sidebar(),
+          Sidebar(route: route, devices: ui.devices, onRoute: viewModel.go),
           const VerticalDivider(width: 1),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const TopBar(),
+                TopBar(
+                  route: route,
+                  latestSensors: ui.latestSensors,
+                  temperatureUnit: ui.temperatureUnit,
+                  argbOff: ui.argbOff,
+                  onRoute: viewModel.go,
+                  onArgbOff: viewModel.setArgbOff,
+                ),
                 Expanded(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 150),

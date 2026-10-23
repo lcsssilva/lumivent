@@ -20,14 +20,12 @@ import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config_repository.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
-import 'package:lumivent/features/preferences/domain/preferences.dart';
-import 'package:lumivent/features/preferences/domain/preferences_repository.dart';
 
 import '../../fake_engine.dart';
+import '../../support/memory_preferences_repository.dart';
 
 part 'runner_effect_library.dart';
 part 'runner_lighting_repository.dart';
-part 'runner_preferences_repository.dart';
 part 'fake_runtime.dart';
 part 'fake_runtime_factory.dart';
 
@@ -53,7 +51,7 @@ void main() {
         engineProvider.overrideWithValue(engine),
         lightingRepositoryProvider.overrideWithValue(repo),
         preferencesRepositoryProvider.overrideWithValue(
-          _RunnerPreferencesRepository(),
+          MemoryPreferencesRepository(),
         ),
         effectLibraryProvider.overrideWithValue(_RunnerEffectLibrary(effect)),
         effectRuntimeFactoryProvider.overrideWithValue(factory),
@@ -119,7 +117,7 @@ void main() {
           _RunnerLightingRepository(),
         ),
         preferencesRepositoryProvider.overrideWithValue(
-          _RunnerPreferencesRepository(),
+          MemoryPreferencesRepository(),
         ),
         effectLibraryProvider.overrideWithValue(_RunnerEffectLibrary(effect)),
         effectRuntimeFactoryProvider.overrideWithValue(factory),

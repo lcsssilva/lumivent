@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/status_dot.dart';
-import '../../application/devices_notifier.dart';
 import '../../domain/device.dart';
 import '../device_status_ui.dart';
+import '../../domain/device_snapshot.dart';
 
 /// Compact device status (sidebar footer).
-class DeviceSummary extends ConsumerWidget {
-  const DeviceSummary({super.key});
+class DeviceSummary extends StatelessWidget {
+  const DeviceSummary({super.key, required this.snapshot});
+
+  /// Last detection, `null` while the first scan runs.
+  final DeviceSnapshot? snapshot;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final snap = ref.watch(devicesProvider);
+  Widget build(BuildContext context) {
+    final snap = snapshot;
     final strings = context.strings;
     final s = strings.devices;
     final rows = <(String, DeviceStatus?)>[];

@@ -8,7 +8,7 @@ import '../../../features/fans/fans.dart';
 import '../../../features/lighting/lighting.dart';
 import '../../../features/monitoring/monitoring.dart';
 import '../../navigation/app_route.dart';
-import '../../navigation/route_notifier.dart';
+import '../view_models/shell_view_model.dart';
 import 'settings_view.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/top_bar.dart';

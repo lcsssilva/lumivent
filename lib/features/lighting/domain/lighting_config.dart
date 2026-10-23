@@ -202,6 +202,9 @@ abstract class LightingConfig with _$LightingConfig {
       order.every((g) => g is int && g >= 0 && g < fanGroupSlots);
 }
 
+/// A user edit of the lighting configuration, applied to the current config.
+typedef LightingConfigEdit = LightingConfig Function(LightingConfig current);
+
 extension LightingConfigX on LightingConfig {
   /// Copies the config and re-applies the constructor normalization (complete
   /// device/zone maps and unmodifiable collections), like the former manual

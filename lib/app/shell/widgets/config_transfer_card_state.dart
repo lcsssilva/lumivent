@@ -1,6 +1,6 @@
 part of 'config_transfer_card.dart';
 
-class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard>
+class _ConfigTransferCardState extends State<ConfigTransferCard>
     with AsyncActionMixin<ConfigTransferCard> {
   void _tell(String message) {
     if (!mounted) return;
@@ -22,7 +22,7 @@ class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard>
 
   Future<void> _export() => _run(() async {
     final s = context.strings.shell;
-    final text = exportConfig(ref.read(configStoreProvider));
+    final text = widget.exportConfiguration();
     final saved = await FilePicker.saveFile(
       dialogTitle: s.exportDialogTitle,
       fileName: exportFileName,
@@ -41,13 +41,11 @@ class _ConfigTransferCardState extends ConsumerState<ConfigTransferCard>
       allowedExtensions: const ['json'],
     );
     if (file == null) return;
-    final text = await readImportText(
+    final backup = await widget.importConfiguration(
       file.readAsByteStream(),
       strings: strings,
     );
-    final transfer = ref.read(configTransferProvider);
-    await transfer.importText(text, strings: strings);
-    _tell(s.importedBackupAt(transfer.backupPath));
+    _tell(s.importedBackupAt(backup));
   });
 
   @override

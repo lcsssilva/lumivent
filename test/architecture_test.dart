@@ -16,6 +16,8 @@
 //     `*View` classes live in views/, `*ViewModel`/`*UiState` in
 //     view_models/, and the presentation/ root holds no classes.
 // 10. `Controller` names only hardware controllers (infrastructure/drivers/).
+// 11. Widgets receive data and callbacks: only views (and the app root) read
+//     providers, so widgets/ has no Consumer widgets or WidgetRef.
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -336,6 +338,19 @@ void main() {
           }
         }
       }
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('widgets receive data instead of reading providers', () {
+      final consumer = RegExp(
+        r'\b(ConsumerWidget|ConsumerStatefulWidget|ConsumerState|WidgetRef)\b',
+      );
+      final violations = [
+        for (final (path, file) in _sources(['lib']))
+          if (path.contains('/widgets/') &&
+              consumer.hasMatch(file.readAsStringSync()))
+            '$path: pass data and callbacks from the view',
+      ];
       expect(violations, isEmpty, reason: violations.join('\n'));
     });
 

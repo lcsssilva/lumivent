@@ -7,12 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/we_app.dart';
 import 'package:lumivent/app/bootstrap_failure_app.dart';
-import 'package:lumivent/app/desktop/desktop_actions.dart';
 import 'package:lumivent/app/navigation/app_route.dart';
 import 'package:lumivent/app/navigation/route_notifier.dart';
 import 'package:lumivent/app/shell/widgets/top_bar.dart';
 import 'package:lumivent/app/ui_language_binding.dart';
-import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/core/i18n/strings_provider.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
@@ -21,12 +19,10 @@ import 'package:lumivent/features/fans/fans.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
 import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
 import 'package:lumivent/features/preferences/preferences.dart';
-import 'package:lumivent/features/system/system.dart';
 
 import '../fake_engine.dart';
-import 'fake_desktop.dart';
 import 'fake_autostart.dart';
-import 'no_diagnostics.dart';
+import 'app_container.dart';
 
 final _snapshot = DeviceSnapshot(
   devices: const [
@@ -57,24 +53,6 @@ final _snapshot = DeviceSnapshot(
   ],
   conflicts: const ['OpenRGB'],
   scannedAt: DateTime(2026, 10, 18),
-);
-
-ProviderContainer appContainer(
-  ConfigStore store,
-  FakeEngine engine,
-  FakeAutostart autostart,
-) => ProviderContainer(
-  overrides: [
-    engineProvider.overrideWithValue(engine),
-    configStoreProvider.overrideWithValue(store),
-    ...PreferencesModule.overrides(store),
-    ...LightingModule.overrides(store),
-    ...FansModule.overrides(store),
-    uiLanguageFromPreferences(),
-    autostartServiceProvider.overrideWithValue(autostart),
-    environmentDiagnosticsProvider.overrideWithValue(NoDiagnostics()),
-    desktopActionsProvider.overrideWithValue(FakeDesktop()),
-  ],
 );
 
 void main() {

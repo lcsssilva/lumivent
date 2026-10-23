@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_sizes.dart';
 import '../../../../core/ui/status_pill.dart';
 import '../../../../core/ui/we_card.dart';
-import '../../application/devices_notifier.dart';
 import '../../domain/device.dart';
 import '../../domain/device_info.dart';
 import '../device_status_ui.dart';
+import '../../domain/device_snapshot.dart';
 
 part 'conflict_banner.dart';
 part 'device_row.dart';
 
 /// Complete device list with details, hints, and conflicts.
-class DevicesCard extends ConsumerWidget {
-  const DevicesCard({super.key});
+class DevicesCard extends StatelessWidget {
+  const DevicesCard({
+    super.key,
+    required this.snapshot,
+    required this.onRescan,
+  });
+
+  /// Last detection, `null` while the first scan runs.
+  final DeviceSnapshot? snapshot;
+  final VoidCallback onRescan;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final snap = ref.watch(devicesProvider);
+  Widget build(BuildContext context) {
+    final snap = snapshot;
     final strings = context.strings;
     final s = strings.devices;
     return WeCard(
@@ -28,7 +35,7 @@ class DevicesCard extends ConsumerWidget {
       trailing: OutlinedButton.icon(
         icon: const Icon(Icons.refresh, size: 18),
         label: Text(s.detectAgain),
-        onPressed: () => ref.read(devicesProvider.notifier).rescan(),
+        onPressed: onRescan,
       ),
       child: snap == null
           ? Padding(

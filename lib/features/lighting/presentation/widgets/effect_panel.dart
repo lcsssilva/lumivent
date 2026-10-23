@@ -11,8 +11,6 @@ import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_card.dart';
-import '../../application/installed_effects_notifier.dart';
-import '../../application/lighting_notifier.dart';
 import '../../application/html_effect_runner.dart';
 import '../../application/html_effect_status.dart';
 import '../../domain/effect_compatibility.dart';
@@ -39,12 +37,26 @@ final _hueGradient = LinearGradient(
   colors: [for (var i = 0; i <= 6; i++) toColor(Rgb.fromHsv(i * 60.0, 1, 1))],
 );
 
-class EffectPanel extends ConsumerWidget {
-  const EffectPanel({super.key});
+class EffectPanel extends StatelessWidget {
+  const EffectPanel({
+    super.key,
+    required this.config,
+    required this.installedLibrary,
+    required this.runnerStatus,
+    required this.onEdit,
+  });
+
+  final LightingConfig config;
+
+  /// The installed HTML effects as the library loads them.
+  final AsyncValue<List<InstalledEffect>> installedLibrary;
+
+  /// Status of the HTML effect being rendered.
+  final HtmlEffectStatus runnerStatus;
+  final ValueChanged<LightingConfigEdit> onEdit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final config = ref.watch(lightingProvider);
+  Widget build(BuildContext context) {
     final effect = nativeEffectById(config.effectId);
     final strings = context.strings;
     final l = strings.lighting;
@@ -52,12 +64,17 @@ class EffectPanel extends ConsumerWidget {
       if (htmlEffectSlugOf(config.effectId) == null) {
         return WeCard(flat: true, title: l.effect, child: Text(l.noControls));
       }
-      return _HtmlEffectPanel(effectId: config.effectId);
+      return _HtmlEffectPanel(
+        effectId: config.effectId,
+        config: config,
+        installedLibrary: installedLibrary,
+        status: runnerStatus,
+        onEdit: onEdit,
+      );
     }
     final values = config.effectValuesFor()!;
-    void set(String key, Object v) => ref
-        .read(lightingProvider.notifier)
-        .update((c) => c.withEffectValue(effect.id, key, v));
+    void set(String key, Object v) =>
+        onEdit((c) => c.withEffectValue(effect.id, key, v));
     final fixedSpeed = firmwareSpeedFixed(config);
 
     return WeCard(

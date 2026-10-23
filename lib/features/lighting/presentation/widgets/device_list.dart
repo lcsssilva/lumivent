@@ -8,14 +8,24 @@ import 'package:flutter/material.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_card.dart';
 import '../../domain/light_device.dart';
+import '../../domain/lighting_config.dart';
+import '../view_models/lighting_ui_state.dart';
 import 'device_item.dart';
 
 part 'device_list_state.dart';
 
 class DeviceList extends StatefulWidget {
-  const DeviceList({super.key, required this.selected, required this.onSelect});
-  final LightDeviceId? selected;
+  const DeviceList({
+    super.key,
+    required this.ui,
+    required this.onSelect,
+    required this.onEdit,
+  });
+
+  /// Configuration, statuses, and selection of the lighting view.
+  final LightingUiState ui;
   final ValueChanged<LightDeviceId> onSelect;
+  final ValueChanged<LightingConfigEdit> onEdit;
 
   @override
   State<DeviceList> createState() => _DeviceListState();

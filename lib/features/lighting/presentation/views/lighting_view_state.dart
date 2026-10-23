@@ -150,7 +150,7 @@ class _LightingViewState extends ConsumerState<LightingView>
                             child: LedCanvas(
                               config: cfg,
                               time: _time,
-                              frame: ref.watch(htmlEffectFramesProvider),
+                              frame: ui.frames,
                               selected: selected,
                               onSelect: _viewModel.selectDevice,
                               onPlace: _viewModel.placeDevice,
@@ -224,7 +224,11 @@ class _LightingViewState extends ConsumerState<LightingView>
             SizedBox(
               width: 340,
               child: SingleChildScrollView(
-                child: LightingModePanel(deviceId: selected),
+                child: LightingModePanel(
+                  ui: ui,
+                  onEdit: _viewModel.edit,
+                  onIdentify: _viewModel.identify,
+                ),
               ),
             ),
           ],
@@ -237,7 +241,6 @@ class _LightingViewState extends ConsumerState<LightingView>
   Widget build(BuildContext context) {
     final ui = ref.watch(lightingViewModelProvider);
     final cfg = ui.config;
-    final selected = ui.selectedDevice;
     const gap = WeSizes.unit * 2;
 
     return Padding(
@@ -248,7 +251,11 @@ class _LightingViewState extends ConsumerState<LightingView>
           if (cfg.argbOff) ...[_argbBanner(), const SizedBox(height: gap)],
           _globalCard(cfg, context.strings),
           const SizedBox(height: gap),
-          DeviceList(selected: selected, onSelect: _viewModel.selectDevice),
+          DeviceList(
+            ui: ui,
+            onSelect: _viewModel.selectDevice,
+            onEdit: _viewModel.edit,
+          ),
           const SizedBox(height: gap),
           Expanded(child: _canvasCard(ui, context.strings)),
         ],

@@ -1,19 +1,27 @@
 part of 'effect_panel.dart';
 
 /// Controls of an installed HTML effect, generated from its metadata.
-class _HtmlEffectPanel extends ConsumerWidget {
-  const _HtmlEffectPanel({required this.effectId});
+class _HtmlEffectPanel extends StatelessWidget {
+  const _HtmlEffectPanel({
+    required this.effectId,
+    required this.config,
+    required this.installedLibrary,
+    required this.status,
+    required this.onEdit,
+  });
 
   final String effectId;
+  final LightingConfig config;
+  final AsyncValue<List<InstalledEffect>> installedLibrary;
+  final HtmlEffectStatus status;
+  final ValueChanged<LightingConfigEdit> onEdit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final installed = ref.watch(installedEffectsProvider);
-    final status = ref.watch(htmlEffectRunnerProvider);
+  Widget build(BuildContext context) {
     final slug = htmlEffectSlugOf(effectId);
     final strings = context.strings;
     final l = strings.lighting;
-    return installed.when(
+    return installedLibrary.when(
       loading: () =>
           WeCard(flat: true, title: l.effect, child: Text(l.loadingEffects)),
       error: (e, _) => WeCard(
@@ -56,7 +64,11 @@ class _HtmlEffectPanel extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 8),
-              _HtmlEffectControls(effect: effect),
+              _HtmlEffectControls(
+                effect: effect,
+                config: config,
+                onEdit: onEdit,
+              ),
             ],
           ),
         );

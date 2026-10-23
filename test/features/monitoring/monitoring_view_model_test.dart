@@ -67,5 +67,22 @@ void main() {
     final v = container.read(monitoringViewModelProvider);
     expect(v.now(Metrics.cpuTctl), 61);
     expect(v.temperatureUnit, TemperatureUnit.celsius);
+    expect(v.ssds, isNull);
+
+    final readAt = DateTime(2026, 10, 23, 8);
+    engine.emit(
+      SsdsUpdated(const [
+        SsdInfo(
+          controller: 'nvme0',
+          model: 'NVMe',
+          serial: 'S1',
+          firmware: '1.0',
+        ),
+      ], readAt),
+    );
+    await Future<void>.delayed(Duration.zero);
+    final updated = container.read(monitoringViewModelProvider);
+    expect(updated.ssds?.single.serial, 'S1');
+    expect(updated.ssdsReadAt, readAt);
   });
 }

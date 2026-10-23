@@ -1,46 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/status_dot.dart';
 import '../../../../core/ui/we_colors.dart';
-import '../../application/lighting_notifier.dart';
 import '../../application/light_output_state.dart';
 import '../../application/light_output_status.dart';
-import '../../domain/hardware_equivalent.dart';
 import '../../domain/light_device.dart';
+import '../../domain/device_light_config.dart';
 import '../../domain/lighting_config.dart';
 import '../lighting_labels.dart';
 import 'panel_dropdown.dart';
-import '../../application/lighting_status_notifier.dart';
 
 /// One lighting device in the horizontal device strip.
-class DeviceItem extends ConsumerWidget {
+class DeviceItem extends StatelessWidget {
   const DeviceItem({
     super.key,
     required this.id,
+    required this.deviceConfig,
+    required this.status,
+    required this.auto,
+    required this.fanGroupNames,
     required this.selected,
     required this.onTap,
+    required this.onEdit,
   });
 
   final LightDeviceId id;
+  final DeviceLightConfig deviceConfig;
+
+  /// Output status from the engine, `null` until it reports one.
+  final LightOutputStatus? status;
+
+  /// The engine hands this canvas device to the firmware for the effect.
+  final bool auto;
+  final List<String> fanGroupNames;
   final bool selected;
   final VoidCallback onTap;
+  final ValueChanged<LightingConfigEdit> onEdit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final deviceConfig = ref.watch(
-      lightingProvider.select((c) => c.device(id)),
-    );
-    final status = ref.watch(
-      lightingStatusProvider.select((s) => s?.devices[id]),
-    );
-    // Canvas device the engine hands to the firmware for the current effect.
-    final auto = ref.watch(
-      lightingProvider.select((c) => autoHardwareDevices(c).contains(id)),
-    );
-    final lighting = ref.read(lightingProvider.notifier);
+  Widget build(BuildContext context) {
+    final status = this.status;
     final supported = id.isSupported;
     final strings = context.strings;
     final l = strings.lighting;
@@ -94,11 +95,7 @@ class DeviceItem extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        deviceLabel(
-                          strings,
-                          id,
-                          ref.watch(fanGroupNamesProvider),
-                        ),
+                        deviceLabel(strings, id, fanGroupNames),
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
@@ -109,7 +106,7 @@ class DeviceItem extends ConsumerWidget {
                         child: Switch(
                           key: ValueKey('device-switch-${id.name}'),
                           value: deviceConfig.enabled,
-                          onChanged: (v) => lighting.update(
+                          onChanged: (v) => onEdit(
                             (c) => c.withDevice(
                               id,
                               deviceConfig.copyWith(enabled: v),
@@ -166,7 +163,7 @@ class DeviceItem extends ConsumerWidget {
                     ],
                     labelOf: (m) => modeLabel(strings, m),
                     onChanged: (m) {
-                      lighting.update(
+                      onEdit(
                         (c) => c.withDevice(id, deviceConfig.copyWith(mode: m)),
                       );
                       onTap();

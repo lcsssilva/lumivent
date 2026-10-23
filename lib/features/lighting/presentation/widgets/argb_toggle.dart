@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
-import '../../application/lighting_notifier.dart';
 
 /// Global "ARGB" switch: off means all LEDs are off.
-class ArgbToggle extends ConsumerWidget {
-  const ArgbToggle({super.key});
+class ArgbToggle extends StatelessWidget {
+  const ArgbToggle({super.key, required this.off, required this.onChanged});
+
+  /// Whether all ARGB is off.
+  final bool off;
+
+  /// Turns all ARGB off (`true`) or back on (`false`).
+  final ValueChanged<bool> onChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final off = ref.watch(lightingProvider.select((s) => s.argbOff));
+  Widget build(BuildContext context) {
     final l = context.strings.lighting;
-    void set(bool v) => ref.read(lightingProvider.notifier).setArgbOff(v);
+    void set(bool v) => onChanged(v);
     return Tooltip(
       message: off ? l.turnOnAllArgb : l.turnOffAllArgb,
       child: InkWell(

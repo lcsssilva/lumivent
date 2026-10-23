@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
@@ -7,28 +6,39 @@ import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_sizes.dart';
 import '../../../../core/ui/we_card.dart';
 import '../../../preferences/preferences.dart';
-import '../../application/monitoring_notifier.dart';
 import '../../domain/metrics.dart';
 import '../../domain/ssd.dart';
 import '../../domain/ssd_smart_error.dart';
 import '../../domain/ssd_info.dart';
 import 'no_reading.dart';
 import 'ssd_row.dart';
+import '../../domain/sensor_sample.dart';
 
 part 'smart_banner.dart';
 
 /// SSD tool: health and SMART data for each NVMe drive.
-class SsdSection extends ConsumerWidget {
-  const SsdSection({super.key});
+class SsdSection extends StatelessWidget {
+  const SsdSection({
+    super.key,
+    required this.ssds,
+    required this.readAt,
+    required this.latest,
+    required this.unit,
+  });
+
+  /// `null` until the first SSD reading.
+  final List<SsdInfo>? ssds;
+  final DateTime? readAt;
+
+  /// Latest sensor reading, for the live drive temperatures.
+  final SensorSample? latest;
+  final TemperatureUnit unit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final ssds = ref.watch(monitoringProvider.select((s) => s.ssds));
-    final readAt = ref.watch(monitoringProvider.select((s) => s.ssdsReadAt));
-    final latest = ref.watch(monitoringProvider.select((s) => s.latest));
-    final unit = ref.watch(
-      preferencesProvider.select((p) => p.temperatureUnit),
-    );
+  Widget build(BuildContext context) {
+    final ssds = this.ssds;
+    final readAt = this.readAt;
+    final latest = this.latest;
     final strings = context.strings;
     final s = strings.monitoring;
     final missingSmart =

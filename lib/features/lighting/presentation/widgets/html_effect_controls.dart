@@ -1,21 +1,26 @@
 part of 'effect_panel.dart';
 
-class _HtmlEffectControls extends ConsumerWidget {
-  const _HtmlEffectControls({required this.effect});
+class _HtmlEffectControls extends StatelessWidget {
+  const _HtmlEffectControls({
+    required this.effect,
+    required this.config,
+    required this.onEdit,
+  });
+
   final InstalledEffect effect;
+  final LightingConfig config;
+  final ValueChanged<LightingConfigEdit> onEdit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final config = ref.watch(lightingProvider);
+  Widget build(BuildContext context) {
     final raw =
         config.effectValues[config.effectId] ?? const <String, Object?>{};
     final params = [
       for (final property in effect.source.properties) ?property.toParam(),
     ];
     final values = EffectValues(params, raw);
-    void set(String key, Object v) => ref
-        .read(lightingProvider.notifier)
-        .update((c) => c.withEffectValue(config.effectId, key, v));
+    void set(String key, Object v) =>
+        onEdit((c) => c.withEffectValue(config.effectId, key, v));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

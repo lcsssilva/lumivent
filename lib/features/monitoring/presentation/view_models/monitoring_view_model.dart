@@ -5,6 +5,7 @@ import '../../../preferences/preferences.dart';
 import '../../application/monitoring_notifier.dart';
 import '../../domain/metrics.dart';
 import '../../domain/sensor_history.dart';
+import '../../domain/ssd_info.dart';
 import '../sensor_format.dart';
 
 /// Readings shown by the monitoring view, in the user's temperature unit.
@@ -14,10 +15,16 @@ class MonitoringViewModel {
   const MonitoringViewModel({
     required this.history,
     required this.temperatureUnit,
+    this.ssds,
+    this.ssdsReadAt,
   });
 
   final SensorHistory history;
   final TemperatureUnit temperatureUnit;
+
+  /// NVMe drives, `null` until the first SSD reading.
+  final List<SsdInfo>? ssds;
+  final DateTime? ssdsReadAt;
 
   /// Latest value of metric [id], `null` without a reading.
   double? now(String id) => history.latest?[id];
@@ -33,11 +40,16 @@ class MonitoringViewModel {
       formatMetric(now(id), unit, temperatureUnit, strings);
 }
 
-final monitoringViewModelProvider = Provider.autoDispose<MonitoringViewModel>(
-  (ref) => MonitoringViewModel(
-    history: ref.watch(monitoringProvider.select((s) => s.history)),
+final monitoringViewModelProvider = Provider.autoDispose<MonitoringViewModel>((
+  ref,
+) {
+  final monitoring = ref.watch(monitoringProvider);
+  return MonitoringViewModel(
+    history: monitoring.history,
     temperatureUnit: ref.watch(
       preferencesProvider.select((p) => p.temperatureUnit),
     ),
-  ),
-);
+    ssds: monitoring.ssds,
+    ssdsReadAt: monitoring.ssdsReadAt,
+  );
+});

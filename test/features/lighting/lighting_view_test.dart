@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/ui/theme.dart';
 import 'package:lumivent/core/ui/we_colors.dart';
@@ -23,6 +24,7 @@ import '../../fake_engine.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/memory_lighting_repository.dart';
+import '../../support/memory_preferences_repository.dart';
 
 /// testWidgets that lets the debounced save timer fire before teardown.
 void page(String name, Future<void> Function(WidgetTester) body) =>
@@ -43,6 +45,9 @@ void main() {
       overrides: [
         engineProvider.overrideWithValue(engine),
         lightingRepositoryProvider.overrideWithValue(repo),
+        preferencesRepositoryProvider.overrideWithValue(
+          MemoryPreferencesRepository(),
+        ),
       ],
     );
   });
@@ -461,6 +466,9 @@ void main() {
       overrides: [
         engineProvider.overrideWithValue(engine),
         lightingRepositoryProvider.overrideWithValue(repo),
+        preferencesRepositoryProvider.overrideWithValue(
+          MemoryPreferencesRepository(),
+        ),
         fanGroupNamesProvider.overrideWithValue(const [
           '',
           'Base',
@@ -604,7 +612,14 @@ void main() {
         child: withPortuguese(
           MaterialApp(
             theme: buildTheme(),
-            home: const Scaffold(body: ArgbToggle()),
+            home: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) => ArgbToggle(
+                  off: ref.watch(lightingProvider.select((c) => c.argbOff)),
+                  onChanged: ref.read(lightingProvider.notifier).setArgbOff,
+                ),
+              ),
+            ),
           ),
         ),
       ),

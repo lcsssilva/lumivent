@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_sizes.dart';
 import '../../../preferences/preferences.dart';
-import '../../application/monitoring_notifier.dart';
 import '../../domain/metrics.dart';
 import '../sensor_format.dart';
+import '../../domain/sensor_sample.dart';
 
 /// "CPU 52 °C · GPU 44 °C" in the top bar on every page.
-class TopbarSensors extends ConsumerWidget {
-  const TopbarSensors({super.key});
+class TopbarSensors extends StatelessWidget {
+  const TopbarSensors({super.key, required this.latest, required this.unit});
+
+  /// Latest sensor reading, `null` before the first one.
+  final SensorSample? latest;
+  final TemperatureUnit unit;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final latest = ref.watch(monitoringProvider.select((s) => s.latest));
-    final unit = ref.watch(
-      preferencesProvider.select((p) => p.temperatureUnit),
-    );
+  Widget build(BuildContext context) {
+    final latest = this.latest;
     final items = [
       ('CPU', latest?[Metrics.cpuTctl]),
       ('GPU', latest?[Metrics.gpuEdge]),

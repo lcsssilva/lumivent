@@ -1,20 +1,39 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/ui/we_colors.dart';
 import '../../../core/ui/we_sizes.dart';
 import '../../../features/lighting/lighting.dart';
 import '../../../features/monitoring/monitoring.dart';
+import '../../../features/preferences/preferences.dart';
 import '../../navigation/app_route.dart';
-import '../../navigation/route_notifier.dart';
 
-class TopBar extends ConsumerWidget {
-  const TopBar({super.key});
+class TopBar extends StatelessWidget {
+  const TopBar({
+    super.key,
+    required this.route,
+    required this.latestSensors,
+    required this.temperatureUnit,
+    required this.argbOff,
+    required this.onRoute,
+    required this.onArgbOff,
+  });
+
+  final AppRoute route;
+
+  /// Latest sensor reading, `null` before the first one.
+  final SensorSample? latestSensors;
+  final TemperatureUnit temperatureUnit;
+
+  /// Whether all ARGB is off.
+  final bool argbOff;
+  final ValueChanged<AppRoute> onRoute;
+
+  /// Turns all ARGB off (`true`) or back on (`false`).
+  final ValueChanged<bool> onArgbOff;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final route = ref.watch(routeProvider);
+  Widget build(BuildContext context) {
     final s = context.strings.shell;
     return Container(
       height: WeSizes.topbarHeight,
@@ -49,9 +68,9 @@ class TopBar extends ConsumerWidget {
               ],
             ),
           ),
-          const TopbarSensors(),
+          TopbarSensors(latest: latestSensors, unit: temperatureUnit),
           const SizedBox(width: WeSizes.unit * 3),
-          const ArgbToggle(),
+          ArgbToggle(off: argbOff, onChanged: onArgbOff),
           const SizedBox(width: WeSizes.unit),
           IconButton(
             tooltip: s.settingsTooltip,
@@ -59,8 +78,7 @@ class TopBar extends ConsumerWidget {
             color: route == AppRoute.settings
                 ? WeColors.accentHover
                 : WeColors.muted,
-            onPressed: () =>
-                ref.read(routeProvider.notifier).go(AppRoute.settings),
+            onPressed: () => onRoute(AppRoute.settings),
           ),
         ],
       ),

@@ -48,7 +48,12 @@ class MonitoringView extends ConsumerWidget {
               children: [
                 ..._rows(cards, cols, box.maxWidth - 2 * pad),
                 const SizedBox(height: WeSizes.unit * 2),
-                const SsdSection(),
+                SsdSection(
+                  ssds: v.ssds,
+                  readAt: v.ssdsReadAt,
+                  latest: v.history.latest,
+                  unit: v.temperatureUnit,
+                ),
               ],
             ),
           ),

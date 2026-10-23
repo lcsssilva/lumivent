@@ -1,6 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
+import 'package:lumivent/features/lighting/application/identify_fan_group.dart';
+import 'package:lumivent/features/lighting/application/light_output_state.dart';
+import 'package:lumivent/features/lighting/application/light_output_status.dart';
+import 'package:lumivent/features/lighting/application/lighting_status.dart';
+import 'package:lumivent/features/lighting/domain/hardware_equivalent.dart';
 import 'package:lumivent/features/lighting/application/lighting_notifier.dart';
 import 'package:lumivent/features/lighting/application/set_argb_off.dart';
 import 'package:lumivent/features/lighting/application/set_lighting_config.dart';
@@ -12,6 +18,7 @@ import 'package:lumivent/features/lighting/presentation/view_models/lighting_vie
 
 import '../../fake_engine.dart';
 import '../../support/memory_lighting_repository.dart';
+import '../../support/memory_preferences_repository.dart';
 
 void main() {
   late FakeEngine engine;
@@ -25,6 +32,9 @@ void main() {
       overrides: [
         engineProvider.overrideWithValue(engine),
         lightingRepositoryProvider.overrideWithValue(repo),
+        preferencesRepositoryProvider.overrideWithValue(
+          MemoryPreferencesRepository(),
+        ),
       ],
     );
     container.listen(lightingViewModelProvider, (_, _) {});
@@ -72,4 +82,29 @@ void main() {
     expect(engine.sent.whereType<SetArgbOff>().single.off, isFalse);
     expect(repo.config.argbOff, isFalse);
   });
+
+  test('panel edits and identify go to the lighting notifier', () {
+    viewModel().edit((c) => c.withFanQuantity(2, 5));
+    expect(container.read(lightingProvider).fanQuantity[2], 5);
+    viewModel().identify(3);
+    expect(engine.sent.whereType<IdentifyFanGroup>().single.group, 3);
+  });
+
+  test(
+    'device status and auto hardware come from the engine and config',
+    () async {
+      expect(ui().deviceStatus(LightDeviceId.gpu), isNull);
+      engine.emit(
+        LightingStatus(const {
+          LightDeviceId.gpu: LightOutputStatus(LightOutputState.unavailable),
+        }, fps: 30),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        ui().deviceStatus(LightDeviceId.gpu)?.state,
+        LightOutputState.unavailable,
+      );
+      expect(ui().autoHardware, autoHardwareDevices(ui().config));
+    },
+  );
 }

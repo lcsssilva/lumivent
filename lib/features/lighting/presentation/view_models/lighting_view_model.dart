@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../application/html_effect_runner.dart';
 import '../../application/installed_effects_notifier.dart';
 import '../../application/lighting_notifier.dart';
+import '../../application/lighting_status_notifier.dart';
 import '../../domain/canvas_rect.dart';
 import '../../domain/light_device.dart';
 import '../../domain/lighting_config.dart';
@@ -18,7 +20,11 @@ class LightingViewModel extends Notifier<LightingUiState> {
   @override
   LightingUiState build() => LightingUiState(
     config: ref.watch(lightingProvider),
-    installedEffects: ref.watch(installedEffectsProvider).value ?? const [],
+    installedLibrary: ref.watch(installedEffectsProvider),
+    runnerStatus: ref.watch(htmlEffectRunnerProvider),
+    frames: ref.watch(htmlEffectFramesProvider),
+    status: ref.watch(lightingStatusProvider),
+    fanGroupNames: ref.watch(fanGroupNamesProvider),
     selectedDevice: _selectedDevice,
   );
 
@@ -44,6 +50,12 @@ class LightingViewModel extends Notifier<LightingUiState> {
   /// Applies a native or installed effect by its `LightingConfig.effectId`.
   void selectEffect(String effectId) =>
       _lighting.update((c) => c.copyWith(effectId: effectId));
+
+  /// Applies an edit made in one of the device panels.
+  void edit(LightingConfigEdit change) => _lighting.update(change);
+
+  /// Pings hub group [group] (1–3) so the user can find it.
+  void identify(int group) => _lighting.identify(group);
 
   /// Moves [device] to [placement] on the canvas.
   void placeDevice(LightDeviceId device, CanvasRect placement) =>

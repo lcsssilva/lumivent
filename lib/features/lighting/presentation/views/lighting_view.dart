@@ -7,7 +7,6 @@ import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_sizes.dart';
 import '../../../../core/ui/we_card.dart';
-import '../../application/html_effect_runner.dart';
 import '../../domain/led_layout.dart';
 import '../../domain/installed_effect.dart';
 import '../../domain/lighting_config.dart';

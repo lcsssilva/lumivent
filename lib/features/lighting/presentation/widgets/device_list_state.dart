@@ -19,8 +19,8 @@ class _DeviceListState extends State<DeviceList> {
   @override
   void didUpdateWidget(covariant DeviceList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final id = widget.selected;
-    if (id != null && id != oldWidget.selected) _reveal(id);
+    final id = widget.ui.selectedDevice;
+    if (id != null && id != oldWidget.ui.selectedDevice) _reveal(id);
   }
 
   @override
@@ -82,6 +82,8 @@ class _DeviceListState extends State<DeviceList> {
   @override
   Widget build(BuildContext context) {
     final ids = LightDeviceId.values;
+    final ui = widget.ui;
+    final autoHardware = ui.autoHardware;
     final strings = context.strings;
     final l = strings.lighting;
 
@@ -137,8 +139,13 @@ class _DeviceListState extends State<DeviceList> {
                       width: _itemWidth,
                       child: DeviceItem(
                         id: id,
-                        selected: widget.selected == id,
+                        deviceConfig: ui.config.device(id),
+                        status: ui.deviceStatus(id),
+                        auto: autoHardware.contains(id),
+                        fanGroupNames: ui.fanGroupNames,
+                        selected: ui.selectedDevice == id,
                         onTap: () => widget.onSelect(id),
+                        onEdit: widget.onEdit,
                       ),
                     ),
                   ],

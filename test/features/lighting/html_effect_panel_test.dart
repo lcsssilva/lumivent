@@ -14,17 +14,16 @@ import 'package:lumivent/features/lighting/domain/effect_source.dart';
 import 'package:lumivent/features/lighting/domain/installed_effect.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config_repository.dart';
+import 'package:lumivent/features/lighting/presentation/view_models/lighting_view_model.dart';
 import 'package:lumivent/features/lighting/presentation/widgets/effect_panel.dart';
 import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
-import 'package:lumivent/features/preferences/domain/preferences.dart';
-import 'package:lumivent/features/preferences/domain/preferences_repository.dart';
 
 import '../../fake_engine.dart';
 
 import '../../support/app_harness.dart';
+import '../../support/memory_preferences_repository.dart';
 
 part 'panel_effect_library.dart';
-part 'panel_preferences_repository.dart';
 part 'panel_lighting_repository.dart';
 
 void main() {
@@ -91,7 +90,7 @@ void main() {
           engineProvider.overrideWithValue(FakeEngine()),
           lightingRepositoryProvider.overrideWithValue(repo),
           preferencesRepositoryProvider.overrideWithValue(
-            _PanelPreferencesRepository(),
+            MemoryPreferencesRepository(),
           ),
           effectLibraryProvider.overrideWithValue(_PanelEffectLibrary(effect)),
         ],
@@ -103,8 +102,22 @@ void main() {
           child: withPortuguese(
             MaterialApp(
               theme: buildTheme(),
-              home: const Scaffold(
-                body: SingleChildScrollView(child: EffectPanel()),
+              home: Scaffold(
+                body: SingleChildScrollView(
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final ui = ref.watch(lightingViewModelProvider);
+                      return EffectPanel(
+                        config: ui.config,
+                        installedLibrary: ui.installedLibrary,
+                        runnerStatus: ui.runnerStatus,
+                        onEdit: ref
+                            .read(lightingViewModelProvider.notifier)
+                            .edit,
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ),

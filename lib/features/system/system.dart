@@ -7,6 +7,7 @@ export 'application/autostart_notifier.dart'
     show autostartProvider, autostartServiceProvider;
 export 'application/diagnostics_providers.dart'
     show diagnosticsProvider, environmentDiagnosticsProvider;
+export 'application/runtime_checks.dart' show runtimeChecksProvider;
 export 'domain/autostart_error.dart';
 export 'domain/autostart_state.dart';
 export 'domain/autostart_exception.dart';

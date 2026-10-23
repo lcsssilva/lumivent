@@ -1,14 +1,13 @@
 part of 'startup_card.dart';
 
-class _StartupCardState extends ConsumerState<StartupCard>
+class _StartupCardState extends State<StartupCard>
     with AsyncActionMixin<StartupCard> {
-  Future<void> _set(bool on) =>
-      run(() => ref.read(autostartProvider.notifier).setEnabled(on));
+  Future<void> _set(bool on) => run(() => widget.onChanged(on));
 
   @override
   Widget build(BuildContext context) {
-    final autostart = ref.watch(autostartProvider);
-    final location = ref.watch(autostartServiceProvider).location;
+    final autostart = widget.autostart;
+    final location = widget.location;
     final state = autostart.value;
     final strings = context.strings;
     final s = strings.settings;

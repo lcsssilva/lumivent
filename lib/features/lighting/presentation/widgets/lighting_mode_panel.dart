@@ -2,38 +2,63 @@
 // sub-panel to show depends on the device and the configured mode.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/lighting_notifier.dart';
 import '../../domain/light_device.dart';
 import '../../domain/lighting_config.dart';
+import '../view_models/lighting_ui_state.dart';
 import 'board_hardware_panel.dart';
 import 'effect_panel.dart';
 import 'fan_hardware_panel.dart';
 import 'fixed_color_panel.dart';
 import 'gpu_hardware_panel.dart';
 
-class LightingModePanel extends ConsumerWidget {
-  const LightingModePanel({super.key, required this.deviceId});
+class LightingModePanel extends StatelessWidget {
+  const LightingModePanel({
+    super.key,
+    required this.ui,
+    required this.onEdit,
+    required this.onIdentify,
+  });
 
-  final LightDeviceId? deviceId;
+  final LightingUiState ui;
+  final ValueChanged<LightingConfigEdit> onEdit;
+
+  /// Pings a hub group (1–3).
+  final ValueChanged<int> onIdentify;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final sel = deviceId;
-    if (sel == null) return const EffectPanel();
-    final mode = ref.watch(lightingProvider.select((c) => c.device(sel).mode));
-    return switch (mode) {
-      LightMode.canvas => const EffectPanel(),
-      LightMode.fixed => FixedColorPanel(id: sel),
+  Widget build(BuildContext context) {
+    final config = ui.config;
+    final effect = EffectPanel(
+      config: config,
+      installedLibrary: ui.installedLibrary,
+      runnerStatus: ui.runnerStatus,
+      onEdit: onEdit,
+    );
+    final sel = ui.selectedDevice;
+    if (sel == null) return effect;
+    return switch (config.device(sel).mode) {
+      LightMode.canvas => effect,
+      LightMode.fixed => FixedColorPanel(
+        id: sel,
+        config: config,
+        fanGroupNames: ui.fanGroupNames,
+        onEdit: onEdit,
+      ),
       LightMode.hardware =>
         sel.isFan
-            ? FanHardwarePanel(id: sel)
+            ? FanHardwarePanel(
+                id: sel,
+                config: config,
+                fanGroupNames: ui.fanGroupNames,
+                onEdit: onEdit,
+                onIdentify: onIdentify,
+              )
             : sel == LightDeviceId.motherboard
-            ? const BoardHardwarePanel()
+            ? BoardHardwarePanel(config: config, onEdit: onEdit)
             : sel == LightDeviceId.gpu
-            ? const GpuHardwarePanel()
-            : const EffectPanel(),
+            ? GpuHardwarePanel(config: config, onEdit: onEdit)
+            : effect,
     };
   }
 }
