@@ -128,7 +128,7 @@ class EffectCard extends StatelessWidget {
                       explore.requires(
                         [
                           for (final issue in effect.compatibility.issues)
-                            strings.lighting.compatibilityIssue(issue.index),
+                            effectIssueLabel(strings, issue),
                         ].join(', '),
                       ),
                       maxLines: 1,

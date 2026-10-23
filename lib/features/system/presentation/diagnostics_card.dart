@@ -6,6 +6,7 @@ import '../../../core/i18n/app_strings_scope.dart';
 import '../../../core/i18n/catalogs/system_strings.dart';
 import '../../../core/ui/theme.dart';
 import '../../../core/ui/we_card.dart';
+import '../../lighting/lighting.dart' show LightOutputStatus, outputIssueLabel;
 import '../application/runtime_checks.dart';
 import '../application/system_controller.dart';
 import '../domain/diagnostics.dart';
@@ -80,14 +81,28 @@ String diagnosticDetail(DiagnosticCheck check, AppStrings strings) {
   final s = strings.system;
   final data = check.data;
   return switch (check.id) {
-    DiagnosticId.udevRules =>
-      (data['installed'] == true)
-          ? s.udevInstalled(data['file'] as String)
-          : s.udevMissing(data['file'] as String),
-    DiagnosticId.boardSensors => _boardSensors(data, s),
-    DiagnosticId.memorySmbus => _memorySmbus(data, s),
-    DiagnosticId.memoryTemperature => _memoryTemperature(data, s),
-    DiagnosticId.nvmeHelper => _nvmeHelper(data, s),
+    DiagnosticId.udevRules => switch (data) {
+      UdevRulesData(installed: true) => s.udevInstalled(udevRulesFileName),
+      _ => s.udevMissing(udevRulesFileName),
+    },
+    DiagnosticId.boardSensors => switch (data) {
+      BoardSensorsData(:final modules) when modules.isNotEmpty =>
+        s.boardSensorsLoaded(modules.join(' + ')),
+      _ => s.boardSensorsMissing,
+    },
+    DiagnosticId.memorySmbus => switch (data) {
+      MemorySmbusData(:final bus?) => s.memorySmbusOk(bus),
+      _ => s.memorySmbusMissing,
+    },
+    DiagnosticId.memoryTemperature => switch (data) {
+      MemoryTemperatureData(:final driver?) => s.memoryTemperatureOk(driver),
+      _ => s.memoryTemperatureMissing,
+    },
+    DiagnosticId.nvmeHelper => switch (data) {
+      NvmeHelperData(:final path?, hasCaps: true) => s.nvmeHelperOk(path),
+      NvmeHelperData(:final path?) => s.nvmeHelperNoCaps(path),
+      _ => s.nvmeHelperMissing,
+    },
     DiagnosticId.hubRpmSync => switch (check.state) {
       CheckState.pending => s.hubRpmSyncPending,
       CheckState.ok => s.hubRpmSyncOk,
@@ -96,57 +111,33 @@ String diagnosticDetail(DiagnosticCheck check, AppStrings strings) {
     DiagnosticId.hubArgbSync => switch (check.state) {
       CheckState.pending => s.hubArgbSyncPending,
       CheckState.ok => s.hubArgbSyncOk,
-      CheckState.warn => switch (data['issue']) {
-        final int issue => strings.lighting.outputIssue(
-          issue,
-          (data['args'] as List?)?.cast<String>() ?? const [],
-        ),
+      CheckState.warn => switch (data) {
+        HubArgbSyncData(
+          status: LightOutputStatus(:final issue?, :final args),
+        ) =>
+          outputIssueLabel(strings, issue, args),
         _ => s.hubUnavailable,
       },
     },
-    DiagnosticId.lightingLoop => _lightingLoop(data, strings),
+    DiagnosticId.lightingLoop => switch (data) {
+      LightingLoopData(:final loops) => _lightingLoop(loops, strings),
+      _ => '',
+    },
   };
 }
 
-String _boardSensors(Map<String, Object?> data, SystemStrings s) {
-  final modules = (data['modules'] as List?)?.cast<String>() ?? const [];
-  return modules.isEmpty
-      ? s.boardSensorsMissing
-      : s.boardSensorsLoaded(modules.join(' + '));
-}
-
-String _memorySmbus(Map<String, Object?> data, SystemStrings s) {
-  final bus = data['bus'] as String?;
-  return bus == null ? s.memorySmbusMissing : s.memorySmbusOk(bus);
-}
-
-String _memoryTemperature(Map<String, Object?> data, SystemStrings s) {
-  final driver = data['driver'] as String?;
-  return driver == null
-      ? s.memoryTemperatureMissing
-      : s.memoryTemperatureOk(driver);
-}
-
-String _nvmeHelper(Map<String, Object?> data, SystemStrings s) {
-  final path = data['path'] as String?;
-  if (path == null) return s.nvmeHelperMissing;
-  return data['hasCaps'] == true
-      ? s.nvmeHelperOk(path)
-      : s.nvmeHelperNoCaps(path);
-}
-
-String _lightingLoop(Map<String, Object?> data, AppStrings strings) {
+String _lightingLoop(List<LoopSample> loops, AppStrings strings) {
   final s = strings.system;
-  final loops = (data['loops'] as List?)?.cast<LoopData>() ?? const [];
   return loops
       .map((loop) {
-        final (family, fps, sendMs) = loop;
-        final name = switch (family) {
-          'fans' => s.loopFamilyFans,
-          'board' => s.loopFamilyBoard,
-          'ram' => s.loopFamilyRam,
-          _ => s.loopFamilyGpu,
+        final name = switch (loop.family) {
+          LoopFamily.fans => s.loopFamilyFans,
+          LoopFamily.board => s.loopFamilyBoard,
+          LoopFamily.ram => s.loopFamilyRam,
+          LoopFamily.gpu => s.loopFamilyGpu,
         };
+        final fps = loop.fps;
+        final sendMs = loop.sendMs;
         final value = fps == null
             ? '—'
             : sendMs == null

@@ -16,6 +16,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../../core/engine/engine_host.dart';
 import '../../monitoring/monitoring.dart';
 import '../../preferences/preferences.dart';
+import '../domain/effect_compat.dart' show EffectIssue;
 import '../domain/effect_runtime.dart';
 import '../domain/effect_sampling.dart';
 import '../domain/installed_effect.dart';
@@ -30,7 +31,6 @@ part 'html_effect_runner.freezed.dart';
 
 /// Why the HTML effect is not running. The presentation maps it to the
 /// catalog (`LightingStrings.effectLoadFailed`/`effectPaused`/...).
-
 enum HtmlEffectIssue { loadFailed, paused, unsupported }
 
 @freezed
@@ -40,12 +40,15 @@ abstract class HtmlEffectStatus with _$HtmlEffectStatus {
     String? effectId,
     @Default(false) bool loading,
 
-    /// Stopped because frames take too long (an effect stuck in a loop).
-    @Default(false) bool paused,
-
     /// Reason the effect is not running; [error] carries technical detail.
     HtmlEffectIssue? issue,
-    @Default(<String>[]) List<String> issueArgs,
+
+    /// Duration of the frame that paused the effect, for
+    /// [HtmlEffectIssue.paused].
+    @Default(0) int slowFrameMs,
+
+    /// Host features the effect needs, for [HtmlEffectIssue.unsupported].
+    @Default(<EffectIssue>[]) List<EffectIssue> missingFeatures,
     String? error,
 
     /// Measured render FPS and mean frame time of the last second.
@@ -55,7 +58,10 @@ abstract class HtmlEffectStatus with _$HtmlEffectStatus {
 }
 
 extension HtmlEffectStatusX on HtmlEffectStatus {
-  bool get running => effectId != null && !loading && !paused && issue == null;
+  /// Stopped because frames take too long (an effect stuck in a loop).
+  bool get paused => issue == HtmlEffectIssue.paused;
+
+  bool get running => effectId != null && !loading && issue == null;
 }
 
 /// Longest accepted frame. Above this for [maxSlowFrames] in a row the effect
@@ -144,7 +150,7 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
     state = HtmlEffectStatus(
       effectId: effectId,
       issue: HtmlEffectIssue.unsupported,
-      issueArgs: [for (final i in effect.compatibility.issues) i.name],
+      missingFeatures: effect.compatibility.issues,
     );
   }
 
@@ -286,25 +292,16 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
   }
 
   void _pause(int ms) {
-    _timer?.cancel();
-    _timer = null;
-    _runtime?.dispose();
-    _runtime = null;
-    _liveFrame?.value = null;
+    _release();
     state = state.copyWith(
-      paused: true,
       issue: HtmlEffectIssue.paused,
-      issueArgs: ['$ms'],
+      slowFrameMs: ms,
       loading: false,
     );
   }
 
   void _fail(String detail) {
-    _timer?.cancel();
-    _timer = null;
-    _runtime?.dispose();
-    _runtime = null;
-    _liveFrame?.value = null;
+    _release();
     state = HtmlEffectStatus(
       effectId: _effectId,
       issue: HtmlEffectIssue.loadFailed,
@@ -312,13 +309,18 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
     );
   }
 
-  void _stop() {
-    _generation++;
+  /// Stops the render loop and frees the runtime and the preview frame.
+  void _release() {
     _timer?.cancel();
     _timer = null;
     _runtime?.dispose();
     _runtime = null;
     _liveFrame?.value = null;
+  }
+
+  void _stop() {
+    _generation++;
+    _release();
     _slug = null;
     _effectId = null;
     _valuesSent = null;

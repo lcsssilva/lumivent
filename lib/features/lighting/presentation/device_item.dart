@@ -28,7 +28,9 @@ class DeviceItem extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cfg = ref.watch(lightingProvider.select((c) => c.device(id)));
+    final deviceConfig = ref.watch(
+      lightingProvider.select((c) => c.device(id)),
+    );
     final status = ref.watch(
       lightingStatusProvider.select((s) => s?.devices[id]),
     );
@@ -104,9 +106,12 @@ class DeviceItem extends ConsumerWidget {
                         scale: .8,
                         child: Switch(
                           key: ValueKey('device-switch-${id.name}'),
-                          value: cfg.enabled,
+                          value: deviceConfig.enabled,
                           onChanged: (v) => controller.update(
-                            (c) => c.withDevice(id, cfg.copyWith(enabled: v)),
+                            (c) => c.withDevice(
+                              id,
+                              deviceConfig.copyWith(enabled: v),
+                            ),
                           ),
                         ),
                       ),
@@ -152,7 +157,7 @@ class DeviceItem extends ConsumerWidget {
                   // have the whole item width instead of sharing a row.
                   PanelDropdown<LightMode>(
                     key: ValueKey('device-mode-${id.name}'),
-                    value: cfg.mode,
+                    value: deviceConfig.mode,
                     items: [
                       for (final m in LightMode.values)
                         if (id.accepts(m)) m,
@@ -160,7 +165,7 @@ class DeviceItem extends ConsumerWidget {
                     labelOf: (m) => modeLabel(strings, m),
                     onChanged: (m) {
                       controller.update(
-                        (c) => c.withDevice(id, cfg.copyWith(mode: m)),
+                        (c) => c.withDevice(id, deviceConfig.copyWith(mode: m)),
                       );
                       onTap();
                     },
@@ -182,5 +187,5 @@ String _outputDetail(AppStrings strings, LightOutputStatus status) {
         ? strings.lighting.unsupported
         : strings.lighting.unavailable;
   }
-  return strings.lighting.outputIssue(issue.index, status.args);
+  return outputIssueLabel(strings, issue, status.args);
 }

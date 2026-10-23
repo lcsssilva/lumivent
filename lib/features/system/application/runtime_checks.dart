@@ -5,6 +5,7 @@ import '../../lighting/lighting.dart'
     show
         LightDeviceId,
         LightOutputState,
+        LightOutputStatus,
         LightingStatus,
         OutputFamily,
         lightingStatusProvider;
@@ -33,28 +34,38 @@ List<DiagnosticCheck> runtimeChecks(FansStatus? fans, LightingStatus? light) {
         LightOutputState.ok)
       const DiagnosticCheck(DiagnosticId.hubArgbSync, CheckState.ok)
     else
-      DiagnosticCheck(DiagnosticId.hubArgbSync, CheckState.warn, {
-        'issue': light.devices[LightDeviceId.alv2Group1]?.issue?.index,
-        'args':
-            light.devices[LightDeviceId.alv2Group1]?.args ?? const <String>[],
-      }),
+      DiagnosticCheck(
+        DiagnosticId.hubArgbSync,
+        CheckState.warn,
+        HubArgbSyncData(light.devices[LightDeviceId.alv2Group1]),
+      ),
     if (light != null && light.loops.isNotEmpty)
-      DiagnosticCheck(DiagnosticId.lightingLoop, CheckState.ok, {
-        'loops': [
-          for (final (family, key) in const [
-            (OutputFamily.fans, 'fans'),
-            (OutputFamily.ite, 'board'),
-            (OutputFamily.ram, 'ram'),
-            (OutputFamily.gpu, 'gpu'),
+      DiagnosticCheck(
+        DiagnosticId.lightingLoop,
+        CheckState.ok,
+        LightingLoopData([
+          for (final (output, family) in const [
+            (OutputFamily.fans, LoopFamily.fans),
+            (OutputFamily.ite, LoopFamily.board),
+            (OutputFamily.ram, LoopFamily.ram),
+            (OutputFamily.gpu, LoopFamily.gpu),
           ])
-            (key, light.loops[family]?.fps, light.loops[family]?.sendMs),
-        ],
-      }),
+            LoopSample(
+              family,
+              fps: light.loops[output]?.fps,
+              sendMs: light.loops[output]?.sendMs,
+            ),
+        ]),
+      ),
   ];
 }
 
-/// Raw loop statistics for one output family.
-typedef LoopData = (String family, double? fps, double? sendMs);
+/// Why the hub ARGB sync check failed: the state of the first AL V2 group
+/// ([status] is null when the engine reported nothing for it).
+class HubArgbSyncData extends DiagnosticData {
+  const HubArgbSyncData(this.status);
+  final LightOutputStatus? status;
+}
 
 final runtimeChecksProvider = Provider<List<DiagnosticCheck>>(
   (ref) => runtimeChecks(

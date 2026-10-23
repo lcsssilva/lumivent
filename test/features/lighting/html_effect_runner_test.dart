@@ -189,4 +189,18 @@ void main() {
     disposed = true;
     expect(factory.runtime.disposed, isTrue);
   });
+
+  test('paused is derived from the issue and carries the slow frame time', () {
+    const loading = HtmlEffectStatus(effectId: 'html:test');
+    expect(loading.running, isTrue);
+    expect(loading.paused, isFalse);
+
+    final paused = loading.copyWith(
+      issue: HtmlEffectIssue.paused,
+      slowFrameMs: 310,
+    );
+    expect(paused.paused, isTrue);
+    expect(paused.running, isFalse);
+    expect(paused.slowFrameMs, 310);
+  });
 }

@@ -19,8 +19,21 @@ import 'effect_card.dart';
 import 'explore_empty_state.dart';
 import 'explore_filters.dart';
 
-String _formatIssue(ExploreStrings explore, ImportIssue issue) =>
-    explore.importIssue(issue.kind.name, issue.path ?? '', error: issue.detail);
+String formatImportIssue(ExploreStrings e, ImportIssue issue) {
+  final path = issue.path ?? '';
+  final error = issue.detail ?? '';
+  return switch (issue.kind) {
+    ImportIssueKind.notHtmlOrZip => e.importNotHtmlOrZip(path),
+    ImportIssueKind.notFound => e.importNotFound(path),
+    ImportIssueKind.folderNotFound => e.importFolderNotFound(path),
+    ImportIssueKind.chooseWindowsCache => e.importChooseWindowsCache,
+    ImportIssueKind.catalogMissing => e.importCatalogMissing,
+    ImportIssueKind.noEffectHtml => e.importNoEffectHtml(path),
+    ImportIssueKind.invalidZip => e.importInvalidZip(path, error),
+    ImportIssueKind.noHtmlInZip => e.importNoHtmlInZip,
+    ImportIssueKind.unknown => e.importUnknown(path, error),
+  };
+}
 
 class ExplorePage extends ConsumerStatefulWidget {
   const ExplorePage({super.key});
@@ -74,7 +87,7 @@ class _ExplorePageState extends ConsumerState<ExplorePage>
             ? strings.explore.importDone(summary)
             : strings.explore.importDoneWithError(
                 summary,
-                _formatIssue(strings.explore, issues.first),
+                formatImportIssue(strings.explore, issues.first),
               ),
         error: issues.isNotEmpty,
       );

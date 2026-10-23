@@ -62,7 +62,11 @@ abstract class LightingStrings {
   String get compatible;
   String get partial;
   String get unsupportedEffect;
-  String compatibilityIssue(int issue);
+  String get compatCapture;
+  String get compatPixels;
+  String get compatAudio;
+  String get compatImages;
+  String get compatApi;
   String get requiresIssues;
 
   // ARGB toggle.
@@ -92,18 +96,40 @@ abstract class LightingStrings {
   String get color;
   String get gpuNote;
   String get boardHardwareTitle;
-  String boardMode(int mode);
+  String get boardModeStatic;
+  String get boardModePulse;
+  String get boardModeFlash;
+  String get boardModeDoubleFlash;
+  String get boardModeColorCycle;
+  String get boardModeWave;
   String boardZone(int zone);
 
   // GPU effects.
-  String gpuEffect(int effect);
+  String get gpuEffectOff;
+  String get gpuEffectStatic;
+  String get gpuEffectBreathing;
+  String get gpuEffectFlash;
+  String get gpuEffectDoubleFlash;
+  String get gpuEffectColorCycle;
+  String get gpuEffectWave;
+  String get gpuEffectGradient;
+  String get gpuEffectColorShift;
+  String get gpuEffectRainbow;
+  String get gpuEffectThreeColors;
+  String get gpuEffectClaws;
+  String get gpuEffectDazzle;
 
   // Color picker.
   String get chooseColor;
   String get hexadecimal;
 
   // Output status details.
-  String outputIssue(int issue, List<String> args);
+  String get outputUnsupported;
+  String get outputHub;
+  String get outputIte;
+  String outputGpu(List<String> args);
+  String get outputRam;
+  String outputBlocked(List<String> args);
 }
 
 class LightingStringsEn extends LightingStrings {
@@ -228,13 +254,15 @@ class LightingStringsEn extends LightingStrings {
   @override
   String get unsupportedEffect => 'Unsupported';
   @override
-  String compatibilityIssue(int issue) => switch (issue) {
-    0 => 'screen capture',
-    1 => 'pixel reads',
-    2 => 'audio (silence)',
-    3 => 'images',
-    _ => 'unsupported API',
-  };
+  String get compatCapture => 'screen capture';
+  @override
+  String get compatPixels => 'pixel reads';
+  @override
+  String get compatAudio => 'audio (silence)';
+  @override
+  String get compatImages => 'images';
+  @override
+  String get compatApi => 'unsupported API';
   @override
   String get requiresIssues => 'Requires';
   @override
@@ -290,15 +318,17 @@ class LightingStringsEn extends LightingStrings {
   @override
   String get boardHardwareTitle => 'Hardware · Motherboard';
   @override
-  String boardMode(int mode) => switch (mode) {
-    0 => 'Static',
-    1 => 'Pulse',
-    2 => 'Flash',
-    3 => 'Double flash',
-    4 => 'Color cycle',
-    5 => 'Wave',
-    _ => 'Mode $mode',
-  };
+  String get boardModeStatic => 'Static';
+  @override
+  String get boardModePulse => 'Pulse';
+  @override
+  String get boardModeFlash => 'Flash';
+  @override
+  String get boardModeDoubleFlash => 'Double flash';
+  @override
+  String get boardModeColorCycle => 'Color cycle';
+  @override
+  String get boardModeWave => 'Wave';
   @override
   String boardZone(int zone) => switch (zone) {
     0x20 => 'IO Shield 1',
@@ -307,42 +337,55 @@ class LightingStringsEn extends LightingStrings {
     _ => 'Zone $zone',
   };
   @override
-  String gpuEffect(int effect) => switch (effect) {
-    0 => 'Off',
-    1 => 'Static',
-    2 => 'Breathing',
-    3 => 'Flash',
-    4 => 'Double flash',
-    5 => 'Color cycle',
-    6 => 'Wave',
-    7 => 'Gradient',
-    8 => 'Color shift',
-    9 => 'Rainbow',
-    10 => 'Three colors',
-    11 => 'Claws',
-    12 => 'Dazzle',
-    _ => 'Effect $effect',
-  };
+  String get gpuEffectOff => 'Off';
+  @override
+  String get gpuEffectStatic => 'Static';
+  @override
+  String get gpuEffectBreathing => 'Breathing';
+  @override
+  String get gpuEffectFlash => 'Flash';
+  @override
+  String get gpuEffectDoubleFlash => 'Double flash';
+  @override
+  String get gpuEffectColorCycle => 'Color cycle';
+  @override
+  String get gpuEffectWave => 'Wave';
+  @override
+  String get gpuEffectGradient => 'Gradient';
+  @override
+  String get gpuEffectColorShift => 'Color shift';
+  @override
+  String get gpuEffectRainbow => 'Rainbow';
+  @override
+  String get gpuEffectThreeColors => 'Three colors';
+  @override
+  String get gpuEffectClaws => 'Claws';
+  @override
+  String get gpuEffectDazzle => 'Dazzle';
   @override
   String get chooseColor => 'Choose color';
   @override
   String get hexadecimal => 'Hexadecimal';
   @override
-  String outputIssue(int issue, List<String> args) => switch (issue) {
-    0 => 'The graphics card driver is not available yet.',
-    1 => 'AL V2 hub not found or without access permission.',
-    2 => 'Motherboard ITE controller not found or without access permission.',
-    3 =>
-      args.isEmpty
-          ? 'GPU RGB controller not found or without access permission.'
-          : 'GPU RGB controller not found or without access permission: '
-                '${args.join(', ')}',
-    4 =>
+  String get outputUnsupported =>
+      'The graphics card driver is not available yet.';
+  @override
+  String get outputHub => 'AL V2 hub not found or without access permission.';
+  @override
+  String get outputIte =>
+      'Motherboard ITE controller not found or without access permission.';
+  @override
+  String outputGpu(List<String> args) => args.isEmpty
+      ? 'GPU RGB controller not found or without access permission.'
+      : 'GPU RGB controller not found or without access permission: '
+            '${args.join(', ')}';
+  @override
+  String get outputRam =>
       'Kingston Fury memory not found or without access permission on the '
-          'SMBus.',
-    5 => 'Blocked for safety: ${args.join(', ')}',
-    _ => 'Device unavailable',
-  };
+      'SMBus.';
+  @override
+  String outputBlocked(List<String> args) =>
+      'Blocked for safety: ${args.join(', ')}';
 }
 
 class LightingStringsPt extends LightingStrings {
@@ -468,13 +511,15 @@ class LightingStringsPt extends LightingStrings {
   @override
   String get unsupportedEffect => 'Não suportado';
   @override
-  String compatibilityIssue(int issue) => switch (issue) {
-    0 => 'captura de tela',
-    1 => 'leitura de pixels',
-    2 => 'áudio (silêncio)',
-    3 => 'imagens',
-    _ => 'API não suportada',
-  };
+  String get compatCapture => 'captura de tela';
+  @override
+  String get compatPixels => 'leitura de pixels';
+  @override
+  String get compatAudio => 'áudio (silêncio)';
+  @override
+  String get compatImages => 'imagens';
+  @override
+  String get compatApi => 'API não suportada';
   @override
   String get requiresIssues => 'Requer';
   @override
@@ -530,15 +575,17 @@ class LightingStringsPt extends LightingStrings {
   @override
   String get boardHardwareTitle => 'Hardware · Placa-mãe';
   @override
-  String boardMode(int mode) => switch (mode) {
-    0 => 'Estático',
-    1 => 'Pulsar',
-    2 => 'Piscar',
-    3 => 'Piscar duplo',
-    4 => 'Ciclo de cores',
-    5 => 'Onda',
-    _ => 'Modo $mode',
-  };
+  String get boardModeStatic => 'Estático';
+  @override
+  String get boardModePulse => 'Pulsar';
+  @override
+  String get boardModeFlash => 'Piscar';
+  @override
+  String get boardModeDoubleFlash => 'Piscar duplo';
+  @override
+  String get boardModeColorCycle => 'Ciclo de cores';
+  @override
+  String get boardModeWave => 'Onda';
   @override
   String boardZone(int zone) => switch (zone) {
     0x20 => 'IO Shield 1',
@@ -547,41 +594,53 @@ class LightingStringsPt extends LightingStrings {
     _ => 'Zona $zone',
   };
   @override
-  String gpuEffect(int effect) => switch (effect) {
-    0 => 'Desligado',
-    1 => 'Estático',
-    2 => 'Respiração',
-    3 => 'Flash',
-    4 => 'Flash duplo',
-    5 => 'Ciclo de cores',
-    6 => 'Onda',
-    7 => 'Gradiente',
-    8 => 'Troca de cores',
-    9 => 'Arco-íris',
-    10 => 'Três cores',
-    11 => 'Garras',
-    12 => 'Ofuscante',
-    _ => 'Efeito $effect',
-  };
+  String get gpuEffectOff => 'Desligado';
+  @override
+  String get gpuEffectStatic => 'Estático';
+  @override
+  String get gpuEffectBreathing => 'Respiração';
+  @override
+  String get gpuEffectFlash => 'Flash';
+  @override
+  String get gpuEffectDoubleFlash => 'Flash duplo';
+  @override
+  String get gpuEffectColorCycle => 'Ciclo de cores';
+  @override
+  String get gpuEffectWave => 'Onda';
+  @override
+  String get gpuEffectGradient => 'Gradiente';
+  @override
+  String get gpuEffectColorShift => 'Troca de cores';
+  @override
+  String get gpuEffectRainbow => 'Arco-íris';
+  @override
+  String get gpuEffectThreeColors => 'Três cores';
+  @override
+  String get gpuEffectClaws => 'Garras';
+  @override
+  String get gpuEffectDazzle => 'Ofuscante';
   @override
   String get chooseColor => 'Escolher cor';
   @override
   String get hexadecimal => 'Hexadecimal';
   @override
-  String outputIssue(int issue, List<String> args) => switch (issue) {
-    0 => 'Placa de vídeo ainda sem suporte.',
-    1 => 'Hub AL V2 não encontrado ou sem permissão de acesso.',
-    2 =>
-      'Controlador ITE da placa-mãe não encontrado ou sem permissão de acesso.',
-    3 =>
-      args.isEmpty
-          ? 'Controlador RGB da GPU não encontrado ou sem permissão de acesso.'
-          : 'Controlador RGB da GPU não encontrado ou sem permissão de acesso: '
-                '${args.join(', ')}',
-    4 =>
+  String get outputUnsupported => 'Placa de vídeo ainda sem suporte.';
+  @override
+  String get outputHub =>
+      'Hub AL V2 não encontrado ou sem permissão de acesso.';
+  @override
+  String get outputIte =>
+      'Controlador ITE da placa-mãe não encontrado ou sem permissão de acesso.';
+  @override
+  String outputGpu(List<String> args) => args.isEmpty
+      ? 'Controlador RGB da GPU não encontrado ou sem permissão de acesso.'
+      : 'Controlador RGB da GPU não encontrado ou sem permissão de acesso: '
+            '${args.join(', ')}';
+  @override
+  String get outputRam =>
       'Memória Kingston Fury não encontrada ou sem permissão de acesso ao '
-          'barramento SMBus.',
-    5 => 'Bloqueado por segurança: ${args.join(', ')}',
-    _ => 'Dispositivo indisponível',
-  };
+      'barramento SMBus.';
+  @override
+  String outputBlocked(List<String> args) =>
+      'Bloqueado por segurança: ${args.join(', ')}';
 }

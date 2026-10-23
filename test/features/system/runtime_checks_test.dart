@@ -51,7 +51,48 @@ void main() {
       light(LightOutputState.unavailable, issue: LightOutputIssue.ite),
     )[1];
     expect(down.state, CheckState.warn);
-    expect(down.data['issue'], LightOutputIssue.ite.index);
+    expect((down.data as HubArgbSyncData).status?.issue, LightOutputIssue.ite);
+    expect(
+      diagnosticDetail(down, AppStrings.en),
+      AppStrings.en.lighting.outputIte,
+    );
+  });
+
+  test('typed data feeds the sentences of the static checks', () {
+    final strings = AppStrings.en.system;
+    expect(
+      diagnosticDetail(
+        const DiagnosticCheck(
+          DiagnosticId.nvmeHelper,
+          CheckState.ok,
+          NvmeHelperData(path: '/x/helper', hasCaps: true),
+        ),
+        AppStrings.en,
+      ),
+      strings.nvmeHelperOk('/x/helper'),
+    );
+    expect(
+      diagnosticDetail(
+        const DiagnosticCheck(
+          DiagnosticId.boardSensors,
+          CheckState.warn,
+          BoardSensorsData([]),
+        ),
+        AppStrings.en,
+      ),
+      strings.boardSensorsMissing,
+    );
+    expect(
+      diagnosticDetail(
+        const DiagnosticCheck(
+          DiagnosticId.udevRules,
+          CheckState.ok,
+          UdevRulesData(installed: true),
+        ),
+        AppStrings.en,
+      ),
+      strings.udevInstalled(udevRulesFileName),
+    );
   });
 
   test('loop line shows fps and send time per family', () {

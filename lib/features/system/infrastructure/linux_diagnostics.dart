@@ -30,17 +30,18 @@ DiagnosticCheck nvmeHelperCheck({
   String Function(String path)? getcap,
 }) {
   if (helper == null) {
-    return const DiagnosticCheck(DiagnosticId.nvmeHelper, CheckState.warn, {
-      'path': null,
-      'hasCaps': false,
-    });
+    return const DiagnosticCheck(
+      DiagnosticId.nvmeHelper,
+      CheckState.warn,
+      NvmeHelperData(hasCaps: false),
+    );
   }
   getcap ??= _getcap;
   final hasCaps = getcap(helper).contains('cap_sys_admin');
   return DiagnosticCheck(
     DiagnosticId.nvmeHelper,
     hasCaps ? CheckState.ok : CheckState.warn,
-    {'path': helper, 'hasCaps': hasCaps},
+    NvmeHelperData(path: helper, hasCaps: hasCaps),
   );
 }
 
@@ -55,7 +56,7 @@ String _getcap(String path) {
 /// Is the udev rule installed by the package (`/usr/lib/udev/rules.d`) or by
 /// the legacy manual setup (`/etc/udev/rules.d`)?
 bool udevRulesInstalled({String etcRoot = '/etc', String usrRoot = '/usr'}) {
-  const name = '99-lumivent.rules';
+  const name = udevRulesFileName;
   return [
     '$etcRoot/udev/rules.d/$name',
     '$usrRoot/lib/udev/rules.d/$name',
@@ -77,22 +78,22 @@ List<DiagnosticCheck> runDiagnostics({
     DiagnosticCheck(
       DiagnosticId.udevRules,
       udev ? CheckState.ok : CheckState.warn,
-      {'installed': udev, 'file': '99-lumivent.rules'},
+      UdevRulesData(installed: udev),
     ),
     DiagnosticCheck(
       DiagnosticId.boardSensors,
       superIo.isNotEmpty ? CheckState.ok : CheckState.warn,
-      {'modules': superIo},
+      BoardSensorsData(superIo),
     ),
     DiagnosticCheck(
       DiagnosticId.memorySmbus,
       bus != null ? CheckState.ok : CheckState.warn,
-      {'bus': bus},
+      MemorySmbusData(bus: bus),
     ),
     DiagnosticCheck(
       DiagnosticId.memoryTemperature,
       spd ? CheckState.ok : CheckState.warn,
-      {'driver': spd ? 'spd5118' : null},
+      MemoryTemperatureData(driver: spd ? 'spd5118' : null),
     ),
     (nvmeHelper ?? () => nvmeHelperCheck(helper: findNvmeSmartHelper()))(),
   ];

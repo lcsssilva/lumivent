@@ -58,4 +58,5 @@ export 'domain/native_effects.dart';
 export 'domain/rgb.dart';
 export 'lighting_module.dart';
 export 'presentation/argb_toggle.dart' show ArgbToggle;
+export 'presentation/labels.dart' show effectIssueLabel, outputIssueLabel;
 export 'presentation/lighting_page.dart' show LightingPage;
