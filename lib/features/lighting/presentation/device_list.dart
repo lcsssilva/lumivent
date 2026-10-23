@@ -53,19 +53,19 @@ class _DeviceListState extends State<DeviceList> {
     if (!_scroll.hasClients) return;
     final i = LightDeviceId.values.indexOf(id);
     if (i < 0) return;
-    final p = _scroll.position;
+    final position = _scroll.position;
     final start = i * (_itemWidth + _gap);
     final end = start + _itemWidth;
     final double target;
-    if (start < p.pixels) {
+    if (start < position.pixels) {
       target = start;
-    } else if (end > p.pixels + p.viewportDimension) {
-      target = end - p.viewportDimension;
+    } else if (end > position.pixels + position.viewportDimension) {
+      target = end - position.viewportDimension;
     } else {
       return;
     }
     _scroll.animateTo(
-      target.clamp(0.0, p.maxScrollExtent),
+      target.clamp(0.0, position.maxScrollExtent),
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOutCubic,
     );
@@ -73,9 +73,9 @@ class _DeviceListState extends State<DeviceList> {
 
   void _sync() {
     if (!mounted || !_scroll.hasClients) return;
-    final p = _scroll.position;
-    final back = p.pixels > .5;
-    final next = p.pixels < p.maxScrollExtent - .5;
+    final position = _scroll.position;
+    final back = position.pixels > .5;
+    final next = position.pixels < position.maxScrollExtent - .5;
     if (back == _canBack && next == _canNext) return;
     setState(() {
       _canBack = back;
@@ -85,9 +85,12 @@ class _DeviceListState extends State<DeviceList> {
 
   void _page(int direction) {
     if (!_scroll.hasClients) return;
-    final p = _scroll.position;
+    final position = _scroll.position;
     final step = (_itemWidth + _gap) * 3;
-    final target = (p.pixels + direction * step).clamp(0.0, p.maxScrollExtent);
+    final target = (position.pixels + direction * step).clamp(
+      0.0,
+      position.maxScrollExtent,
+    );
     _scroll.animateTo(
       target,
       duration: const Duration(milliseconds: 280),

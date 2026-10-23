@@ -15,7 +15,7 @@ import '../application/installed_effects_controller.dart';
 import '../application/lighting_controller.dart';
 import '../application/html_effect_runner.dart';
 import '../domain/effect_compat.dart';
-import '../domain/effect_meta.dart';
+import '../domain/effect_property_param.dart';
 import '../domain/hardware_equivalents.dart';
 import '../domain/installed_effect.dart';
 import '../domain/lighting_config.dart';
@@ -33,21 +33,21 @@ class EffectPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cfg = ref.watch(lightingProvider);
-    final effect = nativeEffectById(cfg.effectId);
+    final config = ref.watch(lightingProvider);
+    final effect = nativeEffectById(config.effectId);
     final strings = context.strings;
     final l = strings.lighting;
     if (effect == null) {
-      if (htmlEffectSlugOf(cfg.effectId) == null) {
+      if (htmlEffectSlugOf(config.effectId) == null) {
         return WeCard(flat: true, title: l.effect, child: Text(l.noControls));
       }
-      return _HtmlEffectPanel(effectId: cfg.effectId);
+      return _HtmlEffectPanel(effectId: config.effectId);
     }
-    final values = cfg.effectValuesFor()!;
+    final values = config.effectValuesFor()!;
     void set(String key, Object v) => ref
         .read(lightingProvider.notifier)
         .update((c) => c.withEffectValue(effect.id, key, v));
-    final fixedSpeed = firmwareSpeedFixed(cfg);
+    final fixedSpeed = firmwareSpeedFixed(config);
 
     return WeCard(
       flat: true,
@@ -55,15 +55,15 @@ class EffectPanel extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final p in effect.params)
+          for (final param in effect.params)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: _ParamControl(
-                key: ValueKey('param-${p.id}'),
-                param: p,
+                key: ValueKey('param-${param.id}'),
+                param: param,
                 values: values,
-                enabled: !(fixedSpeed && p.id == 'speed'),
-                onChanged: (v) => set(p.id, v),
+                enabled: !(fixedSpeed && param.id == 'speed'),
+                onChanged: (v) => set(param.id, v),
               ),
             ),
           if (fixedSpeed)
@@ -189,103 +189,51 @@ class _HtmlEffectControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cfg = ref.watch(lightingProvider);
-    final raw = cfg.effectValues[cfg.effectId] ?? const <String, Object?>{};
-    final params = [for (final p in effect.source.properties) ?_paramOf(p)];
+    final config = ref.watch(lightingProvider);
+    final raw =
+        config.effectValues[config.effectId] ?? const <String, Object?>{};
+    final params = [
+      for (final property in effect.source.properties) ?property.toParam(),
+    ];
     final values = EffectValues(params, raw);
     void set(String key, Object v) => ref
         .read(lightingProvider.notifier)
-        .update((c) => c.withEffectValue(cfg.effectId, key, v));
+        .update((c) => c.withEffectValue(config.effectId, key, v));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final p in params)
+        for (final param in params)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: _ParamControl(
-              key: ValueKey('param-${p.id}'),
-              param: p,
+              key: ValueKey('param-${param.id}'),
+              param: param,
               values: values,
-              onChanged: (v) => set(p.id, v),
+              onChanged: (v) => set(param.id, v),
             ),
           ),
-        for (final p in effect.source.properties)
-          if (p.type == 'textfield' || p.type == 'sensor')
+        for (final property in effect.source.properties)
+          if (property.type == 'textfield' || property.type == 'sensor')
             Padding(
-              key: ValueKey('param-${p.name}'),
+              key: ValueKey('param-${property.name}'),
               padding: const EdgeInsets.only(bottom: 8),
               child: PanelRow(
-                label: p.label ?? p.name,
+                label: property.label ?? property.name,
                 control: SizedBox(
                   width: 150,
                   child: TextFormField(
-                    initialValue: raw[p.name] is String
-                        ? raw[p.name] as String
-                        : '${p.initialValue ?? ''}',
+                    initialValue: raw[property.name] is String
+                        ? raw[property.name] as String
+                        : '${property.initialValue ?? ''}',
                     decoration: const InputDecoration(isDense: true),
-                    onFieldSubmitted: (v) => set(p.name, v),
+                    onFieldSubmitted: (v) => set(property.name, v),
                   ),
                 ),
               ),
             ),
       ],
     );
-  }
-}
-
-/// `EffectProperty` → the control declaration the panel already draws.
-EffectParam? _paramOf(EffectProperty property) {
-  switch (property.type) {
-    case 'number':
-      final minimum = (property.min ?? 0).toDouble();
-      final maximum = (property.max ?? 100).toDouble();
-      final maximumOrMinimum = maximum <= minimum ? minimum + 1 : maximum;
-      final defaultValue = property.initialValue is num
-          ? (property.initialValue as num).toDouble()
-          : minimum;
-      return EffectParam.number(
-        property.name,
-        property.label ?? property.name,
-        min: minimum,
-        max: maximumOrMinimum,
-        defaultValue: defaultValue.clamp(minimum, maximumOrMinimum),
-      );
-    case 'hue':
-      final defaultValue = property.initialValue is num
-          ? (property.initialValue as num).toDouble()
-          : 0.0;
-      return EffectParam.hue(
-        property.name,
-        property.label ?? property.name,
-        defaultValue: defaultValue,
-      );
-    case 'color':
-      final defaultValue = property.resolve(null);
-      return EffectParam.color(
-        property.name,
-        property.label ?? property.name,
-        defaultValue: defaultValue is String ? defaultValue : '#FFFFFF',
-      );
-    case 'boolean':
-      return EffectParam.boolean(
-        property.name,
-        property.label ?? property.name,
-        defaultValue: property.resolve(null) == true,
-      );
-    case 'combobox':
-      final options = property.values;
-      final defaultValue = property.resolve(null);
-      return EffectParam.combobox(
-        property.name,
-        property.label ?? property.name,
-        options: options,
-        defaultValue: defaultValue is String && options.contains(defaultValue)
-            ? defaultValue
-            : (options.isEmpty ? '' : options.first),
-      );
-    default:
-      return null;
   }
 }
 
@@ -304,23 +252,22 @@ class _ParamControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final declaration = param;
     final strings = context.strings;
-    final label = paramLabel(strings, declaration.id, declaration.label);
-    switch (declaration.type) {
+    final label = paramLabel(strings, param.id, param.label);
+    switch (param.type) {
       case EffectParamType.number:
-        final value = values.number(declaration.id);
+        final value = values.number(param.id);
         return PanelSlider(
           label: label,
           valueText: value.round().toString(),
           value: value,
-          min: declaration.min!,
-          max: declaration.max!,
+          min: param.min!,
+          max: param.max!,
           enabled: enabled,
           onChanged: onChanged,
         );
       case EffectParamType.hue:
-        final value = values.number(declaration.id);
+        final value = values.number(param.id);
         return PanelSlider(
           label: label,
           valueText: '${value.round()}°',
@@ -334,7 +281,7 @@ class _ParamControl extends StatelessWidget {
         return PanelRow(
           label: label,
           control: ColorSwatchButton(
-            color: values.color(declaration.id),
+            color: values.color(param.id),
             onChanged: (c) => onChanged(c.toHex()),
           ),
         );
@@ -342,7 +289,7 @@ class _ParamControl extends StatelessWidget {
         return PanelRow(
           label: label,
           control: Switch(
-            value: values.boolean(declaration.id),
+            value: values.boolean(param.id),
             onChanged: onChanged,
           ),
         );
@@ -350,8 +297,8 @@ class _ParamControl extends StatelessWidget {
         return PanelRow(
           label: label,
           control: PanelDropdown<String>(
-            value: values.option(declaration.id),
-            items: declaration.options,
+            value: values.option(param.id),
+            items: param.options,
             labelOf: (s) => strings.lighting.optionLabel(s),
             onChanged: onChanged,
           ),
@@ -364,11 +311,12 @@ String _htmlIssue(AppStrings strings, HtmlEffectStatus status) {
   final l = strings.lighting;
   return switch (status.issue) {
     HtmlEffectIssue.loadFailed => l.effectLoadFailed(status.error ?? ''),
-    HtmlEffectIssue.paused => l.effectPaused(
-      int.tryParse(status.issueArgs.isEmpty ? '' : status.issueArgs.first) ?? 0,
-    ),
+    HtmlEffectIssue.paused => l.effectPaused(status.slowFrameMs),
     HtmlEffectIssue.unsupported => l.effectUnsupported(
-      status.issueArgs.join(', '),
+      [
+        for (final feature in status.missingFeatures)
+          effectIssueLabel(strings, feature),
+      ].join(', '),
     ),
     null => '',
   };
