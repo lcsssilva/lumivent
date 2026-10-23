@@ -77,6 +77,15 @@ abstract class Alv2HardwareConfig with _$Alv2HardwareConfig {
   static const defaultColors = _alv2DefaultColors;
 }
 
+extension Alv2HardwareColors on Alv2HardwareConfig {
+  /// Color slot [index] of the mode; slots the config does not hold yet come
+  /// from the factory defaults, cycling when the mode has more colors.
+  Rgb colorAt(int index) => index < colors.length
+      ? colors[index]
+      : Alv2HardwareConfig.defaultColors[index %
+            Alv2HardwareConfig.defaultColors.length];
+}
+
 // ── Motherboard (ITE hardware effects) ─────────────────────────────────────
 
 /// Addressable motherboard zones: IO Shield 1, LED_CPU, and IO Shield 2

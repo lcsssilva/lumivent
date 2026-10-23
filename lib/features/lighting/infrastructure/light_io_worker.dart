@@ -104,6 +104,20 @@ class IoClose extends PriorityIoCommand {
   const IoClose();
 }
 
+/// Whether the reply to [command] reports the Fury slot reasons
+/// (`LightIoReply.ramReasons`).
+bool reportsRamReasons(LightIoCommand command) =>
+    command is IoRam || command is IoRamOff || command is IoInvalidate;
+
+/// Whether the reply to [command] reports the GPU state
+/// (`LightIoReply.gpuReason`), even when the GPU is usable (`null`).
+bool reportsGpuReason(LightIoCommand command) =>
+    command is IoInitGpu ||
+    command is IoGpuStatic ||
+    command is IoGpuEffect ||
+    command is IoGpuOff ||
+    command is IoInvalidate;
+
 class LightIoRequest {
   const LightIoRequest(this.id, this.command);
   final int id;
@@ -179,18 +193,10 @@ class LightIoCore {
         id,
         ok,
         watch.elapsedMicroseconds,
-        ramReasons: switch (command) {
-          IoRam() || IoRamOff() || IoInvalidate() => _reasons(),
-          _ => null,
-        },
-        gpuReason: switch (command) {
-          IoInitGpu() ||
-          IoGpuStatic() ||
-          IoGpuEffect() ||
-          IoGpuOff() ||
-          IoInvalidate() => _gpu?.disabledReason ?? gpuReason,
-          _ => null,
-        },
+        ramReasons: reportsRamReasons(command) ? _reasons() : null,
+        gpuReason: reportsGpuReason(command)
+            ? _gpu?.disabledReason ?? gpuReason
+            : null,
       );
     });
     _chain = reply.then((_) {}, onError: (Object _) {});
