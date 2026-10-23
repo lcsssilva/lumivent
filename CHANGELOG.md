@@ -7,6 +7,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-10-23
+
 ### Changed
 
 - The interface is now bilingual: **English (default)** and **Portuguese**.
@@ -38,6 +40,9 @@ the project uses [Semantic Versioning](https://semver.org/).
 - The GPU "blocked" hint no longer points to a file outside the repository.
 - A configuration import whose write fails is no longer kept in memory, where
   the next saved setting would have written it to disk without notice.
+- Turning ARGB off and on again no longer switches the fans to the hub merge
+  when automatic hardware effects are on: the fans come back with the selected
+  effect, and disabled fan groups stay off.
 
 ## [1.0.0] — 2026-10-21
 
@@ -74,5 +79,6 @@ First public release.
 - The SMART helper is read-only and uses the minimum capabilities required.
 - The udev rules use `uaccess` and do not expose the monitors' DDC buses.
 
-[Unreleased]: https://github.com/lcsssilva/lumivent/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/lcsssilva/lumivent/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/lcsssilva/lumivent/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/lcsssilva/lumivent/releases/tag/v1.0.0

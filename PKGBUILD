@@ -6,7 +6,7 @@
 
 pkgname=lumivent
 # Mantenha pkgver igual ao version: do pubspec.yaml (sem o +build).
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc='Iluminação, controle de fans e monitoramento para Linux'
 url='https://github.com/lcsssilva/lumivent'
