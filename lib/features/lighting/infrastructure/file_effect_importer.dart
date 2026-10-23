@@ -160,15 +160,15 @@ class FileEffectImporter implements EffectImporter {
     void add(Object? id, Object? value) {
       if (id is! String || id.isEmpty || value is! Map) return;
       final tags = <String>[];
-      final type = value['type'];
-      if (type is String && type.isNotEmpty) tags.add(type);
-      final rawTags = value['tags'];
-      if (rawTags is List) {
-        tags.addAll([
-          for (final t in rawTags)
-            if (t is String && t.isNotEmpty && !tags.contains(t)) t,
-        ]);
+      void addTag(Object? raw) {
+        if (raw is! String) return;
+        final tag = raw.trim();
+        if (tag.isNotEmpty && !tags.contains(tag)) tags.add(tag);
       }
+
+      addTag(value['type']);
+      final rawTags = value['tags'];
+      if (rawTags is List) rawTags.forEach(addTag);
       final price = value['price'];
       out[id] = _CatalogEntry(
         paid: value['requires_pro'] == true || (price is num && price > 0),

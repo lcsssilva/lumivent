@@ -31,7 +31,8 @@ class EffectFilter {
 
   bool matches(InstalledEffect effect) {
     if (!_matchesSupport(effect.compatibility.support)) return false;
-    if (tag != null && !effect.tags.contains(tag)) return false;
+    final wantedTag = tag;
+    if (wantedTag != null && !_hasTag(effect, wantedTag)) return false;
     if (publisher != null && effect.publisher != publisher) return false;
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return true;
@@ -39,6 +40,12 @@ class EffectFilter {
         (effect.publisher?.toLowerCase().contains(q) ?? false) ||
         (effect.description?.toLowerCase().contains(q) ?? false) ||
         effect.tags.any((t) => t.toLowerCase().contains(q));
+  }
+
+  /// Tags are compared trimmed, the same way [availableTags] offers them.
+  static bool _hasTag(InstalledEffect effect, String wantedTag) {
+    final wanted = wantedTag.trim();
+    return effect.tags.any((t) => t.trim() == wanted);
   }
 
   bool _matchesSupport(EffectSupport s) => switch (support) {

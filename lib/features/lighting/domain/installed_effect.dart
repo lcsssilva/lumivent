@@ -101,7 +101,7 @@ class EffectMetadata {
       tags: rawTags is List
           ? [
               for (final t in rawTags)
-                if (t is String && t.isNotEmpty) t,
+                if (t is String && t.trim().isNotEmpty) t.trim(),
             ]
           : const [],
     );
