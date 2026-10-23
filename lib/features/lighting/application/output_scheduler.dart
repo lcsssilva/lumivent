@@ -28,7 +28,7 @@ class OutputScheduler {
 
   /// Receives the loop start/stop and tick events for the FPS statistics.
   final LightingStatusReporter status;
-  final void Function(String message) onError;
+  final void Function(String message, StackTrace stack) onError;
 
   final lanes = {
     for (final family in OutputFamily.values) family: OutputLane(),
@@ -83,8 +83,8 @@ class OutputScheduler {
       ]) {
         _pump(family, fromTick: true);
       }
-    } on Object catch (error) {
-      onError('frame: $error');
+    } on Object catch (error, stack) {
+      onError('frame: $error', stack);
     }
     status.updateFps(at);
   }
@@ -103,8 +103,8 @@ class OutputScheduler {
     var sent = false;
     send(family, at)
         .then((value) => sent = value)
-        .catchError((Object error) {
-          onError('${family.name} frame: $error');
+        .catchError((Object error, StackTrace stack) {
+          onError('${family.name} frame: $error', stack);
           return true;
         })
         .whenComplete(() {
@@ -128,8 +128,8 @@ class OutputScheduler {
       lane.timer = Timer(wait, () {
         try {
           _pump(family);
-        } on Object catch (error) {
-          onError('${family.name} frame: $error');
+        } on Object catch (error, stack) {
+          onError('${family.name} frame: $error', stack);
         }
       });
     }

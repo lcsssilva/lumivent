@@ -95,8 +95,8 @@ class FansEngineModule implements EngineModule {
     _busy = true;
     try {
       await _run();
-    } on Object catch (e) {
-      stderr.writeln('fans: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('fans: $e\n$st');
     } finally {
       _busy = false;
     }
@@ -187,8 +187,8 @@ class FansEngineModule implements EngineModule {
     ];
     try {
       await Future.wait(results).timeout(exitDutyTimeout);
-    } on Object catch (e) {
-      stderr.writeln('fans: exit duty: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('fans: exit duty: $e\n$st');
     }
   }
 

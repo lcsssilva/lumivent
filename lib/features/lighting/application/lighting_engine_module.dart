@@ -270,21 +270,25 @@ class LightingEngineModule implements EngineModule {
       _retryTimer = null;
       _hwResendTimer?.cancel();
       _hwResendTimer = null;
-    } on Object catch (e) {
-      _log('timers: $e');
+    } on Object catch (e, st) {
+      _log('timers: $e', st);
     }
     try {
       final watcher = _watcher;
       if (watcher != null) {
-        unawaited(watcher.stop().catchError((Object e) => _log('watcher: $e')));
+        unawaited(
+          watcher.stop().catchError(
+            (Object e, StackTrace st) => _log('watcher: $e', st),
+          ),
+        );
       }
-    } on Object catch (e) {
-      _log('watcher: $e');
+    } on Object catch (e, st) {
+      _log('watcher: $e', st);
     }
     try {
       await _outputs?.close();
-    } on Object catch (e) {
-      _log('outputs: $e');
+    } on Object catch (e, st) {
+      _log('outputs: $e', st);
     }
   }
 
@@ -295,8 +299,8 @@ class LightingEngineModule implements EngineModule {
       if (_stopped) return;
       try {
         await job();
-      } on Object catch (e) {
-        _log('$e');
+      } on Object catch (e, st) {
+        _log('$e', st);
       }
     });
     return _queue = done;
@@ -346,8 +350,8 @@ class LightingEngineModule implements EngineModule {
         beforeShutdown: _powerDown,
       );
       if (_stopped) await watcher.stop();
-    } on Object catch (e) {
-      _log('power watcher: $e');
+    } on Object catch (e, st) {
+      _log('power watcher: $e', st);
     }
   }
 
@@ -358,8 +362,8 @@ class LightingEngineModule implements EngineModule {
       _powerOff = true;
       _syncTimer();
       await _run(_turnOff);
-    } on Object catch (e) {
-      _log('before sleep: $e');
+    } on Object catch (e, st) {
+      _log('before sleep: $e', st);
     }
   }
 
@@ -627,7 +631,7 @@ class LightingEngineModule implements EngineModule {
             }
             if (!_stopped && !_shouldBeOff) _scheduleReconcile();
           })
-          .catchError((Object e) => _log('identify: $e')),
+          .catchError((Object e, StackTrace st) => _log('identify: $e', st)),
     );
   }
 
@@ -684,10 +688,6 @@ class LightingEngineModule implements EngineModule {
   double _seconds(DateTime at) =>
       at.difference(_startedAt).inMicroseconds / 1e6;
 
-  /// Delay of the AL V2 firmware between receiving a canvas frame and showing
-  /// it. Measured on hardware (2026-10-19, `tool/hw_test_fase4.dart sync`):
-  /// with the fans streamed first, the case/board/RAM had to be sent ~150 ms
-  /// after the fan send completed for both to change at the same instant.
   /// How far ahead of "now" a family must be composed. Synchronous outputs
   /// (ITE, RAM) show the colors when the send ends, so the lead is the send
   /// time. The fans show a frame only [fanDisplayLatencyMs] after the whole
@@ -885,5 +885,7 @@ class LightingEngineModule implements EngineModule {
   static double _gpuColorScale(double brightness) =>
       brightness >= 0.1 ? 1.0 : brightness * 10;
 
-  void _log(String message) => stderr.writeln('lighting: $message');
+  /// Logs to stderr; the stack trace follows when the cause has one.
+  void _log(String message, [StackTrace? stack]) =>
+      stderr.writeln('lighting: $message${stack == null ? '' : '\n$stack'}');
 }

@@ -293,8 +293,8 @@ class DeviceLightOutputs implements LightOutputs {
         _gpuReason = gpuReason;
       }
       return reply.ok;
-    } on Object catch (e) {
-      stderr.writeln('lighting: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('lighting: $e\n$st');
       return false;
     }
   }
@@ -317,8 +317,8 @@ class DeviceLightOutputs implements LightOutputs {
     if (_closed) return false;
     try {
       return await op();
-    } on Object catch (e) {
-      stderr.writeln('lighting: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('lighting: $e\n$st');
       return false;
     }
   }
