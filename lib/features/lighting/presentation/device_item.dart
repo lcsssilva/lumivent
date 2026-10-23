@@ -182,5 +182,5 @@ String _outputDetail(AppStrings strings, LightOutputStatus status) {
         ? strings.lighting.unsupported
         : strings.lighting.unavailable;
   }
-  return strings.lighting.outputIssue(issue.index, status.args);
+  return outputIssueLabel(strings, issue, status.args);
 }

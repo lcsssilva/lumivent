@@ -162,8 +162,7 @@ class _SupportLine extends StatelessWidget {
       EffectSupport.unsupported => l.unsupportedEffect,
     };
     final issues = [
-      for (final i in effect.compatibility.issues)
-        l.compatibilityIssue(i.index),
+      for (final i in effect.compatibility.issues) effectIssueLabel(strings, i),
     ];
     return Row(
       children: [

@@ -61,8 +61,16 @@ abstract class ExploreStrings {
     required int errors,
   });
 
-  /// One import error. [kind] is the stable reason; [path] and [error] are data.
-  String importIssue(String kind, String path, {String? error});
+  // Import errors: [path] and [error] are data.
+  String importNotHtmlOrZip(String path);
+  String importNotFound(String path);
+  String importFolderNotFound(String path);
+  String get importChooseWindowsCache;
+  String get importCatalogMissing;
+  String importNoEffectHtml(String path);
+  String importInvalidZip(String path, String error);
+  String get importNoHtmlInZip;
+  String importUnknown(String path, String error);
 }
 
 class ExploreStringsEn extends ExploreStrings {
@@ -176,20 +184,28 @@ class ExploreStringsEn extends ExploreStrings {
   }
 
   @override
-  String importIssue(String kind, String path, {String? error}) =>
-      switch (kind) {
-        'notHtmlOrZip' => '$path: not HTML or ZIP',
-        'notFound' => '$path: not found',
-        'folderNotFound' => '$path: folder not found',
-        'chooseWindowsCache' => 'Choose the Windows effects cache folder.',
-        'catalogMissing' =>
-          'catalog_en.json not found in the cache folder: without it there is '
-              'no way to tell which effects are paid.',
-        'noEffectHtml' => 'No effect.html found in $path.',
-        'invalidZip' => '$path: invalid ZIP. Technical details: $error',
-        'noHtmlInZip' => 'The ZIP has no HTML files.',
-        _ => '$path. Technical details: $error',
-      };
+  String importNotHtmlOrZip(String path) => '$path: not HTML or ZIP';
+  @override
+  String importNotFound(String path) => '$path: not found';
+  @override
+  String importFolderNotFound(String path) => '$path: folder not found';
+  @override
+  String get importChooseWindowsCache =>
+      'Choose the Windows effects cache folder.';
+  @override
+  String get importCatalogMissing =>
+      'catalog_en.json not found in the cache folder: without it there is '
+      'no way to tell which effects are paid.';
+  @override
+  String importNoEffectHtml(String path) => 'No effect.html found in $path.';
+  @override
+  String importInvalidZip(String path, String error) =>
+      '$path: invalid ZIP. Technical details: $error';
+  @override
+  String get importNoHtmlInZip => 'The ZIP has no HTML files.';
+  @override
+  String importUnknown(String path, String error) =>
+      '$path. Technical details: $error';
 }
 
 class ExploreStringsPt extends ExploreStrings {
@@ -305,18 +321,27 @@ class ExploreStringsPt extends ExploreStrings {
   }
 
   @override
-  String importIssue(String kind, String path, {String? error}) =>
-      switch (kind) {
-        'notHtmlOrZip' => '$path: não é HTML nem ZIP',
-        'notFound' => '$path: não encontrado',
-        'folderNotFound' => '$path: pasta não encontrada',
-        'chooseWindowsCache' => 'Escolha a pasta cache de efeitos do Windows.',
-        'catalogMissing' =>
-          'catalog_en.json não encontrado na pasta cache: sem ele não dá para '
-              'saber quais efeitos são pagos.',
-        'noEffectHtml' => 'Nenhum effect.html encontrado em $path.',
-        'invalidZip' => '$path: ZIP inválido. Detalhes técnicos: $error',
-        'noHtmlInZip' => 'O ZIP não tem arquivos HTML.',
-        _ => '$path. Detalhes técnicos: $error',
-      };
+  String importNotHtmlOrZip(String path) => '$path: não é HTML nem ZIP';
+  @override
+  String importNotFound(String path) => '$path: não encontrado';
+  @override
+  String importFolderNotFound(String path) => '$path: pasta não encontrada';
+  @override
+  String get importChooseWindowsCache =>
+      'Escolha a pasta cache de efeitos do Windows.';
+  @override
+  String get importCatalogMissing =>
+      'catalog_en.json não encontrado na pasta cache: sem ele não dá para '
+      'saber quais efeitos são pagos.';
+  @override
+  String importNoEffectHtml(String path) =>
+      'Nenhum effect.html encontrado em $path.';
+  @override
+  String importInvalidZip(String path, String error) =>
+      '$path: ZIP inválido. Detalhes técnicos: $error';
+  @override
+  String get importNoHtmlInZip => 'O ZIP não tem arquivos HTML.';
+  @override
+  String importUnknown(String path, String error) =>
+      '$path. Detalhes técnicos: $error';
 }

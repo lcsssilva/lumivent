@@ -207,52 +207,21 @@ void main() {
       );
     });
 
-    test('every import issue kind is formatted in both catalogs', () {
-      const kinds = [
-        'notHtmlOrZip',
-        'notFound',
-        'folderNotFound',
-        'chooseWindowsCache',
-        'catalogMissing',
-        'noEffectHtml',
-        'invalidZip',
-        'noHtmlInZip',
-      ];
-      for (final kind in kinds) {
-        expect(
-          AppStrings.en.explore.importIssue(kind, 'effect.zip', error: 'bad'),
-          isNotEmpty,
-          reason: 'en $kind',
-        );
-        expect(
-          AppStrings.pt.explore.importIssue(kind, 'effect.zip', error: 'bad'),
-          isNotEmpty,
-          reason: 'pt $kind',
-        );
-      }
-
+    test('import issues interpolate the path and error', () {
       expect(
-        AppStrings.en.explore.importIssue(
-          'invalidZip',
-          'effect.zip',
-          error: 'truncated',
-        ),
+        AppStrings.en.explore.importInvalidZip('effect.zip', 'truncated'),
         'effect.zip: invalid ZIP. Technical details: truncated',
       );
       expect(
-        AppStrings.pt.explore.importIssue(
-          'invalidZip',
-          'effect.zip',
-          error: 'truncated',
-        ),
+        AppStrings.pt.explore.importInvalidZip('effect.zip', 'truncated'),
         'effect.zip: ZIP inválido. Detalhes técnicos: truncated',
       );
       expect(
-        AppStrings.en.explore.importIssue('unknown', 'effect.zip', error: 'x'),
+        AppStrings.en.explore.importUnknown('effect.zip', 'x'),
         'effect.zip. Technical details: x',
       );
       expect(
-        AppStrings.pt.explore.importIssue('unknown', 'effect.zip', error: 'x'),
+        AppStrings.pt.explore.importUnknown('effect.zip', 'x'),
         'effect.zip. Detalhes técnicos: x',
       );
     });

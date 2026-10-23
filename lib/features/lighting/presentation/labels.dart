@@ -2,6 +2,8 @@
 // file only maps domain values to the matching catalog entry.
 
 import '../../../core/i18n/app_strings.dart';
+import '../application/lighting_messages.dart' show LightOutputIssue;
+import '../domain/effect_compat.dart' show EffectIssue;
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 
@@ -40,14 +42,68 @@ String effectLabel(AppStrings strings, String id, String fallback) =>
 String paramLabel(AppStrings strings, String id, String fallback) =>
     strings.lighting.paramLabel(id, fallback);
 
-String boardModeLabel(AppStrings strings, BoardEffectMode m) =>
-    strings.lighting.boardMode(m.index);
+String boardModeLabel(AppStrings strings, BoardEffectMode mode) {
+  final l = strings.lighting;
+  return switch (mode) {
+    BoardEffectMode.static => l.boardModeStatic,
+    BoardEffectMode.pulse => l.boardModePulse,
+    BoardEffectMode.flash => l.boardModeFlash,
+    BoardEffectMode.doubleFlash => l.boardModeDoubleFlash,
+    BoardEffectMode.colorCycle => l.boardModeColorCycle,
+    BoardEffectMode.wave => l.boardModeWave,
+  };
+}
 
 String boardZoneLabel(AppStrings strings, int zone) =>
     strings.lighting.boardZone(zone);
 
-String gpuEffectLabel(AppStrings strings, GpuEffect effect) =>
-    strings.lighting.gpuEffect(effect.index);
+String gpuEffectLabel(AppStrings strings, GpuEffect effect) {
+  final l = strings.lighting;
+  return switch (effect) {
+    GpuEffect.off => l.gpuEffectOff,
+    GpuEffect.staticColor => l.gpuEffectStatic,
+    GpuEffect.pulse => l.gpuEffectBreathing,
+    GpuEffect.flash => l.gpuEffectFlash,
+    GpuEffect.doubleFlash => l.gpuEffectDoubleFlash,
+    GpuEffect.cycle => l.gpuEffectColorCycle,
+    GpuEffect.wave => l.gpuEffectWave,
+    GpuEffect.gradient => l.gpuEffectGradient,
+    GpuEffect.colorShift => l.gpuEffectColorShift,
+    GpuEffect.rainbow => l.gpuEffectRainbow,
+    GpuEffect.tricolor => l.gpuEffectThreeColors,
+    GpuEffect.claws => l.gpuEffectClaws,
+    GpuEffect.dazzle => l.gpuEffectDazzle,
+  };
+}
+
+/// Feature an HTML effect needs that the host does not provide.
+String effectIssueLabel(AppStrings strings, EffectIssue issue) {
+  final l = strings.lighting;
+  return switch (issue) {
+    EffectIssue.capture => l.compatCapture,
+    EffectIssue.pixels => l.compatPixels,
+    EffectIssue.audio => l.compatAudio,
+    EffectIssue.images => l.compatImages,
+    EffectIssue.api => l.compatApi,
+  };
+}
+
+/// Why a device has no output; [args] carries the technical details.
+String outputIssueLabel(
+  AppStrings strings,
+  LightOutputIssue issue,
+  List<String> args,
+) {
+  final l = strings.lighting;
+  return switch (issue) {
+    LightOutputIssue.unsupported => l.outputUnsupported,
+    LightOutputIssue.hub => l.outputHub,
+    LightOutputIssue.ite => l.outputIte,
+    LightOutputIssue.gpu => l.outputGpu(args),
+    LightOutputIssue.ram => l.outputRam,
+    LightOutputIssue.blocked => l.outputBlocked(args),
+  };
+}
 
 /// Readable firmware mode name: `RainbowMorph_Inner` -> `Rainbow Morph`.
 String firmwareModeLabel(String name) {
