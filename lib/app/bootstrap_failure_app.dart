@@ -36,8 +36,8 @@ class _BootstrapFailureAppState extends State<BootstrapFailureApp> {
       await Process.start('xdg-open', [
         widget.configDir.path,
       ], mode: ProcessStartMode.detached);
-    } on Object catch (e) {
-      error = '$e';
+    } on Object catch (failure) {
+      error = '$failure';
     }
     if (!mounted) return;
     setState(() => _openError = error);
