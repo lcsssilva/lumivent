@@ -17,9 +17,10 @@ the project uses [Semantic Versioning](https://semver.org/).
 - The backup taken before a configuration import is now
   `config.json.before-import` (was `config.json.antes-import`), and driver and
   effect-runtime error details are in English.
-- Documentation is now in English and consolidated in the root files (README,
-  CONTRIBUTING, SECURITY, CODE_OF_CONDUCT); the `docs/` folder is no longer
-  published or installed by the package.
+- Documentation is now in English. The README is a short overview that links
+  to the guides under `guide/` (installation, user guide, configuration and
+  troubleshooting), which the package installs in `/usr/share/doc/lumivent/`;
+  the `docs/` folder is no longer published or installed by the package.
 
 ### Added
 
@@ -27,7 +28,7 @@ the project uses [Semantic Versioning](https://semver.org/).
   (`lib/core/i18n/catalogs/`); device statuses and errors cross the engine as
   typed issues and are translated in the presentation layer.
 - Language is part of configuration export/import.
-- User guide for every page of the app in the README.
+- User guide for every page of the app (`guide/user-guide.md`).
 - `test/docs_test.dart`: relative links and anchors in the published Markdown
   files are checked by `flutter test`.
 

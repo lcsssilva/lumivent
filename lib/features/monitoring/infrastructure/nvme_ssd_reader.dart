@@ -15,7 +15,7 @@ import '../domain/ssd_reader.dart';
 const nvmeHelperName = 'lumivent-nvme-smart';
 
 /// Where the helper may be: `$LUMIVENT_NVME_SMART`, the package, or a manual install
-/// (for development, see README.md).
+/// (for development, see CONTRIBUTING.md).
 List<String> nvmeHelperCandidates([Map<String, String>? env]) {
   env ??= Platform.environment;
   return [

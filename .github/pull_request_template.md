@@ -25,7 +25,7 @@ flutter test
 ## Checklist
 
 - [ ] `dart format`, `flutter analyze` and `flutter test` pass.
-- [ ] Behavior changes update the README and `CHANGELOG.md`.
+- [ ] Behavior changes update the documentation (README or `guide/`) and `CHANGELOG.md`.
 - [ ] I did not include third-party proprietary effects, fonts, binaries or other assets.
 - [ ] I did not include decompiled third-party code or local reverse-engineering notes.
 - [ ] The version was bumped with `scripts/bump-version.sh` when the package changes.

@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for reporting. Before continuing, check the
-        [troubleshooting guide](https://github.com/lcsssilva/lumivent#troubleshooting)
+        [troubleshooting guide](https://github.com/lcsssilva/lumivent/blob/main/guide/troubleshooting.md)
         and search the existing issues.
 
         Do not paste personal data, keys, full memory dumps or third-party

@@ -2,7 +2,7 @@
 #
 # O pacote é montado a partir desta árvore de código (source=()); rode
 # `makepkg -si` na raiz do projeto. O Flutter precisa estar no PATH (AUR
-# `flutter-bin` ou `flutter`). Detalhes no README.md.
+# `flutter-bin` ou `flutter`). Detalhes em guide/installation.md.
 
 pkgname=lumivent
 # Mantenha pkgver igual ao version: do pubspec.yaml (sem o +build).
@@ -87,7 +87,7 @@ package() {
     "$pkgdir/usr/lib/lumivent/lumivent-nvme-smart"
 
   # Regras e módulos. O pacote não mexe no bootloader: o
-  # acpi_enforce_resources=lax é documentado no README.
+  # acpi_enforce_resources=lax é documentado em guide/installation.md.
   install -Dm644 "$startdir/packaging/99-lumivent.rules" \
     "$pkgdir/usr/lib/udev/rules.d/99-lumivent.rules"
   install -Dm644 "$startdir/packaging/modprobe-lumivent.conf" \
@@ -108,6 +108,8 @@ package() {
     "$pkgdir/usr/share/doc/lumivent/README.md"
   install -Dm644 "$startdir/CHANGELOG.md" \
     "$pkgdir/usr/share/doc/lumivent/CHANGELOG.md"
+  install -Dm644 -t "$pkgdir/usr/share/doc/lumivent/guide" \
+    "$startdir"/guide/*.md
 
   # Licenças: a do projeto e as dos arquivos de terceiros embutidos no bundle
   # (fonte Inter e o QuickJS da biblioteca nativa do flutter_js).

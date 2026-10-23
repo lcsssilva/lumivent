@@ -20,7 +20,7 @@ Para o SMBus das memórias (PIIX4 0x0B00), acrescente
   sudo grub-mkconfig -o /boot/grub/grub.cfg
 
 Depois de entrar de novo na sessão, confira em Configurações → Permissões e
-sistema. Detalhes: /usr/share/doc/lumivent/README.md.
+sistema. Detalhes: /usr/share/doc/lumivent/guide/installation.md.
 EOF
 }
 

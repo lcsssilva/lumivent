@@ -34,9 +34,25 @@ flutter pub get
 flutter run -d linux
 ```
 
-To install the udev rules and the SMART helper without building the package,
-see [Manual installation](README.md#manual-installation-development-no-package)
-in the README.
+`flutter run -d linux -- --minimized` starts in the tray. The release bundle is
+built with `flutter build linux --release` into
+`build/linux/x64/release/bundle/`.
+
+Without the udev rules installed, devices show as "Sem permissão" (no
+permission). To install the rules and the SMART helper without building the
+package, see
+[Manual installation](guide/installation.md#manual-installation-development-no-package).
+To use the SMART helper without installing it:
+
+```sh
+cc -O2 -Wall -Wextra -Werror -o build/lumivent-nvme-smart tool/lumivent-nvme-smart/lumivent-nvme-smart.c
+LUMIVENT_NVME_SMART=$PWD/build/lumivent-nvme-smart \
+  build/linux/x64/release/bundle/lumivent
+```
+
+Diagnostic variables (`LUMIVENT_FANS_TRACE`, `LUMIVENT_LIGHTING_TRACE` and
+others) are listed in
+[Environment variables](guide/configuration.md#environment-variables).
 
 ## Before opening a pull request
 
@@ -112,15 +128,17 @@ A pull request should:
 - have a single clear goal and a title in the same format;
 - explain **why** the change exists and how it was tested;
 - list the hardware used for testing, when relevant;
-- update the README and `CHANGELOG.md` when behavior changes;
+- update the documentation and `CHANGELOG.md` when behavior changes;
 - not mix broad refactoring with functional fixes.
 
 ## Documentation
 
-- `README.md` is the user and developer reference; keep commands, paths and
-  key names copyable and faithful to the code.
+- `README.md` is a short overview: what the app does, supported hardware, a
+  quick start and links. Detailed material goes in the guides under `guide/`
+  (installation, user guide, configuration, troubleshooting); keep commands,
+  paths and key names copyable and faithful to the code.
 - When you change `config.json`, the `PKGBUILD`, the udev rules or the release
-  flow, update the README in the same pull request.
+  flow, update the matching guide in the same pull request.
 - `test/docs_test.dart` fails if a relative link or anchor in a published
   Markdown file does not resolve.
 
