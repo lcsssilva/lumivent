@@ -1,9 +1,14 @@
-part of 'logind_power_watcher_test.dart';
+import 'dart:async';
 
-class _FakeLogindBus implements LogindBus {
+import 'package:lumivent/features/lighting/infrastructure/inhibitor_lock.dart';
+import 'package:lumivent/features/lighting/infrastructure/logind_bus.dart';
+
+import 'fake_inhibitor_lock.dart';
+
+class FakeLogindBus implements LogindBus {
   final sleep = StreamController<bool>(sync: true);
   final shutdown = StreamController<bool>(sync: true);
-  final locks = <_FakeInhibitorLock>[];
+  final locks = <FakeInhibitorLock>[];
   bool failInhibit = false;
   bool closed = false;
   bool throwOnClose = false;
@@ -20,7 +25,7 @@ class _FakeLogindBus implements LogindBus {
     if (failInhibit) throw StateError('sem logind');
     final hold = holdInhibit;
     if (hold != null) return hold.future;
-    final lock = _FakeInhibitorLock();
+    final lock = FakeInhibitorLock();
     locks.add(lock);
     return lock;
   }

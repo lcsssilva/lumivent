@@ -1,5 +1,5 @@
 import 'rgb.dart';
-import 'native_effects.dart';
+import 'effect_param.dart';
 
 /// Validated parameter values for an effect.
 class EffectValues {

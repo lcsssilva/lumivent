@@ -9,6 +9,7 @@ import 'package:lumivent/features/lighting/application/lighting_engine_module.da
 import 'package:lumivent/features/lighting/application/light_output_state.dart';
 import 'package:lumivent/features/lighting/application/set_argb_off.dart';
 import 'package:lumivent/features/lighting/application/set_lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/gpu_hardware_config.dart';
 import 'package:lumivent/features/lighting/application/set_html_effect_frame.dart';
 import 'package:lumivent/features/lighting/application/identify_fan_group.dart';
 import 'package:lumivent/features/lighting/domain/frame_composer.dart';

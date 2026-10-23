@@ -1,7 +1,10 @@
-part of 'color_picker.dart';
+import 'package:flutter/material.dart';
 
-class _SvPainter extends CustomPainter {
-  _SvPainter(this.h, this.s, this.v);
+import '../../domain/rgb.dart';
+import '../rgb_color.dart';
+
+class ColorSvPainter extends CustomPainter {
+  ColorSvPainter(this.h, this.s, this.v);
   final double h, s, v;
 
   @override
@@ -13,7 +16,7 @@ class _SvPainter extends CustomPainter {
       rect,
       Paint()
         ..shader = LinearGradient(
-          colors: [Colors.white, _c(Rgb.fromHsv(h, 1, 1))],
+          colors: [Colors.white, toColor(Rgb.fromHsv(h, 1, 1))],
         ).createShader(rect),
     );
     canvas.drawRect(
@@ -46,5 +49,5 @@ class _SvPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SvPainter o) => o.h != h || o.s != s || o.v != v;
+  bool shouldRepaint(ColorSvPainter o) => o.h != h || o.s != s || o.v != v;
 }

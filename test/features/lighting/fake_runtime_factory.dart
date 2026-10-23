@@ -1,11 +1,20 @@
-part of 'html_effect_runner_test.dart';
+import 'dart:typed_data';
 
-class _FakeRuntimeFactory implements EffectRuntimeFactory {
-  _FakeRuntimeFactory({this.colors});
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/domain/effect_runtime.dart';
+import 'package:lumivent/features/lighting/domain/effect_frame.dart';
+import 'package:lumivent/features/lighting/domain/effect_runtime_factory.dart';
+import 'package:lumivent/features/lighting/domain/light_device.dart';
+import 'package:lumivent/features/lighting/domain/rgb.dart';
+
+import 'fake_runtime.dart';
+
+class FakeRuntimeFactory implements EffectRuntimeFactory {
+  FakeRuntimeFactory({this.colors});
 
   final Map<LightDeviceId, List<Rgb>>? colors;
   int loads = 0;
-  late _FakeRuntime runtime;
+  late FakeRuntime runtime;
 
   @override
   Future<EffectRuntime> load(
@@ -20,7 +29,7 @@ class _FakeRuntimeFactory implements EffectRuntimeFactory {
       rgba[i + 2] = 90;
       rgba[i + 3] = 255;
     }
-    runtime = _FakeRuntime(EffectFrame(320, 200, rgba), colors);
+    runtime = FakeRuntime(EffectFrame(320, 200, rgba), colors);
     return runtime;
   }
 }

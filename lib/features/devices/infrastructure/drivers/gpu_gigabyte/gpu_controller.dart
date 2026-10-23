@@ -2,6 +2,7 @@ import 'dart:io' as io;
 import 'dart:typed_data';
 
 import '../../../../../core/platform/raw_i2c_bus.dart';
+import '../../../../../core/platform/raw_i2c_exception.dart';
 import '../../../../../core/platform/i2c_transport.dart';
 import '../../../../../core/platform/smbus.dart' show findI2cBusByName;
 import 'protocol.dart';

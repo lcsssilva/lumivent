@@ -1,7 +1,10 @@
-part of 'hardware_device_detector_test.dart';
+import 'package:lumivent/core/platform/hid_api.dart';
+import 'package:lumivent/core/platform/hid_device_info.dart';
 
-class _FakeHidApi implements HidApi {
-  _FakeHidApi(this.devices);
+import 'fake_hid_device.dart';
+
+class FakeHidApi implements HidApi {
+  FakeHidApi(this.devices);
   final List<HidDeviceInfo> devices;
   final opened = <String>[];
 
@@ -14,7 +17,7 @@ class _FakeHidApi implements HidApi {
   @override
   HidDevice openPath(String path) {
     opened.add(path);
-    return _FakeHidDevice();
+    return FakeHidDevice();
   }
 
   @override

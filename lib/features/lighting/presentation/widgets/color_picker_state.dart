@@ -69,7 +69,10 @@ class _ColorPickerState extends State<ColorPicker> {
               key: const ValueKey('picker-sv'),
               onPanDown: (d) => _pickSv(d.localPosition, size),
               onPanUpdate: (d) => _pickSv(d.localPosition, size),
-              child: CustomPaint(size: size, painter: _SvPainter(_h, _s, _v)),
+              child: CustomPaint(
+                size: size,
+                painter: ColorSvPainter(_h, _s, _v),
+              ),
             );
           },
         ),
@@ -81,7 +84,7 @@ class _ColorPickerState extends State<ColorPicker> {
               key: const ValueKey('picker-hue'),
               onPanDown: (d) => _pickHue(d.localPosition, size),
               onPanUpdate: (d) => _pickHue(d.localPosition, size),
-              child: CustomPaint(size: size, painter: _HuePainter(_h)),
+              child: CustomPaint(size: size, painter: ColorHuePainter(_h)),
             );
           },
         ),
@@ -92,7 +95,7 @@ class _ColorPickerState extends State<ColorPicker> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: _c(_rgb),
+                color: toColor(_rgb),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: WeColors.border),
               ),
@@ -138,7 +141,7 @@ class _ColorPickerState extends State<ColorPicker> {
                   width: 24,
                   height: 24,
                   decoration: BoxDecoration(
-                    color: _c(q),
+                    color: toColor(q),
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(color: WeColors.border),
                   ),

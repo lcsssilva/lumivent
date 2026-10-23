@@ -2,7 +2,6 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_command.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_core.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
@@ -10,12 +9,12 @@ import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_port_
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/protocol.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_port_write.dart';
 
-part 'hub_worker_clock.dart';
-part 'hub_worker_transport.dart';
+import 'hub_worker_clock.dart';
+import 'hub_worker_transport.dart';
 
-(Alv2HubProxy, _HubWorkerTransport, _HubWorkerClock) _proxy() {
-  final clock = _HubWorkerClock();
-  final tr = _HubWorkerTransport(clock);
+(Alv2HubProxy, HubWorkerTransport, HubWorkerClock) _proxy() {
+  final clock = HubWorkerClock();
+  final tr = HubWorkerTransport(clock);
   final hub = Alv2Hub.withTransport(
     tr,
     now: clock.now,
@@ -28,8 +27,8 @@ part 'hub_worker_transport.dart';
 void main() {
   group('Alv2HubCore (no isolate)', () {
     test('answers every command and never throws', () async {
-      final clock = _HubWorkerClock();
-      final tr = _HubWorkerTransport(clock);
+      final clock = HubWorkerClock();
+      final tr = HubWorkerTransport(clock);
       final core = Alv2HubCore(
         Alv2Hub.withTransport(
           tr,

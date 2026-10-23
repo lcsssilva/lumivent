@@ -1,7 +1,15 @@
-part of 'effect_panel.dart';
+import 'package:flutter/material.dart';
 
-class _HtmlEffectControls extends StatelessWidget {
-  const _HtmlEffectControls({
+import '../../domain/effect_property_param.dart';
+import '../../domain/installed_effect.dart';
+import '../../domain/lighting_config.dart';
+import '../../domain/effect_values.dart';
+import 'panel_row.dart';
+import 'effect_param_control.dart';
+
+class HtmlEffectControls extends StatelessWidget {
+  const HtmlEffectControls({
+    super.key,
     required this.effect,
     required this.config,
     required this.onEdit,
@@ -28,7 +36,7 @@ class _HtmlEffectControls extends StatelessWidget {
         for (final param in params)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: _ParamControl(
+            child: EffectParamControl(
               key: ValueKey('param-${param.id}'),
               param: param,
               values: values,

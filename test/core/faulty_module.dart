@@ -1,8 +1,12 @@
-part of 'engine_host_test.dart';
+import 'package:lumivent/core/engine/engine_command.dart';
+import 'package:lumivent/core/engine/engine_event.dart';
+import 'package:lumivent/core/engine/engine_module.dart';
+
+import 'boom.dart';
 
 /// Throws on [Boom] in handle, and/or in stop when [throwOnStop] is set.
-class _FaultyModule implements EngineModule {
-  _FaultyModule({this.throwOnStop = false});
+class FaultyModule implements EngineModule {
+  FaultyModule({this.throwOnStop = false});
   final bool throwOnStop;
 
   @override

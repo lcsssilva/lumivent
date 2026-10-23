@@ -18,18 +18,13 @@ import 'engine_stopped.dart';
 import 'engine_module.dart';
 import 'engine_api.dart';
 import 'engine_startup_exception.dart';
-
-part 'engine_ready.dart';
-part 'engine_start_failed.dart';
-part 'engine_bootstrap.dart';
+import 'engine_bootstrap.dart';
+import 'engine_ready.dart';
+import 'engine_start_failed.dart';
 
 /// Longest the engine waits for one module to stop before moving on, so a
 /// stuck worker never blocks the app exit.
 const moduleStopTimeout = Duration(milliseconds: 700);
-
-/// Builds modules inside the engine isolate. Must be a top-level or static
-/// function so it can be sent to the isolate.
-typedef EngineModulesFactory<T> = List<EngineModule> Function(T init);
 
 final engineProvider = Provider<EngineApi>(
   (ref) => throw UnimplementedError('engineProvider'),
@@ -41,9 +36,9 @@ class IsolateEngine implements EngineApi {
   IsolateEngine._(this._rx) {
     _rx.listen((m) {
       switch (m) {
-        case _EngineReady(:final commands):
+        case EngineReady(:final commands):
           _ready.complete(commands);
-        case _EngineStartFailed(:final error, :final stack):
+        case EngineStartFailed(:final error, :final stack):
           _ready.completeError(
             EngineStartupException(error),
             StackTrace.fromString(stack),
@@ -95,7 +90,7 @@ class IsolateEngine implements EngineApi {
     final e = IsolateEngine._(ReceivePort('lumivent-engine'));
     e._isolate = await Isolate.spawn(
       _engineMain<T>,
-      _EngineBootstrap<T>(e._rx.sendPort, factory, init),
+      EngineBootstrap<T>(e._rx.sendPort, factory, init),
       debugName: 'lumivent-engine',
       errorsAreFatal: false,
       onError: e._rx.sendPort,
@@ -133,7 +128,7 @@ class IsolateEngine implements EngineApi {
 
 // ── Engine side ────────────────────────────────────────────────────────────
 
-Future<void> _engineMain<T>(_EngineBootstrap<T> boot) async {
+Future<void> _engineMain<T>(EngineBootstrap<T> boot) async {
   final rx = ReceivePort('lumivent-engine-commands');
   // Ready is announced only after every module started: a failure here must
   // reach the UI as a startup error, not leave an engine that drops commands.
@@ -148,11 +143,11 @@ Future<void> _engineMain<T>(_EngineBootstrap<T> boot) async {
   } catch (e, s) {
     stderr.writeln('engine: startup failed: $e\n$s');
     await _stopAll(modules);
-    boot.events.send(_EngineStartFailed('$e', '$s'));
+    boot.events.send(EngineStartFailed('$e', '$s'));
     rx.close();
     return;
   }
-  boot.events.send(_EngineReady(rx.sendPort));
+  boot.events.send(EngineReady(rx.sendPort));
   await for (final cmd in rx) {
     if (cmd is ShutdownEngine) {
       await _stopAll(modules);

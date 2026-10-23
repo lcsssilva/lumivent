@@ -9,6 +9,8 @@ import '../domain/led_layout.dart';
 import '../domain/canvas_rect.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
+import '../domain/alv2_hardware_config.dart';
+import '../domain/gpu_hardware_config.dart';
 import '../domain/board_zone_config.dart';
 import '../domain/device_light_config.dart';
 import '../domain/native_effects.dart';

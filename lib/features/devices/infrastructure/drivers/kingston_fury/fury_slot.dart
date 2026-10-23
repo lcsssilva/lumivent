@@ -1,7 +1,7 @@
-part of 'fury_controller.dart';
+enum FurySlotMode { none, direct, single }
 
-class _FurySlot {
-  _Mode mode = _Mode.none;
+class FurySlot {
+  FurySlotMode mode = FurySlotMode.none;
   bool ready = false; // guard + identity completed during this opening
   String? disabledReason; // permanent for this session
   List<int>? cache; // last 36 bytes sent

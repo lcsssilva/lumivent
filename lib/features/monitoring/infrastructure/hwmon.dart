@@ -1,8 +1,6 @@
-part of 'sysfs_sensor_source.dart';
-
 /// An hwmon chip (`/sys/class/hwmon/hwmonN`).
-class _Hwmon {
-  _Hwmon(this.name, this.path, this.device);
+class Hwmon {
+  Hwmon(this.name, this.path, this.device);
   final String name;
   final String path;
 

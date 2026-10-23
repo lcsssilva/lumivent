@@ -8,24 +8,20 @@
 
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show Listenable, ValueListenable;
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 
-import '../../../../core/ui/we_colors.dart';
 import '../../domain/led_layout.dart';
 import '../../domain/canvas_rect.dart';
 import '../../domain/light_device.dart';
 import '../../domain/effect_frame.dart';
 import '../../domain/lighting_config.dart';
-import '../../domain/native_effects.dart';
-import '../../domain/rgb.dart';
+import '../on_canvas.dart';
+import 'led_canvas_painter.dart';
 
 part 'led_canvas_state.dart';
-part 'led_canvas_painter.dart';
 
-const _previewCols = 80;
-const _previewRows = 50;
 const _handlePx = 14.0;
 const _minW = 10.0, _minH = 6.0;
 
@@ -33,19 +29,6 @@ const _minW = 10.0, _minH = 6.0;
 /// when it is below [min] the result is [room] (never throws).
 double resizeExtent(double size, double delta, double min, double room) =>
     (size + delta).clamp(math.min(min, room), room).toDouble();
-
-/// Devices that appear on the canvas.
-///
-/// The GPU has no addressable LEDs but still has an area: its whole rectangle
-/// is sampled for the average color, so the rectangle must stay visible and
-/// draggable.
-bool onCanvas(LightingConfig cfg, LightDeviceId id) {
-  final d = cfg.device(id);
-  final hasArea =
-      id == LightDeviceId.gpu ||
-      ledLayoutFor(id, fanQuantity: cfg.fansOf(id)).length > 0;
-  return id.isSupported && d.enabled && d.mode != LightMode.hardware && hasArea;
-}
 
 class LedCanvas extends StatefulWidget {
   const LedCanvas({

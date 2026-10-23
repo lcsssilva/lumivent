@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'we_colors.dart';
-
-part 'sparkline_painter.dart';
+import 'sparkline_painter.dart';
 
 /// Minimal line chart for short histories. The newest reading is at the right
 /// edge; with fewer than [capacity] points the beginning is empty, and `null`
@@ -31,7 +30,7 @@ class Sparkline extends StatelessWidget {
     height: height,
     width: double.infinity,
     child: CustomPaint(
-      painter: _SparklinePainter(values, capacity, color, min, max),
+      painter: SparklinePainter(values, capacity, color, min, max),
     ),
   );
 }

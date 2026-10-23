@@ -13,33 +13,10 @@ import 'effect_values.dart';
 import 'rgb.dart';
 import 'board_zone_config.dart';
 import 'device_light_config.dart';
+import 'alv2_hardware_config.dart';
+import 'gpu_hardware_config.dart';
 
 part 'lighting_config.freezed.dart';
-
-part 'alv2_hardware_config.dart';
-part 'gpu_hardware_config.dart';
-
-// Top-level constants are usable from the generated part; static members are
-// not inherited by the generated implementation class.
-const _alv2DefaultColors = [
-  Rgb(255, 0, 0),
-  Rgb(0, 0, 255),
-  Rgb(0, 255, 0),
-  Rgb(255, 255, 0),
-  Rgb(255, 128, 0),
-  Rgb(0, 255, 255),
-];
-
-const _gpuDefaultColors = [
-  Rgb(255, 0, 0),
-  Rgb(255, 128, 0),
-  Rgb(255, 255, 0),
-  Rgb(0, 255, 0),
-  Rgb(0, 255, 255),
-  Rgb(0, 0, 255),
-  Rgb(160, 0, 255),
-  Rgb(255, 255, 255),
-];
 
 const _defaultFanQuantity = [0, 3, 3, 1];
 const _defaultMergeOrder = [0, 1, 2, 3];

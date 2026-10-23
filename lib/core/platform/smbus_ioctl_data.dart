@@ -1,6 +1,6 @@
-part of 'smbus.dart';
+import 'dart:ffi';
 
-final class _SmbusIoctlData extends Struct {
+final class SmbusIoctlData extends Struct {
   @Uint8()
   external int readWrite;
   @Uint8()

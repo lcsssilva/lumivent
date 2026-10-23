@@ -1,7 +1,11 @@
-part of 'html_effect_runner_test.dart';
+import 'dart:typed_data';
 
-class _RunnerEffectLibrary implements EffectLibrary {
-  _RunnerEffectLibrary(this.effect);
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/domain/effect_library.dart';
+import 'package:lumivent/features/lighting/domain/installed_effect.dart';
+
+class RunnerEffectLibrary implements EffectLibrary {
+  RunnerEffectLibrary(this.effect);
   final InstalledEffect effect;
 
   @override

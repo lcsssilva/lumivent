@@ -1,10 +1,16 @@
-part of 'async_action_test.dart';
+import 'dart:async';
 
-class _Probe extends StatefulWidget {
-  const _Probe({super.key, required this.body});
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/core/ui/async_action.dart';
+
+part 'probe_state.dart';
+
+class Probe extends StatefulWidget {
+  const Probe({super.key, required this.body});
 
   final Future<void> Function() body;
 
   @override
-  State<_Probe> createState() => _ProbeState();
+  State<Probe> createState() => ProbeState();
 }

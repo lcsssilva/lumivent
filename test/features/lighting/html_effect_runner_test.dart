@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
@@ -9,25 +7,18 @@ import 'package:lumivent/features/lighting/application/set_html_effect_frame.dar
 import 'package:lumivent/features/lighting/application/html_effect_runner.dart';
 import 'package:lumivent/features/lighting/application/html_effect_status.dart';
 import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
-import 'package:lumivent/features/lighting/domain/effect_library.dart';
 import 'package:lumivent/features/lighting/domain/effect_source.dart';
-import 'package:lumivent/features/lighting/domain/effect_runtime.dart';
-import 'package:lumivent/features/lighting/domain/effect_frame.dart';
-import 'package:lumivent/features/lighting/domain/effect_runtime_factory.dart';
 import 'package:lumivent/features/lighting/domain/installed_effect.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config_repository.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
 
 import '../../fake_engine.dart';
 import '../../support/memory_preferences_repository.dart';
-
-part 'runner_effect_library.dart';
-part 'runner_lighting_repository.dart';
-part 'fake_runtime.dart';
-part 'fake_runtime_factory.dart';
+import 'fake_runtime_factory.dart';
+import 'runner_effect_library.dart';
+import 'runner_lighting_repository.dart';
 
 void main() {
   testWidgets('renders the installed effect and sends sampled colors', (
@@ -44,8 +35,8 @@ void main() {
       ),
       compatibility: const EffectCompatibility(EffectSupport.compatible, []),
     );
-    final repo = _RunnerLightingRepository();
-    final factory = _FakeRuntimeFactory();
+    final repo = RunnerLightingRepository();
+    final factory = FakeRuntimeFactory();
     final container = ProviderContainer(
       overrides: [
         engineProvider.overrideWithValue(engine),
@@ -53,7 +44,7 @@ void main() {
         preferencesRepositoryProvider.overrideWithValue(
           MemoryPreferencesRepository(),
         ),
-        effectLibraryProvider.overrideWithValue(_RunnerEffectLibrary(effect)),
+        effectLibraryProvider.overrideWithValue(RunnerEffectLibrary(effect)),
         effectRuntimeFactoryProvider.overrideWithValue(factory),
       ],
     );
@@ -109,17 +100,17 @@ void main() {
     const sampled = {
       LightDeviceId.ram1: [Rgb(1, 2, 3)],
     };
-    final factory = _FakeRuntimeFactory(colors: sampled);
+    final factory = FakeRuntimeFactory(colors: sampled);
     final container = ProviderContainer(
       overrides: [
         engineProvider.overrideWithValue(engine),
         lightingRepositoryProvider.overrideWithValue(
-          _RunnerLightingRepository(),
+          RunnerLightingRepository(),
         ),
         preferencesRepositoryProvider.overrideWithValue(
           MemoryPreferencesRepository(),
         ),
-        effectLibraryProvider.overrideWithValue(_RunnerEffectLibrary(effect)),
+        effectLibraryProvider.overrideWithValue(RunnerEffectLibrary(effect)),
         effectRuntimeFactoryProvider.overrideWithValue(factory),
       ],
     );

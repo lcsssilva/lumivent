@@ -10,7 +10,7 @@ import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_wo
 import 'package:lumivent/features/lighting/infrastructure/html_effects/quickjs_effect.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_script_exception.dart';
 
-part 'fake_stopwatch.dart';
+import 'fake_stopwatch.dart';
 
 /// `flutter test` only has the native QuickJS library when the Linux bundle was
 /// built and `LD_LIBRARY_PATH` points at it (same requirement as the runtime
@@ -208,12 +208,12 @@ ctx.fillStyle = "red";
     const stall = Duration(seconds: 2);
 
     late ReceivePort port;
-    late _FakeStopwatch stopwatch;
+    late FakeStopwatch stopwatch;
     late EffectWorkerConnection connection;
 
     setUp(() {
       port = ReceivePort();
-      stopwatch = _FakeStopwatch();
+      stopwatch = FakeStopwatch();
       connection = EffectWorkerConnection.withPort(
         port.sendPort,
         stopwatch: () => stopwatch,

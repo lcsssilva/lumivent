@@ -1,6 +1,9 @@
-part of 'logind_power_watcher_test.dart';
+import 'dart:async';
 
-class _FakeInhibitorLock implements InhibitorLock {
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/infrastructure/inhibitor_lock.dart';
+
+class FakeInhibitorLock implements InhibitorLock {
   bool released = false;
   bool throwOnRelease = false;
   @override

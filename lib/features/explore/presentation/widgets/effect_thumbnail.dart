@@ -1,7 +1,11 @@
-part of 'effect_card.dart';
+import 'dart:typed_data';
 
-class _EffectThumbnail extends StatelessWidget {
-  const _EffectThumbnail({required this.effect, required this.bytes});
+import 'package:flutter/material.dart';
+
+import '../../../lighting/lighting.dart';
+
+class EffectThumbnail extends StatelessWidget {
+  const EffectThumbnail({super.key, required this.effect, required this.bytes});
   final InstalledEffect effect;
   final Future<Uint8List?>? bytes;
 

@@ -1,8 +1,12 @@
-part of 'fan_curve_editor.dart';
+import 'dart:math' as math;
+
+import 'package:flutter/material.dart';
+
+import '../../domain/fan_point.dart';
 
 /// Chart area geometry inside the widget.
-class _FanCurvePlot {
-  _FanCurvePlot(Size size)
+class FanCurvePlot {
+  FanCurvePlot(Size size)
     : rect = Rect.fromLTRB(
         44,
         26,

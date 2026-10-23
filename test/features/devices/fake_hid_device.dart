@@ -1,6 +1,8 @@
-part of 'hardware_device_detector_test.dart';
+import 'dart:typed_data';
 
-class _FakeHidDevice implements HidDevice {
+import 'package:lumivent/core/platform/hid_api.dart';
+
+class FakeHidDevice implements HidDevice {
   @override
   void sendFeature(List<int> data, int length) {}
   @override

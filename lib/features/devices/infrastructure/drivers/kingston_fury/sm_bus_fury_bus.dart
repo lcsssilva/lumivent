@@ -1,4 +1,5 @@
 import '../../../../../core/platform/smbus.dart';
+import '../../../../../core/platform/smbus_exception.dart';
 import 'protocol.dart';
 import 'fury_bus.dart';
 

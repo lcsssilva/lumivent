@@ -4,7 +4,7 @@ class HidDevice {
   HidDevice._(this._api, this._dev, this.path);
 
   final HidApi _api;
-  final Pointer<_HidDeviceHandle> _dev;
+  final Pointer<HidDeviceHandle> _dev;
   final String path;
   bool _closed = false;
 

@@ -1,5 +1,3 @@
-part of 'hid_api.dart';
-
 class HidDeviceInfo {
   HidDeviceInfo({
     required this.path,
@@ -22,3 +20,5 @@ class HidDeviceInfo {
       '$path ${_hex16(vendorId)}:${_hex16(productId)} if=$interfaceNumber '
       'usage=${_hex16(usagePage)}/${_hex16(usage)} "$product"';
 }
+
+String _hex16(int v) => v.toRadixString(16).padLeft(4, '0');

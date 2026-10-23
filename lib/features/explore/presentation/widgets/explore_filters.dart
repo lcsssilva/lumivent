@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
-import '../../../../core/ui/we_colors.dart';
-import '../../../../core/ui/we_sizes.dart';
 import '../../application/effect_filter.dart';
-
-part 'explore_dropdown.dart';
+import 'explore_dropdown.dart';
 
 /// Search, support filter and metadata filters of the Explore grid.
 class ExploreFilters extends StatelessWidget {
@@ -75,7 +72,7 @@ class ExploreFilters extends StatelessWidget {
             onSelected: (_) => onSupport(option.$1),
           ),
         if (tags.isNotEmpty)
-          _ExploreDropdown(
+          ExploreDropdown(
             key: const Key('filter-tag'),
             value: tag,
             hint: explore.allCategories,
@@ -83,7 +80,7 @@ class ExploreFilters extends StatelessWidget {
             onChanged: onTag,
           ),
         if (publishers.isNotEmpty)
-          _ExploreDropdown(
+          ExploreDropdown(
             key: const Key('filter-publisher'),
             value: publisher,
             hint: explore.allPublishers,

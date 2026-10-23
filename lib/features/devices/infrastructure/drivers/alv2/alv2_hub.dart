@@ -5,7 +5,6 @@
 // firmware commands. Runs in its own worker isolate (`isolate_alv2_hub_link.dart`).
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import '../../../../../core/platform/hid_api.dart';
 import '../../../../../core/platform/hid_exception.dart';
@@ -13,8 +12,7 @@ import 'protocol.dart';
 import 'alv2_packet.dart';
 import 'alv2_port_write.dart';
 import 'alv2_transport.dart';
-
-part 'alv2_hid_transport.dart';
+import 'alv2_hid_transport.dart';
 
 class Alv2Hub {
   Alv2Hub(
@@ -308,7 +306,7 @@ class Alv2Hub {
         .firstOrNull;
     try {
       if (target != null) {
-        return _dev = _Alv2HidTransport(hid.openPath(target.path));
+        return _dev = Alv2HidTransport(hid.openPath(target.path));
       }
     } on HidException {
       // permission denied or disconnected midway: retry later

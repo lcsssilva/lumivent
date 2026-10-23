@@ -2,7 +2,7 @@
 // control declarations the lighting panel draws (pure Dart).
 
 import 'effect_property.dart';
-import 'native_effects.dart';
+import 'effect_param.dart';
 
 extension EffectPropertyParam on EffectProperty {
   /// The control declaration for this property, or null when the type has no

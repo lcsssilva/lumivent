@@ -1,5 +1,6 @@
 import 'rgb.dart';
 import 'native_effects.dart';
+import 'effect_param.dart';
 import 'effect_values.dart';
 
 /// Native effect: [colorAt] returns the LED color in (x, y) of the canvas

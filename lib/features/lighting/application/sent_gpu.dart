@@ -1,7 +1,7 @@
-part of 'lighting_frame_deduplicator.dart';
+import '../domain/rgb.dart';
 
-class _SentGpu {
-  const _SentGpu(this.color, this.brightness, this.at);
+class SentGpu {
+  const SentGpu(this.color, this.brightness, this.at);
 
   final Rgb color;
   final int brightness;

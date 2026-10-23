@@ -1,7 +1,15 @@
-part of 'devices_card.dart';
+import 'package:flutter/material.dart';
 
-class _DeviceRow extends StatelessWidget {
-  const _DeviceRow(this.device);
+import '../../../../core/i18n/app_strings_scope.dart';
+import '../../../../core/ui/we_colors.dart';
+import '../../../../core/ui/we_sizes.dart';
+import '../../../../core/ui/status_pill.dart';
+import '../../domain/device.dart';
+import '../../domain/device_info.dart';
+import '../device_status_ui.dart';
+
+class DeviceRow extends StatelessWidget {
+  const DeviceRow(this.device, {super.key});
   final DeviceInfo device;
 
   @override

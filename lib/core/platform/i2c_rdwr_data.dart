@@ -1,7 +1,9 @@
-part of 'raw_i2c_bus.dart';
+import 'dart:ffi';
 
-final class _I2cRdwrData extends Struct {
-  external Pointer<_I2cMsg> msgs;
+import 'i2c_msg.dart';
+
+final class I2cRdwrData extends Struct {
+  external Pointer<I2cMsg> msgs;
 
   @Uint32()
   external int nmsgs;

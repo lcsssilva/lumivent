@@ -1,7 +1,12 @@
-part of 'light_io_worker_test.dart';
+import 'dart:async';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io_command.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io_reply.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io_client.dart';
 
 /// Records the requests; answers `ok` immediately.
-class _RecordingIo implements LightIoClient {
+class RecordingIo implements LightIoClient {
   final commands = <LightIoCommand>[];
   bool disposed = false;
   @override

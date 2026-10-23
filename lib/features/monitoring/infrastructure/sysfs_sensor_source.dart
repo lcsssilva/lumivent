@@ -5,8 +5,7 @@ import 'dart:io';
 
 import '../domain/metrics.dart';
 import '../domain/sensor_source.dart';
-
-part 'hwmon.dart';
+import 'hwmon.dart';
 
 class SysfsSensorSource implements SensorSource {
   SysfsSensorSource({
@@ -22,7 +21,7 @@ class SysfsSensorSource implements SensorSource {
   /// loaded while the app is open).
   final int rescanEvery;
 
-  List<_Hwmon> _hwmons = const [];
+  List<Hwmon> _hwmons = const [];
   int _reads = 0;
   ({int idle, int total})? _lastCpu;
 
@@ -30,8 +29,8 @@ class SysfsSensorSource implements SensorSource {
   Map<String, double> read() {
     if (_reads++ % rescanEvery == 0) _hwmons = _scanHwmon();
     final out = <String, double>{};
-    final dimms = <_Hwmon>[];
-    _Hwmon? gpu;
+    final dimms = <Hwmon>[];
+    Hwmon? gpu;
     for (final hw in _hwmons) {
       switch (hw.name) {
         case 'k10temp':
@@ -69,10 +68,10 @@ class SysfsSensorSource implements SensorSource {
   @override
   void dispose() {}
 
-  List<_Hwmon> _scanHwmon() {
+  List<Hwmon> _scanHwmon() {
     final dir = Directory('$sysfsRoot/class/hwmon');
     if (!dir.existsSync()) return const [];
-    final out = <_Hwmon>[];
+    final out = <Hwmon>[];
     for (final e in dir.listSync()) {
       final name = _str('${e.path}/name');
       if (name == null) continue;
@@ -82,13 +81,13 @@ class SysfsSensorSource implements SensorSource {
       } on FileSystemException {
         device = '';
       }
-      out.add(_Hwmon(name, e.path, device));
+      out.add(Hwmon(name, e.path, device));
     }
     out.sort((a, b) => a.path.compareTo(b.path));
     return out;
   }
 
-  void _readCpuTemps(_Hwmon hw, Map<String, double> out) {
+  void _readCpuTemps(Hwmon hw, Map<String, double> out) {
     for (final (label, t) in _labeledTemps(hw)) {
       switch (label) {
         case 'Tctl':
@@ -99,10 +98,10 @@ class SysfsSensorSource implements SensorSource {
     }
   }
 
-  double _vramTotal(_Hwmon hw) =>
+  double _vramTotal(Hwmon hw) =>
       _num('${hw.path}/device/mem_info_vram_total') ?? 0;
 
-  void _readGpu(_Hwmon hw, Map<String, double> out) {
+  void _readGpu(Hwmon hw, Map<String, double> out) {
     for (final (label, t) in _labeledTemps(hw)) {
       final id = switch (label) {
         'edge' => Metrics.gpuEdge,
@@ -133,7 +132,7 @@ class SysfsSensorSource implements SensorSource {
   /// Super I/O: fixed indexes (it87 provides no labels). −55 °C or 127 °C =
   /// input without a sensor.
   void _readBoard(
-    _Hwmon hw,
+    Hwmon hw,
     Map<String, double> out, {
     required int tempOffset,
     required int temps,
@@ -153,7 +152,7 @@ class SysfsSensorSource implements SensorSource {
   }
 
   /// `(label, °C)` for each `tempN_input` with `tempN_label`.
-  Iterable<(String, double)> _labeledTemps(_Hwmon hw) sync* {
+  Iterable<(String, double)> _labeledTemps(Hwmon hw) sync* {
     for (var i = 1; i <= 8; i++) {
       final label = _str('${hw.path}/temp${i}_label');
       if (label == null) continue;

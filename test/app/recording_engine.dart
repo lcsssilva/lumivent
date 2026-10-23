@@ -1,7 +1,9 @@
-part of 'bootstrap_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 
-class _RecordingEngine extends FakeEngine {
-  _RecordingEngine(this.order);
+import '../fake_engine.dart';
+
+class RecordingEngine extends FakeEngine {
+  RecordingEngine(this.order);
   final List<String> order;
 
   @override

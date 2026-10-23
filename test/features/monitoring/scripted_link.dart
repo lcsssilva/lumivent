@@ -1,7 +1,12 @@
-part of 'monitoring_engine_test.dart';
+import 'dart:async';
 
-class _ScriptedLink implements Alv2HubLink {
-  _ScriptedLink(this.replies);
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_command.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_reply.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_link.dart';
+
+class ScriptedLink implements Alv2HubLink {
+  ScriptedLink(this.replies);
 
   /// Each entry is a reply, or an error to throw.
   final List<Object> replies;

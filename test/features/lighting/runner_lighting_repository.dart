@@ -1,6 +1,8 @@
-part of 'html_effect_runner_test.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/lighting_config_repository.dart';
 
-class _RunnerLightingRepository implements LightingConfigRepository {
+class RunnerLightingRepository implements LightingConfigRepository {
   LightingConfig config = LightingConfig(effectId: 'html:test');
 
   @override

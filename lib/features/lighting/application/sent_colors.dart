@@ -1,7 +1,7 @@
-part of 'lighting_frame_deduplicator.dart';
+import '../domain/rgb.dart';
 
-class _SentColors {
-  const _SentColors(this.colors, this.at);
+class SentColors {
+  const SentColors(this.colors, this.at);
 
   final List<Rgb> colors;
   final DateTime at;

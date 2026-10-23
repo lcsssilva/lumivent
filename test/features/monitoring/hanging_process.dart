@@ -1,6 +1,7 @@
-part of 'nvme_test.dart';
+import 'dart:async';
+import 'dart:io';
 
-class _HangingProcess implements Process {
+class HangingProcess implements Process {
   final _stdout = StreamController<List<int>>();
   final _stderr = StreamController<List<int>>();
   final _exit = Completer<int>();

@@ -1,6 +1,6 @@
-part of 'raw_i2c_bus.dart';
+import 'dart:ffi';
 
-final class _I2cMsg extends Struct {
+final class I2cMsg extends Struct {
   @Uint16()
   external int addr;
 

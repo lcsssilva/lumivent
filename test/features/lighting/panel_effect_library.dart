@@ -1,7 +1,11 @@
-part of 'html_effect_panel_test.dart';
+import 'dart:typed_data';
 
-class _PanelEffectLibrary implements EffectLibrary {
-  _PanelEffectLibrary(this.effect);
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/domain/effect_library.dart';
+import 'package:lumivent/features/lighting/domain/installed_effect.dart';
+
+class PanelEffectLibrary implements EffectLibrary {
+  PanelEffectLibrary(this.effect);
   final InstalledEffect effect;
 
   @override

@@ -11,6 +11,7 @@ import '../../domain/fan_mode_name.dart';
 import '../../domain/led_layout.dart';
 import '../../domain/light_device.dart';
 import '../../domain/lighting_config.dart';
+import '../../domain/alv2_hardware_config.dart';
 import '../lighting_labels.dart';
 import 'panel_slider.dart';
 import 'panel_row.dart';

@@ -3,7 +3,8 @@
 import 'dart:async';
 
 import 'light_device.dart';
-import 'lighting_config.dart';
+import 'alv2_hardware_config.dart';
+import 'gpu_hardware_config.dart';
 import 'board_zone_config.dart';
 import 'rgb.dart';
 

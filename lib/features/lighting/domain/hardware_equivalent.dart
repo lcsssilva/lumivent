@@ -12,8 +12,11 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'hardware_timing.dart';
 import 'light_device.dart';
 import 'lighting_config.dart';
+import 'alv2_hardware_config.dart';
+import 'gpu_hardware_config.dart';
 import 'board_zone_config.dart';
 import 'native_effects.dart';
+import 'effect_param.dart';
 import 'effect_values.dart';
 import 'rgb.dart';
 

@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import '../domain/lighting_config.dart';
+import '../domain/gpu_hardware_config.dart';
 import '../domain/board_zone_config.dart';
 
 part 'droppable_io_command.dart';

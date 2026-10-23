@@ -1,7 +1,12 @@
-part of 'ssd_row.dart';
+import 'package:flutter/material.dart';
 
-class _LifeTile extends StatelessWidget {
-  const _LifeTile(this.smart);
+import '../../../../core/i18n/app_strings_scope.dart';
+import '../../../../core/ui/we_colors.dart';
+import '../../domain/nvme_smart_log.dart';
+import '../ssd_health_color.dart';
+
+class SsdLifeTile extends StatelessWidget {
+  const SsdLifeTile(this.smart, {super.key});
   final NvmeSmartLog smart;
 
   @override
@@ -26,7 +31,7 @@ class _LifeTile extends StatelessWidget {
             value: smart.lifeRemaining / 100,
             minHeight: 4,
             backgroundColor: WeColors.surface2,
-            color: _healthColor(smart.health),
+            color: ssdHealthColor(smart.health),
           ),
         ),
       ],

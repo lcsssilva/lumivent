@@ -2,17 +2,16 @@ import 'package:flutter/foundation.dart' show listEquals;
 
 import '../domain/light_device.dart';
 import '../domain/rgb.dart';
-
-part 'sent_colors.dart';
-part 'sent_gpu.dart';
+import 'sent_colors.dart';
+import 'sent_gpu.dart';
 
 /// Tracks the last color sent to each output and the safety resend deadline.
 class LightingFrameDeduplicator {
   LightingFrameDeduplicator(this.resendEvery);
 
   final Duration resendEvery;
-  final _sent = <LightDeviceId, _SentColors>{};
-  _SentGpu? _sentGpu;
+  final _sent = <LightDeviceId, SentColors>{};
+  SentGpu? _sentGpu;
 
   bool shouldSendColors(LightDeviceId id, List<Rgb> colors, DateTime at) {
     final last = _sent[id];
@@ -30,11 +29,11 @@ class LightingFrameDeduplicator {
   }
 
   void recordColors(LightDeviceId id, List<Rgb> colors, DateTime at) {
-    _sent[id] = _SentColors(colors, at);
+    _sent[id] = SentColors(colors, at);
   }
 
   void recordGpu(Rgb color, int brightness, DateTime at) {
-    _sentGpu = _SentGpu(color, brightness, at);
+    _sentGpu = SentGpu(color, brightness, at);
   }
 
   void forget(LightDeviceId id) => _sent.remove(id);

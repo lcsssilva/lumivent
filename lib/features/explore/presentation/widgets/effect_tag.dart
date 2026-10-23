@@ -1,7 +1,9 @@
-part of 'effect_card.dart';
+import 'package:flutter/material.dart';
 
-class _EffectTag extends StatelessWidget {
-  const _EffectTag({required this.text});
+import '../../../../core/ui/we_colors.dart';
+
+class EffectTag extends StatelessWidget {
+  const EffectTag({super.key, required this.text});
   final String text;
 
   @override

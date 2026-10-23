@@ -1,7 +1,13 @@
-part of 'ssd_section.dart';
+import 'package:flutter/material.dart';
 
-class _SmartBanner extends StatelessWidget {
-  const _SmartBanner(this.ssds);
+import '../../../../core/i18n/app_strings_scope.dart';
+import '../../../../core/ui/we_colors.dart';
+import '../../../../core/ui/we_sizes.dart';
+import '../../domain/ssd_info.dart';
+import '../ssd_error_text.dart';
+
+class SsdSmartBanner extends StatelessWidget {
+  const SsdSmartBanner(this.ssds, {super.key});
   final List<SsdInfo> ssds;
 
   @override

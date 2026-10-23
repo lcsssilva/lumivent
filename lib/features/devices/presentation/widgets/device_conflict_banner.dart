@@ -1,7 +1,11 @@
-part of 'devices_card.dart';
+import 'package:flutter/material.dart';
 
-class _ConflictBanner extends StatelessWidget {
-  const _ConflictBanner(this.programs);
+import '../../../../core/i18n/app_strings_scope.dart';
+import '../../../../core/ui/we_colors.dart';
+import '../../../../core/ui/we_sizes.dart';
+
+class DeviceConflictBanner extends StatelessWidget {
+  const DeviceConflictBanner(this.programs, {super.key});
   final List<String> programs;
 
   @override

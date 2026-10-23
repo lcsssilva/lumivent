@@ -1,7 +1,13 @@
-part of 'fan_curve_editor.dart';
+import 'package:flutter/material.dart';
 
-class _FanCurvePainter extends CustomPainter {
-  _FanCurvePainter(
+import '../../../../core/i18n/app_strings.dart';
+import '../../../../core/ui/we_colors.dart';
+import '../../domain/fan_group_config.dart';
+import 'fan_curve_live.dart';
+import 'fan_curve_plot.dart';
+
+class FanCurvePainter extends CustomPainter {
+  FanCurvePainter(
     this.group,
     this.live,
     this.plot,
@@ -11,7 +17,7 @@ class _FanCurvePainter extends CustomPainter {
 
   final FanGroupConfig group;
   final FanCurveLive live;
-  final _FanCurvePlot plot;
+  final FanCurvePlot plot;
   final int? dragging;
   final AppStrings strings;
 
@@ -209,5 +215,5 @@ class _FanCurvePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_FanCurvePainter old) => true;
+  bool shouldRepaint(FanCurvePainter old) => true;
 }

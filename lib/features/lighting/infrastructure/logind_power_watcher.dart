@@ -1,14 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dbus/dbus.dart';
-
 import '../domain/power_watcher.dart';
 import 'inhibitor_lock.dart';
 import 'logind_bus.dart';
-
-part 'fd_lock.dart';
-part 'dbus_logind_bus.dart';
+import 'dbus_logind_bus.dart';
 
 /// Inhibitor/state logic over a [LogindBus]. Signals are handled one at a time
 /// in a queue; repeated signals (true, true) are ignored.

@@ -1,9 +1,11 @@
-part of 'monitoring_engine_test.dart';
+import 'dart:typed_data';
+
+import 'rpm_transport.dart';
 
 /// Hub transport whose RPM replies follow [readings] (one per read), for the
 /// alternating readings seen while the lighting streams (2026-10-19).
-class _SeqRpmTransport extends _RpmTransport {
-  _SeqRpmTransport(this.readings);
+class SeqRpmTransport extends RpmTransport {
+  SeqRpmTransport(this.readings);
   final List<List<int>> readings;
   int _i = 0;
 

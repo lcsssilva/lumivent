@@ -8,10 +8,9 @@ import 'canvas_op.dart';
 import 'canvas_command_buffer.dart';
 import 'css_color.dart';
 import 'hsl_color.dart';
-
-part 'canvas_state.dart';
-part 'canvas_gradient.dart';
-part 'rect_batch.dart';
+import 'canvas_gradient.dart';
+import 'canvas_state.dart';
+import 'rect_batch.dart';
 
 const _blendModes = <String, BlendMode>{
   'source-over': BlendMode.srcOver,
@@ -48,9 +47,9 @@ class CanvasReplayer {
   CanvasReplayer({this.width = 320, this.height = 200});
 
   final double width, height;
-  final _gradients = <int, _CanvasGradient>{};
-  var _st = _CanvasState();
-  final _stack = <_CanvasState>[];
+  final _gradients = <int, CanvasGradient>{};
+  var _st = CanvasState();
+  final _stack = <CanvasState>[];
   final _fillPaint = Paint();
   final _strokePaint = Paint();
   final _vertexPaint = Paint()..isAntiAlias = false;
@@ -64,7 +63,7 @@ class CanvasReplayer {
     canvas.save();
     // JS saves stay inside this one; the final restore undoes anything left.
     var depth = 0;
-    final batch = _RectBatch();
+    final batch = RectBatch();
     void flushBatch() => batch.draw(canvas, _vertexPaint);
 
     while (ops.next()) {
@@ -107,7 +106,7 @@ class CanvasReplayer {
             _ => StrokeJoin.miter,
           };
         case CanvasOp.save:
-          _stack.add(_CanvasState.copy(_st));
+          _stack.add(CanvasState.copy(_st));
           canvas.save();
           depth++;
         case CanvasOp.restore:
@@ -204,11 +203,11 @@ class CanvasReplayer {
         case CanvasOp.clip:
           canvas.clipPath(path);
         case CanvasOp.linearGradient:
-          _gradients[a(0).toInt()] = _CanvasGradient.linear([
+          _gradients[a(0).toInt()] = CanvasGradient.linear([
             for (var i = 1; i < 5; i++) a(i),
           ]);
         case CanvasOp.radialGradient:
-          _gradients[a(0).toInt()] = _CanvasGradient.radial([
+          _gradients[a(0).toInt()] = CanvasGradient.radial([
             for (var i = 1; i < 7; i++) a(i),
           ]);
         case CanvasOp.colorStop:
@@ -249,7 +248,7 @@ class CanvasReplayer {
       p.color = _st.alpha == 1
           ? style
           : style.withValues(alpha: style.a * _st.alpha);
-    } else if (style is _CanvasGradient) {
+    } else if (style is CanvasGradient) {
       p.shader = style.shader();
       p.color = Color.fromRGBO(0, 0, 0, _st.alpha);
     }

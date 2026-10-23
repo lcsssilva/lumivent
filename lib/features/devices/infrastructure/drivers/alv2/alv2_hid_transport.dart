@@ -1,7 +1,10 @@
-part of 'alv2_hub.dart';
+import 'dart:typed_data';
 
-class _Alv2HidTransport implements Alv2Transport {
-  _Alv2HidTransport(this._dev);
+import '../../../../../core/platform/hid_api.dart';
+import 'alv2_transport.dart';
+
+class Alv2HidTransport implements Alv2Transport {
+  Alv2HidTransport(this._dev);
   final HidDevice _dev;
 
   @override

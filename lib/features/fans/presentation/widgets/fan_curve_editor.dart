@@ -2,18 +2,16 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
-import '../../../../core/ui/we_colors.dart';
 import '../../domain/fan_curve.dart';
 import '../../domain/fan_point.dart';
 import '../../domain/fan_presets.dart';
 import '../../domain/fan_group_config.dart';
 import 'fan_curve_live.dart';
+import 'fan_curve_plot.dart';
+import 'fan_curve_painter.dart';
 
 part 'fan_curve_editor_state.dart';
-part 'fan_curve_plot.dart';
-part 'fan_curve_painter.dart';
 
 /// Curve editor: X = 0–100 °C, Y = 0–100% (secondary axis in RPM).
 ///

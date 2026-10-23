@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/platform/raw_i2c_bus.dart';
 import 'package:lumivent/core/platform/i2c_transport.dart';
+import 'package:lumivent/core/platform/raw_i2c_exception.dart';
 
 /// Fake transport with queued read answers. A read failure simulates the
 /// `EIO` this kernel returns for the OEM bus, which is the current hardware

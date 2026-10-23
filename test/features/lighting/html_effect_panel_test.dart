@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,12 +6,9 @@ import 'package:lumivent/core/ui/theme.dart';
 import 'package:lumivent/features/lighting/application/installed_effects_notifier.dart';
 import 'package:lumivent/features/lighting/application/lighting_notifier.dart';
 import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
-import 'package:lumivent/features/lighting/domain/effect_library.dart';
 import 'package:lumivent/features/lighting/domain/effect_property.dart';
 import 'package:lumivent/features/lighting/domain/effect_source.dart';
 import 'package:lumivent/features/lighting/domain/installed_effect.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config_repository.dart';
 import 'package:lumivent/features/lighting/presentation/view_models/lighting_view_model.dart';
 import 'package:lumivent/features/lighting/presentation/widgets/effect_panel.dart';
 import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
@@ -22,9 +17,8 @@ import '../../fake_engine.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/memory_preferences_repository.dart';
-
-part 'panel_effect_library.dart';
-part 'panel_lighting_repository.dart';
+import 'panel_effect_library.dart';
+import 'panel_lighting_repository.dart';
 
 void main() {
   testWidgets(
@@ -84,7 +78,7 @@ void main() {
         ),
         compatibility: const EffectCompatibility(EffectSupport.compatible, []),
       );
-      final repo = _PanelLightingRepository();
+      final repo = PanelLightingRepository();
       final container = ProviderContainer(
         overrides: [
           engineProvider.overrideWithValue(FakeEngine()),
@@ -92,7 +86,7 @@ void main() {
           preferencesRepositoryProvider.overrideWithValue(
             MemoryPreferencesRepository(),
           ),
-          effectLibraryProvider.overrideWithValue(_PanelEffectLibrary(effect)),
+          effectLibraryProvider.overrideWithValue(PanelEffectLibrary(effect)),
         ],
       );
       addTearDown(container.dispose);

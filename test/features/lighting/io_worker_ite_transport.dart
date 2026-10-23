@@ -1,6 +1,8 @@
-part of 'light_io_worker_test.dart';
+import 'dart:typed_data';
 
-class _IoWorkerIteTransport implements IteTransport {
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_transport.dart';
+
+class IoWorkerIteTransport implements IteTransport {
   final sent = <List<int>>[];
   bool closed = false;
   @override

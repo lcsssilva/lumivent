@@ -1,8 +1,22 @@
-part of 'effect_panel.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/i18n/app_strings.dart';
+import '../../../../core/i18n/app_strings_scope.dart';
+import '../../../../core/ui/we_colors.dart';
+import '../../../../core/ui/we_card.dart';
+import '../../application/html_effect_runner.dart';
+import '../../application/html_effect_status.dart';
+import '../../domain/installed_effect.dart';
+import '../../domain/lighting_config.dart';
+import '../lighting_labels.dart';
+import 'effect_support_line.dart';
+import 'html_effect_controls.dart';
 
 /// Controls of an installed HTML effect, generated from its metadata.
-class _HtmlEffectPanel extends StatelessWidget {
-  const _HtmlEffectPanel({
+class HtmlEffectPanel extends StatelessWidget {
+  const HtmlEffectPanel({
+    super.key,
     required this.effectId,
     required this.config,
     required this.installedLibrary,
@@ -44,7 +58,7 @@ class _HtmlEffectPanel extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _SupportLine(effect: effect),
+              EffectSupportLine(effect: effect),
               if (status.effectId == effectId && status.issue != null) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -64,7 +78,7 @@ class _HtmlEffectPanel extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 8),
-              _HtmlEffectControls(
+              HtmlEffectControls(
                 effect: effect,
                 config: config,
                 onEdit: onEdit,
@@ -75,4 +89,19 @@ class _HtmlEffectPanel extends StatelessWidget {
       },
     );
   }
+}
+
+String _htmlIssue(AppStrings strings, HtmlEffectStatus status) {
+  final l = strings.lighting;
+  return switch (status.issue) {
+    HtmlEffectIssue.loadFailed => l.effectLoadFailed(status.error ?? ''),
+    HtmlEffectIssue.paused => l.effectPaused(status.slowFrameMs),
+    HtmlEffectIssue.unsupported => l.effectUnsupported(
+      [
+        for (final feature in status.missingFeatures)
+          effectIssueLabel(strings, feature),
+      ].join(', '),
+    ),
+    null => '',
+  };
 }

@@ -1,10 +1,10 @@
-part of 'smbus.dart';
+import 'dev_access.dart';
 
 class SmbusException implements Exception {
   SmbusException(this.message, this.errno);
   final String message;
   final int errno;
-  bool get permissionDenied => errno == _eacces || errno == _eperm;
+  bool get permissionDenied => isPermissionDeniedErrno(errno);
   @override
   String toString() => 'SmbusException: $message (errno $errno)';
 }

@@ -1,6 +1,8 @@
-part of 'hid_api.dart';
+import 'dart:ffi';
 
-final class _HidDeviceInfoStruct extends Struct {
+import 'package:ffi/ffi.dart';
+
+final class HidDeviceInfoStruct extends Struct {
   external Pointer<Utf8> path;
   @UnsignedShort()
   external int vendorId;
@@ -17,7 +19,7 @@ final class _HidDeviceInfoStruct extends Struct {
   external int usage;
   @Int()
   external int interfaceNumber;
-  external Pointer<_HidDeviceInfoStruct> next;
+  external Pointer<HidDeviceInfoStruct> next;
   @Int()
   external int busType;
 }

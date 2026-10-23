@@ -1,4 +1,20 @@
-part of 'lighting_config.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+import 'lighting_config.dart';
+import 'rgb.dart';
+
+part 'alv2_hardware_config.freezed.dart';
+
+// Top-level constants are usable from the generated part; static members are
+// not inherited by the generated implementation class.
+const _alv2DefaultColors = [
+  Rgb(255, 0, 0),
+  Rgb(0, 0, 255),
+  Rgb(0, 255, 0),
+  Rgb(255, 255, 0),
+  Rgb(255, 128, 0),
+  Rgb(0, 255, 255),
+];
 
 /// Hardware mode for a hub group. The domain stores only the mode name
 /// (`Rainbow`, `StaticColor_Inner`…); the byte table belongs to devices.

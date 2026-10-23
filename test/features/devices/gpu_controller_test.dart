@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/platform/raw_i2c_bus.dart';
+import 'package:lumivent/core/platform/raw_i2c_exception.dart';
 import 'package:lumivent/features/devices/devices.dart';
 
 import 'fake_gpu_transport.dart';

@@ -1,7 +1,13 @@
-part of 'effect_panel.dart';
+import 'package:flutter/material.dart';
 
-class _SupportLine extends StatelessWidget {
-  const _SupportLine({required this.effect});
+import '../../../../core/i18n/app_strings_scope.dart';
+import '../../../../core/ui/we_colors.dart';
+import '../../domain/effect_compatibility.dart';
+import '../../domain/installed_effect.dart';
+import '../lighting_labels.dart';
+
+class EffectSupportLine extends StatelessWidget {
+  const EffectSupportLine({super.key, required this.effect});
   final InstalledEffect effect;
 
   @override

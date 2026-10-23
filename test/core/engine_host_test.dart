@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
-import 'package:lumivent/core/engine/engine_command.dart';
 import 'package:lumivent/core/engine/engine_event.dart';
 import 'package:lumivent/core/engine/engine_stopped.dart';
 import 'package:lumivent/core/engine/engine_module.dart';
@@ -11,29 +10,28 @@ import 'pong.dart';
 import 'started.dart';
 import 'stopping.dart';
 import 'boom.dart';
-
-part 'echo_module.dart';
-part 'faulty_module.dart';
-part 'throwing_start_module.dart';
+import 'echo_module.dart';
+import 'faulty_module.dart';
+import 'throwing_start_module.dart';
 
 // Runs inside the engine isolate.
-List<EngineModule> _modules(int base) => [_EchoModule(base)];
+List<EngineModule> _modules(int base) => [EchoModule(base)];
 
 List<EngineModule> _throwingStartModules(int base) => [
-  _EchoModule(base),
-  _ThrowingStartModule(),
+  EchoModule(base),
+  ThrowingStartModule(),
 ];
 
 List<EngineModule> _throwingBuild(int base) => throw StateError('build boom');
 
 List<EngineModule> _throwingHandleModules(int base) => [
-  _FaultyModule(),
-  _EchoModule(base),
+  FaultyModule(),
+  EchoModule(base),
 ];
 
 List<EngineModule> _throwingStopModules(int base) => [
-  _EchoModule(base),
-  _FaultyModule(throwOnStop: true),
+  EchoModule(base),
+  FaultyModule(throwOnStop: true),
 ];
 
 void main() {

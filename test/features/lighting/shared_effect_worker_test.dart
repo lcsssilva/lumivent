@@ -1,16 +1,12 @@
-import 'dart:isolate';
-
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_connection.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_protocol.dart';
-import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_request.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/shared_effect_worker.dart';
 
-part 'fake_workers.dart';
+import 'fake_workers.dart';
 
 void main() {
-  late _FakeWorkers workers;
-  setUp(() => workers = _FakeWorkers());
+  late FakeWorkers workers;
+  setUp(() => workers = FakeWorkers());
   tearDown(() => workers.close());
 
   test('consecutive effects share one worker', () async {

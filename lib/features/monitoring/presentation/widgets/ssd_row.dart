@@ -5,13 +5,11 @@ import '../../../../core/ui/status_pill.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_sizes.dart';
 import '../../../preferences/preferences.dart';
-import '../../domain/ssd.dart';
-import '../../domain/nvme_smart_log.dart';
 import '../../domain/ssd_info.dart';
 import '../sensor_format.dart';
+import '../ssd_health_color.dart';
 import 'ssd_smart_dialog.dart';
-
-part 'life_tile.dart';
+import 'ssd_life_tile.dart';
 
 /// One NVMe drive in the storage card: identity, health and SMART tiles.
 class SsdRow extends StatelessWidget {
@@ -71,7 +69,7 @@ class SsdRow extends StatelessWidget {
                   ? StatusPill(label: s.noSmart, color: WeColors.muted)
                   : StatusPill(
                       label: healthLabel(health, strings),
-                      color: _healthColor(health),
+                      color: ssdHealthColor(health),
                     ),
               const SizedBox(width: WeSizes.unit * 1.5),
               OutlinedButton(
@@ -89,7 +87,7 @@ class SsdRow extends StatelessWidget {
               spacing: WeSizes.unit * 4,
               runSpacing: WeSizes.unit * 1.5,
               children: [
-                if (smart != null) _LifeTile(smart),
+                if (smart != null) SsdLifeTile(smart),
                 _tile(
                   s.temperature,
                   formatTemp(liveTemp ?? smart?.compositeCelsius, unit),
@@ -158,9 +156,3 @@ class SsdRow extends StatelessWidget {
         ),
       );
 }
-
-Color _healthColor(SsdHealth health) => switch (health) {
-  SsdHealth.good => WeColors.ok,
-  SsdHealth.caution => WeColors.warn,
-  SsdHealth.bad => WeColors.danger,
-};

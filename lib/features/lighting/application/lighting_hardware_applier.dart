@@ -5,6 +5,8 @@ import '../domain/light_device.dart';
 import '../domain/native_effects.dart';
 import '../domain/light_outputs.dart';
 import '../domain/lighting_config.dart';
+import '../domain/alv2_hardware_config.dart';
+import '../domain/gpu_hardware_config.dart';
 import '../domain/board_zone_config.dart';
 import '../domain/rgb.dart';
 import 'lighting_hardware_state.dart';

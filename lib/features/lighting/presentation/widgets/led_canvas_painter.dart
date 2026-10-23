@@ -1,4 +1,17 @@
-part of 'led_canvas.dart';
+import 'package:flutter/foundation.dart' show Listenable, ValueListenable;
+import 'package:flutter/material.dart';
+
+import '../../../../core/ui/we_colors.dart';
+import '../../domain/led_layout.dart';
+import '../../domain/light_device.dart';
+import '../../domain/effect_frame.dart';
+import '../../domain/lighting_config.dart';
+import '../../domain/native_effects.dart';
+import '../../domain/rgb.dart';
+import '../on_canvas.dart';
+
+const _previewCols = 80;
+const _previewRows = 50;
 
 class LedCanvasPainter extends CustomPainter {
   LedCanvasPainter({

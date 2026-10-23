@@ -1,29 +1,23 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
-import 'package:lumivent/core/platform/hid_exception.dart' show HidException;
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_transport.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_controller.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_controller.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_bus.dart';
 import 'package:lumivent/features/lighting/infrastructure/device_light_outputs.dart';
 import 'package:lumivent/features/lighting/infrastructure/light_io_core.dart';
 import 'package:lumivent/features/lighting/infrastructure/local_light_io.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
 
 import '../../fake_engine.dart';
-
-part 'lighting_hub_transport.dart';
-part 'lighting_ite_transport.dart';
-part 'lighting_fury_bus.dart';
+import 'lighting_fury_bus.dart';
+import 'lighting_hub_transport.dart';
+import 'lighting_ite_transport.dart';
 
 List<int> hex(String s) => [
   for (final b in s.split(' ')) int.parse(b, radix: 16),
@@ -31,15 +25,15 @@ List<int> hex(String s) => [
 
 void main() {
   group('DeviceLightOutputs over fake drivers', () {
-    late _LightingHubTransport hubTr;
-    late _LightingIteTransport ite;
-    late _LightingFuryBus fury;
+    late LightingHubTransport hubTr;
+    late LightingIteTransport ite;
+    late LightingFuryBus fury;
     late DeviceLightOutputs out;
 
     setUp(() {
-      hubTr = _LightingHubTransport();
-      ite = _LightingIteTransport();
-      fury = _LightingFuryBus();
+      hubTr = LightingHubTransport();
+      ite = LightingIteTransport();
+      fury = LightingFuryBus();
       out = DeviceLightOutputs(
         Alv2HubProxy.local(
           Alv2Hub.withTransport(hubTr, delay: (_) async {}, sleeper: (_) {}),
@@ -364,13 +358,13 @@ void main() {
     });
 
     test('guarded RAM address is reported and never written', () async {
-      final bus = _LightingFuryBus()
+      final bus = LightingFuryBus()
         ..dd = 0x72
         ..ddAddress = 0x61;
       final guarded = DeviceLightOutputs(
         Alv2HubProxy.local(
           Alv2Hub.withTransport(
-            _LightingHubTransport(),
+            LightingHubTransport(),
             delay: (_) async {},
             sleeper: (_) {},
           ),
@@ -404,7 +398,7 @@ void main() {
       final failing = DeviceLightOutputs(
         Alv2HubProxy.local(
           Alv2Hub.withTransport(
-            _LightingHubTransport()..failNext = true,
+            LightingHubTransport()..failNext = true,
             delay: (_) async {},
             sleeper: (_) {},
           ),

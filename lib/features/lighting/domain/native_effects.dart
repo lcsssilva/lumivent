@@ -10,22 +10,11 @@ import 'led_layout.dart';
 import 'rgb.dart';
 import 'effect_values.dart';
 import 'native_effect.dart';
-
-part 'effect_param.dart';
-
-enum EffectParamType { number, color, boolean, combobox, hue }
+import 'effect_param.dart';
 
 typedef EffectFn = Rgb Function(double x, double y, double t, EffectValues v);
 
 const _directionOptions = ['Left', 'Right', 'Up', 'Down'];
-
-/// Values saved by older versions, when the option text was Portuguese.
-const _legacyOptions = {
-  'Esquerda': 'Left',
-  'Direita': 'Right',
-  'Cima': 'Up',
-  'Baixo': 'Down',
-};
 
 const _speed = EffectParam.number(
   'speed',

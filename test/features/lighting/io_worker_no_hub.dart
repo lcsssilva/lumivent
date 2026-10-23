@@ -1,6 +1,8 @@
-part of 'light_io_worker_test.dart';
+import 'dart:typed_data';
 
-class _IoWorkerNoHub implements Alv2Transport {
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
+
+class IoWorkerNoHub implements Alv2Transport {
   @override
   void sendFeature(List<int> data, int length) {}
   @override

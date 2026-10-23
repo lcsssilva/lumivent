@@ -7,9 +7,8 @@ import '../../../../core/ui/status_pill.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_sizes.dart';
 import '../../../lighting/lighting.dart';
-
-part 'effect_thumbnail.dart';
-part 'effect_tag.dart';
+import 'effect_tag.dart';
+import 'effect_thumbnail.dart';
 
 /// Installed-effect card in the Explore grid: thumbnail, compatibility,
 /// metadata and the apply/remove actions.
@@ -56,7 +55,7 @@ class EffectCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _EffectThumbnail(effect: effect, bytes: thumbnail),
+                EffectThumbnail(effect: effect, bytes: thumbnail),
                 Positioned(
                   left: 8,
                   top: 8,
@@ -121,7 +120,7 @@ class EffectCard extends StatelessWidget {
                         for (final tag in effect.tags.take(4))
                           Padding(
                             padding: const EdgeInsets.only(right: 4),
-                            child: _EffectTag(text: tag),
+                            child: EffectTag(text: tag),
                           ),
                       ],
                     ),

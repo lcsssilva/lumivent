@@ -1,7 +1,10 @@
-part of 'explore_filters.dart';
+import 'package:flutter/material.dart';
 
-class _ExploreDropdown extends StatelessWidget {
-  const _ExploreDropdown({
+import '../../../../core/ui/we_colors.dart';
+import '../../../../core/ui/we_sizes.dart';
+
+class ExploreDropdown extends StatelessWidget {
+  const ExploreDropdown({
     super.key,
     required this.value,
     required this.hint,

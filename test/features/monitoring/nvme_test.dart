@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -7,8 +6,7 @@ import 'package:lumivent/features/monitoring/infrastructure/nvme_ssd_reader.dart
 import 'package:lumivent/features/monitoring/monitoring.dart';
 
 import 'smart_fixture.dart';
-
-part 'hanging_process.dart';
+import 'hanging_process.dart';
 
 void main() {
   test('log 02h → SMART fields', () {
@@ -152,7 +150,7 @@ echo '{"ctrl":"nvme10","error":"open: No such device"}'
     test(
       'a hanging helper is killed on timeout and reported as failed',
       () async {
-        final process = _HangingProcess();
+        final process = HangingProcess();
         final ssds = await NvmeSsdReader(
           sysfsRoot: root.path,
           helper: '/fake/helper',

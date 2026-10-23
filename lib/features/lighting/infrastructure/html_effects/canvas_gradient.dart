@@ -1,8 +1,8 @@
-part of 'canvas_replayer.dart';
+import 'dart:ui';
 
-class _CanvasGradient {
-  _CanvasGradient.linear(this.args) : radial = false;
-  _CanvasGradient.radial(this.args) : radial = true;
+class CanvasGradient {
+  CanvasGradient.linear(this.args) : radial = false;
+  CanvasGradient.radial(this.args) : radial = true;
 
   final bool radial;
   final List<double> args;

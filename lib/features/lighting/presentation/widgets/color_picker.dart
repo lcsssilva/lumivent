@@ -2,15 +2,18 @@
 // hexadecimal field, and quick colors.
 
 import 'package:flutter/material.dart';
+
+import '../rgb_color.dart';
+
 import 'package:flutter/services.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../domain/rgb.dart';
+import 'color_hue_painter.dart';
+import 'color_sv_painter.dart';
 
 part 'color_picker_state.dart';
-part 'sv_painter.dart';
-part 'hue_painter.dart';
 
 /// (hue 0–360, saturation 0–1, value 0–1) of [c].
 (double, double, double) rgbToHsv(Rgb c) {
@@ -42,8 +45,6 @@ const quickColors = [
   Rgb(255, 0, 128),
   Rgb(255, 255, 255),
 ];
-
-Color _c(Rgb c) => Color.fromARGB(255, c.r, c.g, c.b);
 
 /// Opens the picker in a dialog; [onChanged] is called live.
 Future<void> showColorPickerDialog(

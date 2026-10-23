@@ -1,7 +1,18 @@
-part of 'effect_panel.dart';
+import 'package:flutter/material.dart';
 
-class _ParamControl extends StatelessWidget {
-  const _ParamControl({
+import '../../../../core/i18n/app_strings_scope.dart';
+import '../../domain/effect_param.dart';
+import '../../domain/effect_values.dart';
+import '../../domain/rgb.dart';
+import '../lighting_labels.dart';
+import '../rgb_color.dart';
+import 'panel_slider.dart';
+import 'panel_row.dart';
+import 'panel_dropdown.dart';
+import 'color_swatch_button.dart';
+
+class EffectParamControl extends StatelessWidget {
+  const EffectParamControl({
     super.key,
     required this.param,
     required this.values,
@@ -69,3 +80,7 @@ class _ParamControl extends StatelessWidget {
     }
   }
 }
+
+final _hueGradient = LinearGradient(
+  colors: [for (var i = 0; i <= 6; i++) toColor(Rgb.fromHsv(i * 60.0, 1, 1))],
+);

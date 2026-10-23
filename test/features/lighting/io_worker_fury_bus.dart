@@ -1,6 +1,6 @@
-part of 'light_io_worker_test.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_bus.dart';
 
-class _IoWorkerFuryBus implements FuryBus {
+class IoWorkerFuryBus implements FuryBus {
   final writes = <(int, int, int)>[];
   bool closed = false;
 

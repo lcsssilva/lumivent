@@ -1,6 +1,9 @@
-part of 'monitoring_engine_test.dart';
+import 'dart:async';
+import 'dart:typed_data';
 
-class _RpmTransport implements Alv2Transport {
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
+
+class RpmTransport implements Alv2Transport {
   final log = <String>[];
   Completer<void>? gate;
 

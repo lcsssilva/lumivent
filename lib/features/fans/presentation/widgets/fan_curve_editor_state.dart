@@ -9,7 +9,7 @@ class _FanCurveEditorState extends State<FanCurveEditor> {
 
   bool get _fixed => widget.group.preset == FanPreset.fixed;
 
-  int? _hit(_FanCurvePlot plot, Offset p) {
+  int? _hit(FanCurvePlot plot, Offset p) {
     final pts = widget.group.points;
     int? best;
     var bestDist = _hitRadius;
@@ -23,7 +23,7 @@ class _FanCurveEditorState extends State<FanCurveEditor> {
     return best;
   }
 
-  void _move(_FanCurvePlot plot, int index, Offset p) {
+  void _move(FanCurvePlot plot, int index, Offset p) {
     final pts = [...widget.group.points];
     if (index >= pts.length) return;
     final percent = plot.percentAt(p.dy).roundToDouble();
@@ -44,7 +44,7 @@ class _FanCurveEditorState extends State<FanCurveEditor> {
     widget.onChanged(widget.group.withPoints(pts));
   }
 
-  void _add(_FanCurvePlot plot, Offset p) {
+  void _add(FanCurvePlot plot, Offset p) {
     if (_fixed) return;
     final pts = [...widget.group.points];
     if (pts.length >= FanPresets.maxPoints || _hit(plot, p) != null) return;
@@ -55,7 +55,7 @@ class _FanCurveEditorState extends State<FanCurveEditor> {
     widget.onCommit();
   }
 
-  void _remove(_FanCurvePlot plot, Offset p) {
+  void _remove(FanCurvePlot plot, Offset p) {
     if (_fixed) return;
     final pts = [...widget.group.points];
     final i = _hit(plot, p);
@@ -70,7 +70,7 @@ class _FanCurveEditorState extends State<FanCurveEditor> {
     height: widget.height,
     child: LayoutBuilder(
       builder: (context, c) {
-        final plot = _FanCurvePlot(Size(c.maxWidth, widget.height));
+        final plot = FanCurvePlot(Size(c.maxWidth, widget.height));
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onPanDown: (d) => _dragging = _hit(plot, d.localPosition),
@@ -85,7 +85,7 @@ class _FanCurveEditorState extends State<FanCurveEditor> {
           onSecondaryTapDown: (d) => _remove(plot, d.localPosition),
           child: CustomPaint(
             size: Size(c.maxWidth, widget.height),
-            painter: _FanCurvePainter(
+            painter: FanCurvePainter(
               widget.group,
               widget.live,
               plot,

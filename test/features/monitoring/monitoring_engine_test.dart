@@ -1,6 +1,3 @@
-import 'dart:async';
-import 'dart:typed_data';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
@@ -9,20 +6,16 @@ import 'package:lumivent/core/engine/shutdown_engine.dart';
 import 'package:lumivent/features/monitoring/monitoring.dart';
 
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_command.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_reply.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_link.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
 import 'package:lumivent/features/monitoring/infrastructure/alv2_rpm_source.dart';
 
 import '../../fake_engine.dart';
 import 'fake_source.dart';
 import 'fake_ssds.dart';
-
-part 'seq_rpm_transport.dart';
-part 'rpm_transport.dart';
-part 'scripted_link.dart';
+import 'rpm_transport.dart';
+import 'scripted_link.dart';
+import 'seq_rpm_transport.dart';
 
 void main() {
   rpmSourceTests();
@@ -120,7 +113,7 @@ void main() {
 void rpmSourceTests() {
   group('Alv2RpmSource', () {
     test('logs a failed read once per run of failures', () async {
-      final link = _ScriptedLink([
+      final link = ScriptedLink([
         StateError('boom'),
         StateError('boom'),
         const Alv2HubReply(1, rpm: [900, 900, 900, 900]),
@@ -143,7 +136,7 @@ void rpmSourceTests() {
     });
 
     test('read returns the last reading and never waits for the hub', () async {
-      final tr = _RpmTransport();
+      final tr = RpmTransport();
       final hub = Alv2HubProxy.local(
         Alv2Hub.withTransport(tr, sleeper: (_) {}, delay: (_) async {}),
       );
@@ -158,7 +151,7 @@ void rpmSourceTests() {
     test(
       'alternating readings under USB load average to the real speed',
       () async {
-        final tr = _SeqRpmTransport([
+        final tr = SeqRpmTransport([
           [0, 885, 1080, 1080],
           [0, 1095, 1350, 1365],
         ]);

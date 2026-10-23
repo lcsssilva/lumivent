@@ -1,4 +1,14 @@
-part of 'native_effects.dart';
+import 'rgb.dart';
+
+enum EffectParamType { number, color, boolean, combobox, hue }
+
+/// Values saved by older versions, when the option text was Portuguese.
+const _legacyOptions = {
+  'Esquerda': 'Left',
+  'Direita': 'Right',
+  'Cima': 'Up',
+  'Baixo': 'Down',
+};
 
 /// Effect parameter declaration.
 class EffectParam {

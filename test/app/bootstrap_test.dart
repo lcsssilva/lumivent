@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/bootstrap.dart';
 
-import '../fake_engine.dart';
-
-part 'recording_engine.dart';
+import 'recording_engine.dart';
 
 void main() {
   test(
@@ -20,7 +18,7 @@ void main() {
       final container = ProviderContainer()..read(probe);
 
       await releaseAfterStartupFailure(
-        engine: _RecordingEngine(order),
+        engine: RecordingEngine(order),
         container: container,
         releaseDesktop: () async => order.add('desktop'),
       );
@@ -33,7 +31,7 @@ void main() {
     final order = <String>[];
 
     await releaseAfterStartupFailure(
-      engine: _RecordingEngine(order),
+      engine: RecordingEngine(order),
       releaseDesktop: () async => throw StateError('window channel gone'),
     );
 

@@ -1,6 +1,8 @@
-part of 'engine_host_test.dart';
+import 'package:lumivent/core/engine/engine_command.dart';
+import 'package:lumivent/core/engine/engine_event.dart';
+import 'package:lumivent/core/engine/engine_module.dart';
 
-class _ThrowingStartModule implements EngineModule {
+class ThrowingStartModule implements EngineModule {
   @override
   void start(void Function(EngineEvent) emit) => throw StateError('start boom');
 

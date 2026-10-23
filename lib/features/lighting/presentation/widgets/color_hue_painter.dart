@@ -1,7 +1,10 @@
-part of 'color_picker.dart';
+import 'package:flutter/material.dart';
 
-class _HuePainter extends CustomPainter {
-  _HuePainter(this.h);
+import '../../domain/rgb.dart';
+import '../rgb_color.dart';
+
+class ColorHuePainter extends CustomPainter {
+  ColorHuePainter(this.h);
   final double h;
 
   @override
@@ -12,7 +15,7 @@ class _HuePainter extends CustomPainter {
       Paint()
         ..shader = LinearGradient(
           colors: [
-            for (var i = 0; i <= 6; i++) _c(Rgb.fromHsv(i * 60.0, 1, 1)),
+            for (var i = 0; i <= 6; i++) toColor(Rgb.fromHsv(i * 60.0, 1, 1)),
           ],
         ).createShader(rect),
     );
@@ -34,5 +37,5 @@ class _HuePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_HuePainter o) => o.h != h;
+  bool shouldRepaint(ColorHuePainter o) => o.h != h;
 }

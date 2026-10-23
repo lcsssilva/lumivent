@@ -4,14 +4,11 @@
 // after the 0xDD guard and "FURY" identity check. Runs in the engine isolate.
 import 'dart:io';
 
-import '../../../../../core/platform/smbus.dart';
+import '../../../../../core/platform/smbus_exception.dart';
 import 'protocol.dart';
 import 'fury_bus.dart';
 import 'sm_bus_fury_bus.dart';
-
-part 'fury_slot.dart';
-
-enum _Mode { none, direct, single }
+import 'fury_slot.dart';
 
 class FuryController {
   FuryController({
@@ -41,7 +38,7 @@ class FuryController {
 
   /// Set by [close]: nothing opens or touches the bus after this.
   bool _disposed = false;
-  final _slots = {for (final a in furyAddresses) a: _FurySlot()};
+  final _slots = {for (final a in furyAddresses) a: FurySlot()};
 
   /// Slots (0/1) still usable (not disabled).
   List<int> get activeSlots => [
@@ -60,9 +57,9 @@ class FuryController {
       throw ArgumentError('expected $furyColorBytes bytes, got ${rgb.length}');
     }
     return _run(slot, (bus, addr, s) {
-      if (s.mode != _Mode.direct) {
+      if (s.mode != FurySlotMode.direct) {
         _enterDirect(bus, addr);
-        s.mode = _Mode.direct;
+        s.mode = FurySlotMode.direct;
         s.cache = null;
       }
       final cache = s.cache;
@@ -85,7 +82,7 @@ class FuryController {
     final color = [r & 0xFF, g & 0xFF, b & 0xFF];
     return _run(slot, (bus, addr, s) {
       final prev = s.single;
-      if (s.mode == _Mode.single &&
+      if (s.mode == FurySlotMode.single &&
           prev != null &&
           prev[0] == color[0] &&
           prev[1] == color[1] &&
@@ -99,7 +96,7 @@ class FuryController {
         bus.writeByte(addr, furyRegSingleColor + c, color[c]);
       }
       bus.writeByte(addr, furyRegSession, furySessionEnd);
-      s.mode = _Mode.single;
+      s.mode = FurySlotMode.single;
       s.single = color;
       s.cache = null;
     });
@@ -110,7 +107,7 @@ class FuryController {
   /// disabled; the bus and the identity checks are kept.
   void invalidate() {
     for (final s in _slots.values) {
-      s.mode = _Mode.none;
+      s.mode = FurySlotMode.none;
       s.cache = null;
       s.single = null;
     }
@@ -125,14 +122,14 @@ class FuryController {
 
   // ---- internal ----
 
-  bool _run(int slot, void Function(FuryBus, int, _FurySlot) body) {
+  bool _run(int slot, void Function(FuryBus, int, FurySlot) body) {
     if (slot < 0 || slot >= furyAddresses.length) {
       throw ArgumentError('invalid slot: $slot');
     }
     return _runAddr(furyAddresses[slot], body);
   }
 
-  bool _runAddr(int addr, void Function(FuryBus, int, _FurySlot) body) {
+  bool _runAddr(int addr, void Function(FuryBus, int, FurySlot) body) {
     // Defense in depth: nothing outside the list, no I/O.
     if (!furyAddresses.contains(addr)) {
       throw ArgumentError(
@@ -183,14 +180,14 @@ class FuryController {
     _bus = null;
     for (final s in _slots.values) {
       s.ready = false;
-      s.mode = _Mode.none;
+      s.mode = FurySlotMode.none;
       s.cache = null;
       s.single = null;
     }
   }
 
   /// Quick write (ACK) -> 0xDD guard -> "FURY" identity. The first write happens only here.
-  bool _prepare(FuryBus bus, int addr, _FurySlot s) {
+  bool _prepare(FuryBus bus, int addr, FurySlot s) {
     bus.quick(addr);
     final dd = bus.readByte(addr, furyGuardRegister);
     if (!furyGuardAllows(dd)) {

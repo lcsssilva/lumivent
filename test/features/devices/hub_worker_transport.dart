@@ -1,9 +1,13 @@
-part of 'alv2_hub_worker_test.dart';
+import 'dart:typed_data';
+
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
+
+import 'hub_worker_clock.dart';
 
 /// Records packets and the close, in order.
-class _HubWorkerTransport implements Alv2Transport {
-  _HubWorkerTransport(this.clock);
-  final _HubWorkerClock clock;
+class HubWorkerTransport implements Alv2Transport {
+  HubWorkerTransport(this.clock);
+  final HubWorkerClock clock;
   final log = <String>[];
   final times = <DateTime>[];
   Uint8List? input;

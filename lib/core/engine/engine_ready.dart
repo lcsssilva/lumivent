@@ -1,6 +1,8 @@
-part of 'isolate_engine.dart';
+import 'dart:isolate';
 
-class _EngineReady extends EngineEvent {
-  const _EngineReady(this.commands);
+import 'engine_event.dart';
+
+class EngineReady extends EngineEvent {
+  const EngineReady(this.commands);
   final SendPort commands;
 }

@@ -1,6 +1,4 @@
-part of 'effect_worker_connection_test.dart';
-
-class _FakeStopwatch implements Stopwatch {
+class FakeStopwatch implements Stopwatch {
   @override
   Duration elapsed = Duration.zero;
 

@@ -1,4 +1,4 @@
-import 'package:lumivent/core/platform/smbus.dart';
+import 'package:lumivent/core/platform/smbus_exception.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_bus.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/protocol.dart';
 

@@ -1,7 +1,14 @@
-part of 'html_effect_runner_test.dart';
+import 'dart:typed_data';
 
-class _FakeRuntime implements EffectRuntime {
-  _FakeRuntime(this._frame, this._colors);
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/domain/effect_source.dart';
+import 'package:lumivent/features/lighting/domain/effect_runtime.dart';
+import 'package:lumivent/features/lighting/domain/effect_frame.dart';
+import 'package:lumivent/features/lighting/domain/light_device.dart';
+import 'package:lumivent/features/lighting/domain/rgb.dart';
+
+class FakeRuntime implements EffectRuntime {
+  FakeRuntime(this._frame, this._colors);
 
   final EffectFrame _frame;
 

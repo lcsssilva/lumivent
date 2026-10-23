@@ -3,13 +3,12 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/infrastructure/logind_power_watcher.dart';
 import 'package:lumivent/features/lighting/infrastructure/inhibitor_lock.dart';
-import 'package:lumivent/features/lighting/infrastructure/logind_bus.dart';
 
-part 'fake_inhibitor_lock.dart';
-part 'fake_logind_bus.dart';
+import 'fake_inhibitor_lock.dart';
+import 'fake_logind_bus.dart';
 
 void main() {
-  late _FakeLogindBus bus;
+  late FakeLogindBus bus;
   late LogindPowerWatcher w;
   late List<String> log;
 
@@ -27,7 +26,7 @@ void main() {
       Future<void>.delayed(const Duration(milliseconds: 20));
 
   setUp(() {
-    bus = _FakeLogindBus();
+    bus = FakeLogindBus();
     log = [];
     w = LogindPowerWatcher(
       busFactory: () => bus,
@@ -219,7 +218,7 @@ void main() {
     final starting = startWith();
     await settle();
     await w.stop();
-    final lock = _FakeInhibitorLock();
+    final lock = FakeInhibitorLock();
     hold.complete(lock);
     await starting;
     expect(lock.released, isTrue);

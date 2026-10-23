@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
-import '../../../../core/ui/we_sizes.dart';
 import '../../../../core/ui/we_card.dart';
 import '../../../preferences/preferences.dart';
 import '../../domain/metrics.dart';
-import '../../domain/ssd.dart';
-import '../../domain/ssd_smart_error.dart';
 import '../../domain/ssd_info.dart';
 import 'no_reading.dart';
 import 'ssd_row.dart';
 import '../../domain/sensor_sample.dart';
-
-part 'smart_banner.dart';
+import 'ssd_smart_banner.dart';
 
 /// SSD tool: health and SMART data for each NVMe drive.
 class SsdSection extends StatelessWidget {
@@ -57,7 +52,7 @@ class SsdSection extends StatelessWidget {
         _ => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (missingSmart.isNotEmpty) _SmartBanner(missingSmart),
+            if (missingSmart.isNotEmpty) SsdSmartBanner(missingSmart),
             for (final (index, ssd) in ssds.indexed) ...[
               if (index > 0) const Divider(height: 1),
               SsdRow(
@@ -78,17 +73,3 @@ String _hms(DateTime time) => [
   time.minute,
   time.second,
 ].map((value) => '$value'.padLeft(2, '0')).join(':');
-
-String ssdErrorText(SsdSmartError error, AppStrings strings) {
-  final s = strings.monitoring;
-  return switch (error.kind) {
-    SsdErrorKind.helperMissing => s.ssdHelperMissing,
-    SsdErrorKind.helperFailed => s.ssdHelperFailed(error.message ?? ''),
-    SsdErrorKind.helperExit => s.ssdHelperExit(
-      error.exitCode ?? 0,
-      error.stderr ?? '',
-    ),
-    SsdErrorKind.invalidResponse => s.ssdInvalidResponse,
-    SsdErrorKind.device => error.message ?? '',
-  };
-}

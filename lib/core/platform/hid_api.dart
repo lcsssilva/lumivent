@@ -8,41 +8,41 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 import 'hid_exception.dart';
+import 'hid_device_handle.dart';
+import 'hid_device_info_struct.dart';
+import 'hid_device_info.dart';
 
-part 'hid_device_info_struct.dart';
-part 'hid_device_handle.dart';
-part 'hid_device_info.dart';
 part 'hid_device.dart';
 
 typedef _InitC = Int Function();
 typedef _InitD = int Function();
-typedef _EnumC = Pointer<_HidDeviceInfoStruct> Function(
+typedef _EnumC = Pointer<HidDeviceInfoStruct> Function(
   UnsignedShort,
   UnsignedShort,
 );
-typedef _EnumD = Pointer<_HidDeviceInfoStruct> Function(int, int);
-typedef _FreeEnumC = Void Function(Pointer<_HidDeviceInfoStruct>);
-typedef _FreeEnumD = void Function(Pointer<_HidDeviceInfoStruct>);
-typedef _OpenPathC = Pointer<_HidDeviceHandle> Function(Pointer<Utf8>);
-typedef _OpenPathD = Pointer<_HidDeviceHandle> Function(Pointer<Utf8>);
-typedef _CloseC = Void Function(Pointer<_HidDeviceHandle>);
-typedef _CloseD = void Function(Pointer<_HidDeviceHandle>);
-typedef _IoC = Int Function(Pointer<_HidDeviceHandle>, Pointer<Uint8>, Size);
-typedef _IoD = int Function(Pointer<_HidDeviceHandle>, Pointer<Uint8>, int);
+typedef _EnumD = Pointer<HidDeviceInfoStruct> Function(int, int);
+typedef _FreeEnumC = Void Function(Pointer<HidDeviceInfoStruct>);
+typedef _FreeEnumD = void Function(Pointer<HidDeviceInfoStruct>);
+typedef _OpenPathC = Pointer<HidDeviceHandle> Function(Pointer<Utf8>);
+typedef _OpenPathD = Pointer<HidDeviceHandle> Function(Pointer<Utf8>);
+typedef _CloseC = Void Function(Pointer<HidDeviceHandle>);
+typedef _CloseD = void Function(Pointer<HidDeviceHandle>);
+typedef _IoC = Int Function(Pointer<HidDeviceHandle>, Pointer<Uint8>, Size);
+typedef _IoD = int Function(Pointer<HidDeviceHandle>, Pointer<Uint8>, int);
 typedef _ReadTimeoutC = Int Function(
-  Pointer<_HidDeviceHandle>,
+  Pointer<HidDeviceHandle>,
   Pointer<Uint8>,
   Size,
   Int,
 );
 typedef _ReadTimeoutD = int Function(
-  Pointer<_HidDeviceHandle>,
+  Pointer<HidDeviceHandle>,
   Pointer<Uint8>,
   int,
   int,
 );
-typedef _ErrorC = Pointer<Int32> Function(Pointer<_HidDeviceHandle>);
-typedef _ErrorD = Pointer<Int32> Function(Pointer<_HidDeviceHandle>);
+typedef _ErrorC = Pointer<Int32> Function(Pointer<HidDeviceHandle>);
+typedef _ErrorD = Pointer<Int32> Function(Pointer<HidDeviceHandle>);
 
 String? _wstr(Pointer<Int32> p) {
   if (p == nullptr) return null;
@@ -52,8 +52,6 @@ String? _wstr(Pointer<Int32> p) {
   }
   return String.fromCharCodes(codes);
 }
-
-String _hex16(int v) => v.toRadixString(16).padLeft(4, '0');
 
 class HidApi {
   HidApi._(DynamicLibrary lib)

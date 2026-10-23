@@ -1,8 +1,12 @@
-part of 'shared_effect_worker_test.dart';
+import 'dart:isolate';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_connection.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_request.dart';
 
 /// Worker connections with no worker behind them: every request is answered
 /// `ok` and every message is recorded per connection.
-class _FakeWorkers {
+class FakeWorkers {
   final connections = <EffectWorkerConnection>[];
   final received = <List<String>>[];
   final _ports = <ReceivePort>[];

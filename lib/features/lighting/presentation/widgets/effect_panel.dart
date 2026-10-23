@@ -7,35 +7,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_card.dart';
-import '../../application/html_effect_runner.dart';
 import '../../application/html_effect_status.dart';
-import '../../domain/effect_compatibility.dart';
-import '../../domain/effect_property_param.dart';
 import '../../domain/hardware_equivalent.dart';
 import '../../domain/installed_effect.dart';
 import '../../domain/lighting_config.dart';
 import '../../domain/native_effects.dart';
-import '../../domain/effect_values.dart';
-import '../../domain/rgb.dart';
 import '../lighting_labels.dart';
-import '../rgb_color.dart';
-import 'panel_slider.dart';
-import 'panel_row.dart';
-import 'panel_dropdown.dart';
-import 'color_swatch_button.dart';
-
-part 'html_effect_panel.dart';
-part 'support_line.dart';
-part 'html_effect_controls.dart';
-part 'param_control.dart';
-
-final _hueGradient = LinearGradient(
-  colors: [for (var i = 0; i <= 6; i++) toColor(Rgb.fromHsv(i * 60.0, 1, 1))],
-);
+import 'effect_param_control.dart';
+import 'html_effect_panel.dart';
 
 class EffectPanel extends StatelessWidget {
   const EffectPanel({
@@ -64,7 +46,7 @@ class EffectPanel extends StatelessWidget {
       if (htmlEffectSlugOf(config.effectId) == null) {
         return WeCard(flat: true, title: l.effect, child: Text(l.noControls));
       }
-      return _HtmlEffectPanel(
+      return HtmlEffectPanel(
         effectId: config.effectId,
         config: config,
         installedLibrary: installedLibrary,
@@ -86,7 +68,7 @@ class EffectPanel extends StatelessWidget {
           for (final param in effect.params)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _ParamControl(
+              child: EffectParamControl(
                 key: ValueKey('param-${param.id}'),
                 param: param,
                 values: values,
@@ -104,19 +86,4 @@ class EffectPanel extends StatelessWidget {
       ),
     );
   }
-}
-
-String _htmlIssue(AppStrings strings, HtmlEffectStatus status) {
-  final l = strings.lighting;
-  return switch (status.issue) {
-    HtmlEffectIssue.loadFailed => l.effectLoadFailed(status.error ?? ''),
-    HtmlEffectIssue.paused => l.effectPaused(status.slowFrameMs),
-    HtmlEffectIssue.unsupported => l.effectUnsupported(
-      [
-        for (final feature in status.missingFeatures)
-          effectIssueLabel(strings, feature),
-      ].join(', '),
-    ),
-    null => '',
-  };
 }

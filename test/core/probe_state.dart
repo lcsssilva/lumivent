@@ -1,6 +1,6 @@
-part of 'async_action_test.dart';
+part of 'probe.dart';
 
-class _ProbeState extends State<_Probe> with AsyncActionMixin<_Probe> {
+class ProbeState extends State<Probe> with AsyncActionMixin<Probe> {
   int calls = 0;
 
   Future<void> start() {

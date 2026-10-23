@@ -1,7 +1,7 @@
-part of 'sparkline.dart';
+import 'package:flutter/material.dart';
 
-class _SparklinePainter extends CustomPainter {
-  _SparklinePainter(this.values, this.capacity, this.color, this.min, this.max);
+class SparklinePainter extends CustomPainter {
+  SparklinePainter(this.values, this.capacity, this.color, this.min, this.max);
 
   final List<double?> values;
   final int capacity;
@@ -82,7 +82,7 @@ class _SparklinePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SparklinePainter old) =>
+  bool shouldRepaint(SparklinePainter old) =>
       !identical(old.values, values) ||
       old.color != color ||
       old.min != min ||

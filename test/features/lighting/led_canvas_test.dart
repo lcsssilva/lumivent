@@ -5,6 +5,7 @@ import 'package:lumivent/features/lighting/domain/canvas_rect.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/presentation/widgets/led_canvas.dart';
+import 'package:lumivent/features/lighting/presentation/on_canvas.dart';
 
 import '../../support/app_harness.dart';
 

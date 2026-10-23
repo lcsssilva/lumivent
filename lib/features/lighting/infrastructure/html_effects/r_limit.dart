@@ -1,6 +1,6 @@
-part of 'quickjs_interrupt.dart';
+import 'dart:ffi';
 
-final class _RLimit extends Struct {
+final class RLimit extends Struct {
   @Uint64()
   external int current;
 

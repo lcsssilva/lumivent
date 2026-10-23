@@ -24,18 +24,18 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_js/flutter_js.dart';
 import 'package:flutter_js/quickjs/ffi.dart' show runtimeOpaques;
 
-part 'r_limit.dart';
+import 'r_limit.dart';
 
 typedef _GetRLimitNative = Int32 Function(
   Int32 resource,
-  Pointer<_RLimit> limit,
+  Pointer<RLimit> limit,
 );
-typedef _GetRLimit = int Function(int resource, Pointer<_RLimit> limit);
+typedef _GetRLimit = int Function(int resource, Pointer<RLimit> limit);
 typedef _SetRLimitNative = Int32 Function(
   Int32 resource,
-  Pointer<_RLimit> limit,
+  Pointer<RLimit> limit,
 );
-typedef _SetRLimit = int Function(int resource, Pointer<_RLimit> limit);
+typedef _SetRLimit = int Function(int resource, Pointer<RLimit> limit);
 
 typedef _HandlerNative = Int32 Function(Pointer<Void> rt, Pointer<Void> opaque);
 typedef _SetHandlerNative = Void Function(
@@ -70,7 +70,7 @@ void limitWorkerAddressSpace() {
   final currentBytes = virtualMemoryBytes(
     File('/proc/self/status').readAsStringSync(),
   );
-  final limit = calloc<_RLimit>();
+  final limit = calloc<RLimit>();
   try {
     final libc = DynamicLibrary.process();
     final getRLimit = libc.lookupFunction<_GetRLimitNative, _GetRLimit>(

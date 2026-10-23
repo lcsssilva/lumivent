@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/light_outputs.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/alv2_hardware_config.dart';
+import 'package:lumivent/features/lighting/domain/gpu_hardware_config.dart';
 import 'package:lumivent/features/lighting/domain/board_zone_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 

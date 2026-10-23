@@ -11,15 +11,13 @@ import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 
 import 'i2c_transport.dart';
-
-part 'i2c_msg.dart';
-part 'i2c_rdwr_data.dart';
-part 'raw_i2c_exception.dart';
+import 'i2c_msg.dart';
+import 'i2c_rdwr_data.dart';
+import 'raw_i2c_exception.dart';
 
 const _oRdwr = 2;
 const _i2cRdwr = 0x0707;
 const _i2cMRd = 0x0001;
-const _eacces = 13, _eperm = 1;
 const _ewouldblock = 11;
 const _lockEx = 2, _lockNb = 4, _lockUn = 8;
 
@@ -39,9 +37,9 @@ typedef _CloseD = int Function(int);
 typedef _IoctlC = Int Function(
   Int,
   UnsignedLong,
-  VarArgs<(Pointer<_I2cRdwrData>,)>,
+  VarArgs<(Pointer<I2cRdwrData>,)>,
 );
-typedef _IoctlD = int Function(int, int, Pointer<_I2cRdwrData>);
+typedef _IoctlD = int Function(int, int, Pointer<I2cRdwrData>);
 typedef _ErrnoC = Pointer<Int> Function();
 typedef _FlockC = Int Function(Int, Int);
 typedef _FlockD = int Function(int, int);
@@ -93,8 +91,8 @@ class RawI2cBus implements I2cTransport {
   void write(Uint8List data) {
     _check(data.length);
     final buf = malloc<Uint8>(data.length);
-    final msg = calloc<_I2cMsg>();
-    final args = calloc<_I2cRdwrData>();
+    final msg = calloc<I2cMsg>();
+    final args = calloc<I2cRdwrData>();
     try {
       buf.asTypedList(data.length).setAll(0, data);
       msg.ref
@@ -119,8 +117,8 @@ class RawI2cBus implements I2cTransport {
   Uint8List read(int length) {
     _check(length);
     final buf = malloc<Uint8>(length);
-    final msg = calloc<_I2cMsg>();
-    final args = calloc<_I2cRdwrData>();
+    final msg = calloc<I2cMsg>();
+    final args = calloc<I2cRdwrData>();
     try {
       msg.ref
         ..addr = address

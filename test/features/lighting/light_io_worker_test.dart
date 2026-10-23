@@ -3,38 +3,35 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_transport.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_controller.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_controller.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_bus.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/gpu_hardware_config.dart';
 import 'package:lumivent/features/lighting/domain/board_zone_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/infrastructure/device_light_outputs.dart';
 import 'package:lumivent/features/lighting/infrastructure/light_io_command.dart';
 import 'package:lumivent/features/lighting/infrastructure/light_io_reply.dart';
 import 'package:lumivent/features/lighting/infrastructure/light_io_core.dart';
-import 'package:lumivent/features/lighting/infrastructure/light_io_client.dart';
 
-part 'io_worker_ite_transport.dart';
-part 'io_worker_fury_bus.dart';
-part 'recording_io.dart';
-part 'io_worker_no_hub.dart';
+import 'io_worker_fury_bus.dart';
+import 'io_worker_ite_transport.dart';
+import 'io_worker_no_hub.dart';
+import 'recording_io.dart';
 
 Uint8List rgb(int n, [int v = 7]) => Uint8List.fromList(List.filled(n * 3, v));
 
 void main() {
-  late _IoWorkerIteTransport ite;
-  late _IoWorkerFuryBus bus;
+  late IoWorkerIteTransport ite;
+  late IoWorkerFuryBus bus;
   late Completer<void> gate;
   late LightIoCore core;
   var next = 0;
 
   setUp(() {
-    ite = _IoWorkerIteTransport();
-    bus = _IoWorkerFuryBus();
+    ite = IoWorkerIteTransport();
+    bus = IoWorkerFuryBus();
     gate = Completer<void>();
     core = LightIoCore(
       // The zone-effect wait is the only async step: it holds the worker.
@@ -133,14 +130,14 @@ void main() {
   });
 
   group('adapter', () {
-    late _RecordingIo io;
+    late RecordingIo io;
     late DeviceLightOutputs out;
     setUp(() {
-      io = _RecordingIo();
+      io = RecordingIo();
       out = DeviceLightOutputs(
         Alv2HubProxy.local(
           Alv2Hub.withTransport(
-            _IoWorkerNoHub(),
+            IoWorkerNoHub(),
             delay: (_) async {},
             sleeper: (_) {},
           ),

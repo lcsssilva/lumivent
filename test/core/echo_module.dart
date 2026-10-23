@@ -1,7 +1,14 @@
-part of 'engine_host_test.dart';
+import 'package:lumivent/core/engine/engine_command.dart';
+import 'package:lumivent/core/engine/engine_event.dart';
+import 'package:lumivent/core/engine/engine_module.dart';
 
-class _EchoModule implements EngineModule {
-  _EchoModule(this.base);
+import 'ping.dart';
+import 'pong.dart';
+import 'started.dart';
+import 'stopping.dart';
+
+class EchoModule implements EngineModule {
+  EchoModule(this.base);
   final int base;
   late void Function(EngineEvent) emit;
 

@@ -1,6 +1,9 @@
-part of 'lighting_test.dart';
+import 'dart:typed_data';
 
-class _LightingHubTransport implements Alv2Transport {
+import 'package:lumivent/core/platform/hid_exception.dart' show HidException;
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
+
+class LightingHubTransport implements Alv2Transport {
   final writes = <List<int>>[];
 
   /// Report length passed to `write` / `sendFeature`, parallel to [writes].

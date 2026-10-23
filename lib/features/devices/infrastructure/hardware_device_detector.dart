@@ -7,6 +7,7 @@ import '../../../core/platform/dev_access.dart';
 import '../../../core/platform/hid_api.dart';
 import '../../../core/platform/hid_exception.dart';
 import '../../../core/platform/smbus.dart';
+import '../../../core/platform/smbus_exception.dart';
 import '../domain/device.dart';
 import '../domain/device_info.dart';
 import '../domain/device_snapshot.dart';

@@ -1,4 +1,10 @@
-part of 'logind_power_watcher.dart';
+import 'dart:async';
+
+import 'package:dbus/dbus.dart';
+
+import 'inhibitor_lock.dart';
+import 'logind_bus.dart';
+import 'fd_lock.dart';
 
 /// Real [LogindBus]: system bus, `org.freedesktop.login1.Manager`.
 class DBusLogindBus implements LogindBus {
@@ -35,7 +41,7 @@ class DBusLogindBus implements LogindBus {
       DBusString('Apagar os ARGB'),
       DBusString('delay'),
     ], replySignature: DBusSignature('h'));
-    return _FdLock(r.values[0].asUnixFd());
+    return FdLock(r.values[0].asUnixFd());
   }
 
   @override

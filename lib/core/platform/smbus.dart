@@ -8,15 +8,14 @@ import 'dart:io';
 
 import 'package:ffi/ffi.dart';
 
-part 'smbus_ioctl_data.dart';
-part 'smbus_exception.dart';
+import 'smbus_ioctl_data.dart';
+import 'smbus_exception.dart';
 
 const _oRdwr = 2;
 const _i2cSlave = 0x0703;
 const _i2cSmbus = 0x0720;
 const _smbusWrite = 0, _smbusRead = 1;
 const _smbusQuick = 0, _smbusByteData = 2, _smbusWordData = 3;
-const _eacces = 13, _eperm = 1;
 
 /// SPD addresses (0x50–0x57) must never be accessed.
 bool isForbiddenSmbusAddress(int addr) => addr >= 0x50 && addr <= 0x57;
@@ -44,9 +43,9 @@ typedef _IoctlLongD = int Function(int, int, int);
 typedef _IoctlPtrC = Int Function(
   Int,
   UnsignedLong,
-  VarArgs<(Pointer<_SmbusIoctlData>,)>,
+  VarArgs<(Pointer<SmbusIoctlData>,)>,
 );
-typedef _IoctlPtrD = int Function(int, int, Pointer<_SmbusIoctlData>);
+typedef _IoctlPtrD = int Function(int, int, Pointer<SmbusIoctlData>);
 typedef _ErrnoC = Pointer<Int> Function();
 
 final _libc = DynamicLibrary.process();
@@ -72,7 +71,7 @@ class SmBus {
   int? _slaveAddr;
 
   /// Native buffers allocated once per bus and released in [close].
-  final Pointer<_SmbusIoctlData> _args = calloc<_SmbusIoctlData>();
+  final Pointer<SmbusIoctlData> _args = calloc<SmbusIoctlData>();
   final Pointer<Uint8> _data = calloc<Uint8>(34);
 
   static SmBus open(String path) {

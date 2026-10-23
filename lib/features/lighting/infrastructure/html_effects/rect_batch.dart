@@ -1,8 +1,9 @@
-part of 'canvas_replayer.dart';
+import 'dart:typed_data';
+import 'dart:ui';
 
 /// Accumulates opaque rectangles and draws them all with one `drawVertices`.
 /// Only rectangles independent of alpha/blend and paths belong here.
-class _RectBatch {
+class RectBatch {
   static const _capacity = 512;
 
   final _positions = Float32List(_capacity * 12);

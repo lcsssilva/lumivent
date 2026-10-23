@@ -1,3 +1,3 @@
-part of 'hid_api.dart';
+import 'dart:ffi';
 
-final class _HidDeviceHandle extends Opaque {}
+final class HidDeviceHandle extends Opaque {}

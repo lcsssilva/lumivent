@@ -1,6 +1,9 @@
-part of 'lighting_test.dart';
+import 'dart:typed_data';
 
-class _LightingIteTransport implements IteTransport {
+import 'package:lumivent/core/platform/hid_exception.dart' show HidException;
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_transport.dart';
+
+class LightingIteTransport implements IteTransport {
   final sent = <List<int>>[];
   bool failNext = false;
   @override
