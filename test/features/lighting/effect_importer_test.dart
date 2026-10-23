@@ -539,6 +539,43 @@ void main() {
     expect(await library.list(), isEmpty);
   });
 
+  test('trims stored tags on read and drops blank ones', () async {
+    await library.write(
+      'spaced',
+      effectHtml('Spaced'),
+      EffectMetadata(
+        title: 'Spaced',
+        origin: EffectOrigin.file,
+        importedAt: DateTime(2026, 10, 20),
+        tags: const [' Pro', '  ', 'Basic '],
+      ),
+    );
+
+    expect((await library.find('spaced'))!.tags, ['Pro', 'Basic']);
+  });
+
+  test('trims catalog tags on import and drops blank ones', () async {
+    final cache = Directory('${temp.path}/win/EffectsApp/cache')
+      ..createSync(recursive: true);
+    Directory('${cache.path}/effects/padded').createSync(recursive: true);
+    File('${cache.path}/effects/padded/effect.html')
+        .writeAsStringSync(effectHtml('Padded'));
+    File('${cache.path}/catalog_en.json').writeAsStringSync('''
+[
+  {
+    "id": "padded",
+    "name": "Padded",
+    "type": " Basic ",
+    "tags": [" Pro", "  ", "Pro "]
+  }
+]
+''');
+
+    await importer.importWindowsCache(cache.path);
+
+    expect((await library.find('padded'))!.tags, ['Basic', 'Pro']);
+  });
+
   test('sanitizes ids and refuses path traversal', () async {
     expect(sanitizeEffectId('Neon Shift!'), 'neon-shift');
     expect(sanitizeEffectId('  ***  '), 'effect');

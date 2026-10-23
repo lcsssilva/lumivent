@@ -201,6 +201,9 @@ class HidDevice {
     _io(_api._write, data, length, 'hid_write');
   }
 
+  // Not unit-tested (REV-008): a HidDevice only exists after a real hidapi
+  // open, and _checkLength is a private one-line guard. Testing it would mean
+  // widening the API or opening hardware, so the guards are reviewed here.
   /// Reads an input report from the interrupt endpoint; empty on timeout.
   Uint8List read(int length, {int timeoutMs = 100}) {
     _checkOpen();
