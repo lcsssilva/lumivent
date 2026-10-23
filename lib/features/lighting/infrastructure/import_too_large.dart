@@ -1,8 +1,6 @@
-part of 'file_effect_importer.dart';
-
 /// A file read stopped at the import size [limit].
-class _TooLarge implements Exception {
-  const _TooLarge(this.limit);
+class ImportTooLarge implements Exception {
+  const ImportTooLarge(this.limit);
 
   final int limit;
 

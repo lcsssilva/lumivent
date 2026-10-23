@@ -1,7 +1,6 @@
-part of 'file_effect_importer.dart';
-
-class _CatalogEntry {
-  const _CatalogEntry({
+/// Metadata of one effect in the Windows effects-cache catalog.
+class CatalogEntry {
+  const CatalogEntry({
     this.title,
     this.publisher,
     this.description,

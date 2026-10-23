@@ -12,6 +12,7 @@ export 'domain/device_snapshot.dart';
 export 'domain/device_detector.dart' show DeviceDetector;
 export 'infrastructure/drivers/alv2/alv2_hub_proxy.dart' show Alv2HubProxy;
 export 'infrastructure/drivers/alv2/lighting.dart';
+export 'infrastructure/drivers/alv2/alv2_port_writes.dart';
 export 'infrastructure/drivers/alv2/alv2_mode_meta.dart';
 export 'infrastructure/drivers/alv2/alv2_effect.dart';
 export 'infrastructure/drivers/alv2/alv2_packet.dart' show Alv2Packet;

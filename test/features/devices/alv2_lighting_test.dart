@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_port_writes.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/lighting.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_effect.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/protocol.dart';

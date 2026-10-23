@@ -4,9 +4,6 @@
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
-
-import 'package:archive/archive.dart';
 
 import '../domain/effect_library.dart';
 import '../domain/import_issue.dart';
@@ -15,15 +12,12 @@ import '../domain/effect_importer.dart';
 import '../domain/effect_meta.dart';
 import '../domain/installed_effect.dart';
 import '../domain/effect_metadata.dart';
+import 'bounded_file_read.dart';
 import 'file_effect_library.dart';
-
-part 'too_large.dart';
-part 'catalog_entry.dart';
-
-const _maxHtmlBytes = 4 * 1024 * 1024;
-const _maxZipBytes = 64 * 1024 * 1024;
-const _maxZipHtmlBytes = 32 * 1024 * 1024;
-const _maxCatalogBytes = 8 * 1024 * 1024;
+import 'import_issue_for.dart';
+import 'import_limits.dart';
+import 'windows_effect_catalog.dart';
+import 'zip_effect_reader.dart';
 
 class FileEffectImporter implements EffectImporter {
   FileEffectImporter(this.library);
@@ -55,7 +49,7 @@ class FileEffectImporter implements EffectImporter {
           report.issues.add(ImportIssue(ImportIssueKind.notFound, path: path));
         }
       } on Object catch (e) {
-        report.issues.add(_issueFor(path, e));
+        report.issues.add(importIssueFor(path, e));
       }
     }
     library.invalidate();
@@ -77,7 +71,7 @@ class FileEffectImporter implements EffectImporter {
       report.issues.add(const ImportIssue(ImportIssueKind.chooseWindowsCache));
       return report;
     }
-    final catalog = await _readCatalog(root);
+    final catalog = await const WindowsEffectCatalog().read(root);
     report.catalogFound = catalog != null;
     if (catalog == null) {
       // Without the catalog there is no way to tell paid effects apart.
@@ -112,7 +106,7 @@ class FileEffectImporter implements EffectImporter {
           ),
         );
       } on Object catch (e) {
-        report.issues.add(_issueFor(id, e));
+        report.issues.add(importIssueFor(id, e));
       }
     }
     if (report.total == 0 && report.paidSkipped == 0 && report.issues.isEmpty) {
@@ -135,73 +129,6 @@ class FileEffectImporter implements EffectImporter {
       if (d.existsSync() && d.listSync().any((e) => e is Directory)) return d;
     }
     return null;
-  }
-
-  Future<Map<String, _CatalogEntry>?> _readCatalog(Directory root) async {
-    final name = root.uri.pathSegments.where((s) => s.isNotEmpty).last;
-    final candidates = [
-      if (name == 'cache') File('${root.path}/catalog_en.json'),
-      File('${root.path}/catalog_en.json'),
-      File('${root.path}/cache/catalog_en.json'),
-    ];
-    for (final f in candidates) {
-      if (!await f.exists()) continue;
-      try {
-        final bytes = await _readBounded(f, _maxCatalogBytes);
-        final json = jsonDecode(utf8.decode(bytes));
-        final entries = _catalogEntries(json);
-        if (entries.isNotEmpty) return entries;
-      } on Object {
-        // A corrupt catalog only costs the names/tags, not the import.
-      }
-    }
-    return null;
-  }
-
-  Map<String, _CatalogEntry> _catalogEntries(Object? json) {
-    final out = <String, _CatalogEntry>{};
-    void add(Object? id, Object? value) {
-      if (id is! String || id.isEmpty || value is! Map) return;
-      final tags = <String>[];
-      void addTag(Object? raw) {
-        if (raw is! String) return;
-        final tag = raw.trim();
-        if (tag.isNotEmpty && !tags.contains(tag)) tags.add(tag);
-      }
-
-      addTag(value['type']);
-      final rawTags = value['tags'];
-      if (rawTags is List) rawTags.forEach(addTag);
-      final price = value['price'];
-      out[id] = _CatalogEntry(
-        paid: value['requires_pro'] == true || (price is num && price > 0),
-        title: value['name'] is String ? value['name'] as String : null,
-        publisher: value['publisher'] is String
-            ? value['publisher'] as String
-            : null,
-        description: value['description'] is String
-            ? value['description'] as String
-            : null,
-        tags: tags,
-      );
-    }
-
-    if (json is List) {
-      for (final e in json) {
-        if (e is Map) add(e['id'] ?? e['name'], e);
-      }
-    } else if (json is Map) {
-      for (final e in json.entries) {
-        if (e.value is List) {
-          for (final item in e.value as List) {
-            if (item is Map) add(item['id'] ?? item['name'], item);
-          }
-        } else {
-          add(e.key, e.value);
-        }
-      }
-    }
-    return out;
   }
 
   Future<ImportReport> _importFile(File file) async {
@@ -269,107 +196,28 @@ class FileEffectImporter implements EffectImporter {
           ),
         );
       } on Object catch (e) {
-        report.issues.add(_issueFor(f.path, e));
+        report.issues.add(importIssueFor(f.path, e));
       }
     }
     return report;
   }
 
-  /// Unix file types that name regular files: no type bits, or S_IFREG.
-  static const Set<int> _regularEntryTypes = {0x0000, 0x8000};
-  static const int _unixDirectoryType = 0x4000;
-
   Future<ImportReport> _importZip(File file) async {
     final report = ImportReport();
-    final Uint8List bytes;
-    try {
-      bytes = await _readBounded(file, _maxZipBytes);
-    } on Object catch (e) {
-      report.issues.add(
-        e is _TooLarge
-            ? ImportIssue(ImportIssueKind.tooLarge, path: file.path)
-            : ImportIssue(
-                ImportIssueKind.invalidZip,
-                path: file.path,
-                detail: '$e',
-              ),
-      );
-      return report;
-    }
-    // Only the central directory is read here. Archiver versions that decode
-    // entries eagerly would decompress symlink targets and other payload
-    // while building the archive object, before the limits below apply.
-    final ZipDirectory directory;
-    try {
-      directory = ZipDirectory()..read(InputMemoryStream(bytes));
-    } on Object catch (e) {
-      report.issues.add(
-        ImportIssue(ImportIssueKind.invalidZip, path: file.path, detail: '$e'),
-      );
-      return report;
-    }
-    final zipBase = file.uri.pathSegments
-        .where((s) => s.isNotEmpty)
-        .last
-        .replaceAll(RegExp(r'\.zip$', caseSensitive: false), '');
-    var found = 0;
-    var totalHtmlBytes = 0;
-    for (final header in directory.fileHeaders) {
-      final zipFile = header.file;
-      if (zipFile == null) continue;
-      final name = header.filename.replaceAll('\\', '/');
-      if (name.startsWith('/') || name.split('/').contains('..')) continue;
-      final lower = name.toLowerCase();
-      if (!lower.endsWith('.html') && !lower.endsWith('.htm')) continue;
-      // Symlinks, devices and other non-regular entries are never HTML:
-      // they are rejected before their payload is read or decompressed.
-      final entryType = (header.externalFileAttributes >> 16) & 0xf000;
-      if (entryType == _unixDirectoryType) continue;
-      if (!_regularEntryTypes.contains(entryType)) {
-        report.issues.add(
-          ImportIssue(ImportIssueKind.unsupportedZipEntry, path: name),
-        );
-        continue;
-      }
-      found++;
+    final entries = await const ZipEffectReader().open(file, report);
+    if (entries == null) return report;
+    for (final entry in entries) {
       try {
-        final size = header.uncompressedSize;
-        if (size < 0 ||
-            size > _maxHtmlBytes ||
-            totalHtmlBytes + size > _maxZipHtmlBytes) {
-          report.issues.add(ImportIssue(ImportIssueKind.tooLarge, path: name));
-          continue;
-        }
-        totalHtmlBytes += size;
-        final parts = name.split('/').where((s) => s.isNotEmpty).toList();
-        final fileBase = parts.last.replaceAll(
-          RegExp(r'\.html?$', caseSensitive: false),
-          '',
-        );
-        final base = parts.length > 1 ? parts[parts.length - 2] : zipBase;
-        // `effect.html` is the standard name: the folder names the effect.
-        final isEffect = parts.last.toLowerCase() == 'effect.html';
-        // Decompression also stops at the declared size inside the archive
-        // library; the declared size is bounded by the check above.
-        final content = zipFile.readBytes();
-        if (content.length > _maxHtmlBytes) {
-          report.issues.add(ImportIssue(ImportIssueKind.tooLarge, path: name));
-          continue;
-        }
-        final html = utf8.decode(content, allowMalformed: true);
         report.add(
           await _install(
-            id: _idFor(parseEffect(html).title, isEffect ? base : fileBase),
-            html: html,
+            id: _idFor(parseEffect(entry.html).title, entry.fallbackName),
+            html: entry.html,
             origin: EffectOrigin.zip,
           ),
         );
       } on Object catch (e) {
-        report.issues.add(_issueFor(name, e));
+        report.issues.add(importIssueFor(entry.name, e));
       }
-    }
-    if (found == 0) {
-      report.issues.add(const ImportIssue(ImportIssueKind.noHtmlInZip));
     }
     return report;
   }
@@ -406,27 +254,6 @@ class FileEffectImporter implements EffectImporter {
     return sanitizeEffectId(raw.length > 80 ? raw.substring(0, 80) : raw);
   }
 
-  Future<String> _readHtml(File file) async => utf8.decode(
-    await _readBounded(file, _maxHtmlBytes),
-    allowMalformed: true,
-  );
-
-  Future<Uint8List> _readBounded(File file, int limit) async {
-    final bytes = BytesBuilder(copy: false);
-    var length = 0;
-    await for (final chunk in file.openRead()) {
-      length += chunk.length;
-      if (length > limit) {
-        throw _TooLarge(limit);
-      }
-      bytes.add(chunk);
-    }
-    return bytes.takeBytes();
-  }
+  Future<String> _readHtml(File file) async =>
+      utf8.decode(await readBounded(file, maxHtmlBytes), allowMalformed: true);
 }
-
-/// Issue for an error caught while importing [path]: the size limit has its
-/// own translated message; anything else keeps the technical detail.
-ImportIssue _issueFor(String path, Object error) => error is _TooLarge
-    ? ImportIssue(ImportIssueKind.tooLarge, path: path)
-    : ImportIssue(ImportIssueKind.unknown, path: path, detail: '$error');

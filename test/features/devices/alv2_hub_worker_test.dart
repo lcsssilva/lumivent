@@ -6,7 +6,7 @@ import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_trans
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_command.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_core.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/lighting.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_port_writes.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/protocol.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_port_write.dart';
 

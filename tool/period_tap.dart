@@ -24,6 +24,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_port_writes.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/lighting.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_effect.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_controller.dart';
