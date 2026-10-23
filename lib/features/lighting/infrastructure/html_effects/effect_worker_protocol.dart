@@ -50,9 +50,12 @@ List<Object?> loadRequest(
   Map<String, Object?> values,
 ) => [EffectWorkerOperation.load.name, html, shim, values];
 
-List<Object?> frameRequest(double nowMs) => [
+/// With [pixels] false the worker leaves the frame pixels out of the reply
+/// when it sampled the LED colors itself (no preview needs them).
+List<Object?> frameRequest(double nowMs, {bool pixels = true}) => [
   EffectWorkerOperation.frame.name,
   nowMs,
+  pixels,
 ];
 
 List<Object?> pointsRequest(Object? encodedPoints) => [
@@ -120,7 +123,8 @@ final class EffectWorkerRequest {
   /// Arguments per op (validated again by each handling):
   ///
   /// * `load`: html, shim script, property values.
-  /// * `frame`: time in milliseconds.
+  /// * `frame`: time in milliseconds, whether the pixels are wanted (absent
+  ///   equals true).
   /// * `property`: name, value (absent equals null).
   /// * `sensors`: the values.
   /// * `points`: encoded sample points, or null to clear them.
@@ -129,6 +133,7 @@ final class EffectWorkerRequest {
   Map<String, Object?> values() =>
       (arguments[2] as Map).cast<String, Object?>();
   double frameTime() => (arguments[0] as num).toDouble();
+  bool framePixels() => arguments.length < 2 || arguments[1] != false;
   String propertyName() => arguments[0] as String;
   Object? propertyValue() => arguments.length > 1 ? arguments[1] : null;
   Map<String, double> sensorValues() =>

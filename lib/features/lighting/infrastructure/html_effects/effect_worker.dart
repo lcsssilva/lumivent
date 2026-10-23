@@ -61,6 +61,7 @@ Future<void> runHtmlEffectWorker() async {
             // not the disposed one.
             runtime?.dispose();
             runtime = null;
+            pendingError = null;
             runtime = await HtmlEffectRuntime.load(
               request.html(),
               shim: request.shim(),
@@ -81,7 +82,10 @@ Future<void> runHtmlEffectWorker() async {
               request.frameTime(),
             );
             reply = processFrameReply(
-              pixelsOrOps: frame.rgba,
+              // Without a preview the parent only needs the sampled colors.
+              pixelsOrOps: request.framePixels() || colors == null
+                  ? frame.rgba
+                  : const <int>[],
               simple: true,
               opCount: current.lastOpCount,
               logs: current.drainLog(),
@@ -163,6 +167,8 @@ void runHtmlEffectIsolateWorker(SendPort main) {
           // the disposed one.
           runtime?.dispose();
           runtime = null;
+          pendingError = null;
+          samplePoints = null;
           runtime = QuickJsEffect.load(
             request.html(),
             request.shim(),
@@ -186,6 +192,7 @@ void runHtmlEffectIsolateWorker(SendPort main) {
             fastCanvas: fastCanvas,
             firstFrame: firstFrame,
             points: samplePoints,
+            pixels: request.framePixels(),
             onState: (canvas, state) {
               fastCanvas = canvas;
               fastState = state;
@@ -236,6 +243,7 @@ List<Object?> renderIsolateFrame(
   required Uint32List? fastCanvas,
   required bool firstFrame,
   required List<(LightDeviceId, int, int)>? points,
+  bool pixels = true,
   required void Function(Uint32List? canvas, SimpleRasterState state) onState,
 }) {
   final bytes = js.renderOps(nowMs);
@@ -260,7 +268,11 @@ List<Object?> renderIsolateFrame(
       ? sampleCanvasPixels(points, raster.pixels)
       : null;
   return frameReply(
-    pixelsOrOps: simple ? raster.pixels : bytes,
+    pixelsOrOps: !simple
+        ? bytes
+        : pixels || colors == null
+        ? raster.pixels
+        : Uint8List(0),
     simple: simple,
     opCount: simple ? raster.opCount : -1,
     logs: logs,

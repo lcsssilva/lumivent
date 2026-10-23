@@ -62,9 +62,15 @@ class _Prefs implements PreferencesRepository {
 }
 
 class _FakeRuntime implements EffectRuntime {
-  _FakeRuntime(this._frame);
+  _FakeRuntime(this._frame, this._colors);
 
   final EffectFrame _frame;
+
+  /// Colors "sampled on the worker"; `null` makes the runner sample itself.
+  final Map<LightDeviceId, List<Rgb>>? _colors;
+
+  /// `needFrame` of every render, in order.
+  final frameRequests = <bool>[];
   final properties = <String, Object?>{};
   final sensors = <String, double>{};
   bool disposed = false;
@@ -74,9 +80,14 @@ class _FakeRuntime implements EffectRuntime {
       EffectSource(title: 'Teste', properties: const [], script: '');
 
   @override
-  Future<(EffectFrame, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
-    double nowMs,
-  ) => renderFrame(nowMs).then((frame) => (frame, null));
+  Future<(EffectFrame?, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
+    double nowMs, {
+    bool needFrame = true,
+  }) async {
+    frameRequests.add(needFrame);
+    final colors = _colors;
+    return (needFrame || colors == null ? _frame : null, colors);
+  }
 
   @override
   void setSamplePoints(List<(LightDeviceId, int, int)>? points) {}
@@ -104,6 +115,9 @@ class _FakeRuntime implements EffectRuntime {
 }
 
 class _Factory implements EffectRuntimeFactory {
+  _Factory({this.colors});
+
+  final Map<LightDeviceId, List<Rgb>>? colors;
   int loads = 0;
   late _FakeRuntime runtime;
 
@@ -120,7 +134,7 @@ class _Factory implements EffectRuntimeFactory {
       rgba[i + 2] = 90;
       rgba[i + 3] = 255;
     }
-    runtime = _FakeRuntime(EffectFrame(320, 200, rgba));
+    runtime = _FakeRuntime(EffectFrame(320, 200, rgba), colors);
     return runtime;
   }
 }
@@ -188,6 +202,57 @@ void main() {
     container.dispose();
     disposed = true;
     expect(factory.runtime.disposed, isTrue);
+  });
+
+  testWidgets('asks for the frame pixels only for the thumbnail and preview', (
+    tester,
+  ) async {
+    final engine = FakeEngine();
+    final effect = InstalledEffect(
+      id: 'test',
+      title: 'Teste',
+      source: EffectSource(title: 'Teste', properties: const [], script: ''),
+      compatibility: const EffectCompatibility(EffectSupport.compatible, []),
+    );
+    const sampled = {
+      LightDeviceId.ram1: [Rgb(1, 2, 3)],
+    };
+    final factory = _Factory(colors: sampled);
+    final container = ProviderContainer(
+      overrides: [
+        engineProvider.overrideWithValue(engine),
+        lightingRepositoryProvider.overrideWithValue(_Repo()),
+        preferencesRepositoryProvider.overrideWithValue(_Prefs()),
+        effectLibraryProvider.overrideWithValue(_Library(effect)),
+        effectRuntimeFactoryProvider.overrideWithValue(factory),
+      ],
+    );
+    container.listen(htmlEffectRunnerProvider, (_, _) {});
+    await tester.pump();
+    await tester.pump();
+
+    Future<void> tick() async {
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.pump();
+    }
+
+    // The first frame feeds the thumbnail; with no preview listening, the
+    // next ones carry only the colors.
+    await tick();
+    await tick();
+    expect(factory.runtime.frameRequests.take(2), [true, false]);
+    expect(engine.sent.whereType<SetHtmlEffectFrame>().last.pixels, sampled);
+
+    final feed = container.read(htmlEffectFramesProvider);
+    void preview() {}
+    feed.addListener(preview);
+    factory.runtime.frameRequests.clear();
+    await tick();
+    expect(factory.runtime.frameRequests, isNotEmpty);
+    expect(factory.runtime.frameRequests, everyElement(isTrue));
+
+    feed.removeListener(preview);
+    container.dispose();
   });
 
   test('paused is derived from the issue and carries the slow frame time', () {

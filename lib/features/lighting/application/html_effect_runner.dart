@@ -72,15 +72,23 @@ const maxSlowFrames = 3;
 
 /// Last rendered frame, for the canvas preview. The runner updates it at the
 /// effects FPS; only the painter listens, so it does not rebuild the page.
-final htmlEffectFramesProvider = Provider<ValueNotifier<EffectFrame?>>((ref) {
-  final notifier = ValueNotifier<EffectFrame?>(null);
-  ref.onDispose(notifier.dispose);
-  return notifier;
+final htmlEffectFramesProvider = Provider<EffectFrameFeed>((ref) {
+  final feed = EffectFrameFeed();
+  ref.onDispose(feed.dispose);
+  return feed;
 });
+
+/// The preview frame, and whether anything is showing it: without a
+/// listener the runner asks the runtime for the LED colors only.
+class EffectFrameFeed extends ValueNotifier<EffectFrame?> {
+  EffectFrameFeed() : super(null);
+
+  bool get watched => hasListeners;
+}
 
 class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
   EffectRuntime? _runtime;
-  ValueNotifier<EffectFrame?>? _liveFrame;
+  EffectFrameFeed? _liveFrame;
   Timer? _timer;
   int _generation = 0;
   String? _slug;
@@ -191,8 +199,11 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
     try {
       final cfg = ref.read(lightingProvider);
       _pushInputs(runtime, effectId, cfg);
+      // The pixels cross from the render worker only for the preview and
+      // the thumbnail; the LEDs need just the sampled colors.
       final (frame, colors) = await runtime.renderSampled(
         DateTime.now().difference(_started).inMicroseconds / 1000,
+        needFrame: !_thumbnailSaved || (_liveFrame?.watched ?? false),
       );
       // The effect may have been switched while awaiting the frame.
       if (!_isCurrent(gen, runtime, effectId)) return;
@@ -241,14 +252,16 @@ class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
     String effectId,
     EffectRuntime runtime,
     LightingConfig cfg,
-    EffectFrame frame,
+    EffectFrame? frame,
     Map<LightDeviceId, List<Rgb>>? colors,
   ) {
-    ref
-        .read(engineProvider)
-        .send(
-          SetHtmlEffectFrame(effectId, colors ?? sampleEffectFrame(cfg, frame)),
-        );
+    final pixels =
+        colors ?? (frame == null ? null : sampleEffectFrame(cfg, frame));
+    if (pixels == null) {
+      throw StateError('the effect runtime returned no frame and no colors');
+    }
+    ref.read(engineProvider).send(SetHtmlEffectFrame(effectId, pixels));
+    if (frame == null) return;
     _liveFrame?.value = frame;
     if (!_thumbnailSaved) {
       _thumbnailSaved = true;

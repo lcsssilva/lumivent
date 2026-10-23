@@ -287,5 +287,8 @@ class EffectWorkerConnection {
     unawaited(_stderr?.cancel());
   }
 
+  /// The worker was closed or failed; requests are rejected.
+  bool get isClosed => _dead;
+
   void close() => _fail(const EffectScriptException('Effect unloaded.'));
 }

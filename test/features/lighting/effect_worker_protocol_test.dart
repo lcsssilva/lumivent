@@ -25,6 +25,16 @@ void main() {
     final frame = parseRequest(frameRequest(16.5))!;
     expect(frame.operation, EffectWorkerOperation.frame);
     expect(frame.frameTime(), 16.5);
+    expect(frame.framePixels(), isTrue);
+    expect(
+      parseRequest(frameRequest(0, pixels: false))!.framePixels(),
+      isFalse,
+    );
+    // A request from before the flag existed still asks for the pixels.
+    expect(
+      EffectWorkerRequest.tryParse([1, 'frame', 0])!.framePixels(),
+      isTrue,
+    );
 
     final points = parseRequest(pointsRequest(null))!;
     expect(points.operation, EffectWorkerOperation.points);

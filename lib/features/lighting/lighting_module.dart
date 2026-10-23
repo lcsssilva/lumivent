@@ -27,7 +27,7 @@ abstract final class LightingModule {
       effectLibraryProvider.overrideWithValue(library),
       effectImporterProvider.overrideWithValue(FileEffectImporter(library)),
       effectRuntimeFactoryProvider.overrideWithValue(
-        const HtmlEffectRuntimeFactory(),
+        HtmlEffectRuntimeFactory(),
       ),
     ];
   }

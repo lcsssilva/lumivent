@@ -49,9 +49,15 @@ abstract interface class EffectRuntime {
   /// Renders the frame at [nowMs], together with the device colors sampled on
   /// the render isolate ([setSamplePoints]); `null` colors mean this runtime
   /// did not sample (and the app samples from the returned frame itself).
-  Future<(EffectFrame, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
-    double nowMs,
-  );
+  ///
+  /// With [needFrame] false (no preview or thumbnail is waiting for the
+  /// pixels) a runtime that sampled the colors may skip transferring the
+  /// frame and return `null` for it. The frame is never `null` when the
+  /// colors are.
+  Future<(EffectFrame?, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
+    double nowMs, {
+    bool needFrame = true,
+  });
 
   /// Values for `engine.getSensorValue` (metric id → reading).
   void setSensors(Map<String, double> values);

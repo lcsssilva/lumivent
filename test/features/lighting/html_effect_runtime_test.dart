@@ -8,7 +8,9 @@ import 'package:lumivent/features/lighting/domain/effect_sampling.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_connection.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/runtime.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/shared_effect_worker.dart';
 
 /// `flutter test` only has the native QuickJS library when the Linux bundle was
 /// built and `LD_LIBRARY_PATH` points at it.
@@ -347,7 +349,11 @@ ctx.fillRect(0, 0, 320, 200);
     final config = LightingConfig();
     rt.setSamplePoints(canvasSamplePoints(config));
     final (frame, colors) = await rt.renderSampled(0);
-    expect(frame.pixelAt(10, 10), (255, 0, 0));
+    expect(frame!.pixelAt(10, 10), (255, 0, 0));
+    // Without a preview the frame pixels stay in the worker.
+    final (skipped, colorsOnly) = await rt.renderSampled(16, needFrame: false);
+    expect(skipped, isNull);
+    expect(colorsOnly, colors);
     // The colors came from the render isolate; the app does not need to read
     // the frame itself (sampleCanvasPixels runs there too, but a null colors
     // map would mean the app-side fallback).
@@ -361,5 +367,38 @@ ctx.fillRect(0, 0, 320, 200);
         reason: '${entry.key}',
       );
     }
+  }, skip: _skip);
+
+  test('switching effects reuses the worker and renders the new one', () async {
+    var spawns = 0;
+    final factory = HtmlEffectRuntimeFactory(
+      worker: SharedEffectWorker(
+        spawn: () {
+          spawns++;
+          return EffectWorkerConnection.spawn();
+        },
+        idleTimeout: Duration.zero,
+      ),
+    );
+    String fill(String color) => effect(
+      script:
+          '''
+var ctx = document.getElementById('exCanvas').getContext('2d');
+requestAnimationFrame(function draw() {
+  ctx.fillStyle = '$color';
+  ctx.fillRect(0, 0, 320, 200);
+  requestAnimationFrame(draw);
+});
+''',
+    );
+
+    final red = await factory.load(fill('#ff0000'));
+    expect((await red.renderFrame(0)).pixelAt(5, 5), (255, 0, 0));
+    red.dispose();
+    final blue = await factory.load(fill('#0000ff'));
+    addTearDown(blue.dispose);
+
+    expect((await blue.renderFrame(0)).pixelAt(5, 5), (0, 0, 255));
+    expect(spawns, 1);
   }, skip: _skip);
 }

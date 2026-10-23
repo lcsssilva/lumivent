@@ -12,6 +12,7 @@
 //   and codecs.
 // * `effect_worker.dart`: the worker side (child process and isolate).
 // * `effect_worker_connection.dart`: the parent side of the worker transports.
+// * `shared_effect_worker.dart`: one worker reused across effect loads.
 //
 // Linux app builds run QuickJS in a child process; tests and development
 // runners use an isolate. Both paths enforce the evaluation deadlines, while
@@ -26,9 +27,9 @@ import '../../domain/effect_sampling.dart';
 import '../../domain/light_device.dart';
 import '../../domain/rgb.dart';
 import 'effect_rasterizer.dart';
-import 'effect_worker_connection.dart';
 import 'effect_worker_protocol.dart';
 import 'quickjs_effect.dart';
+import 'shared_effect_worker.dart';
 import 'simple_canvas_raster.dart' show SimpleCanvasRaster;
 
 export 'effect_worker.dart' show runHtmlEffectWorker;
@@ -45,7 +46,7 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
 
   @override
   final EffectSource effect;
-  final EffectWorkerConnection _connection;
+  final EffectWorkerLease _connection;
   final EffectRasterizer _raster;
   final _logs = <String>[];
   Duration _lastScriptTime = Duration.zero;
@@ -62,20 +63,28 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
   @override
   Set<String> get unknownOps => _raster.unknownOps;
 
+  /// Loads [html] into [worker], or into a worker of its own that closes
+  /// with this runtime when [worker] is null.
   static Future<IsolatedHtmlEffectRuntime> load(
     String html, {
     Map<String, Object?> values = const {},
     String? shim,
+    SharedEffectWorker? worker,
   }) async {
     final effect = parseEffect(html);
-    final connection = await EffectWorkerConnection.spawn();
+    final shimScript = shim ?? await loadShim();
+    final connection =
+        await (worker ?? SharedEffectWorker(idleTimeout: Duration.zero))
+            .acquire();
     try {
       await connection.request(
-        loadRequest(html, shim ?? await loadShim(), values),
+        loadRequest(html, shimScript, values),
         timeout: scriptLoadLimit,
       );
     } on Object {
-      connection.close();
+      // A script error leaves the worker usable for the next effect; a load
+      // past its deadline has already killed it.
+      connection.release();
       rethrow;
     }
     return IsolatedHtmlEffectRuntime._(effect, connection, EffectRasterizer());
@@ -83,14 +92,15 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
 
   @override
   Future<EffectFrame> renderFrame(double nowMs) async =>
-      (await renderSampled(nowMs)).$1;
+      (await renderSampled(nowMs)).$1!;
 
   @override
-  Future<(EffectFrame, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
-    double nowMs,
-  ) async {
+  Future<(EffectFrame?, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
+    double nowMs, {
+    bool needFrame = true,
+  }) async {
     final reply = await _connection.request(
-      frameRequest(nowMs),
+      frameRequest(nowMs, pixels: needFrame),
       timeout: scriptHardLimit,
     ) as List;
     final frame = parseFrameReply(reply);
@@ -103,6 +113,11 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
       // General replay on the UI isolate: no sampling available, the app
       // samples from the returned frame itself.
       return (await _raster.drawSlow(frame.pixelsOrOps), null);
+    }
+    final colors = frame.colors;
+    if (!needFrame && colors != null && frame.pixelsOrOps.isEmpty) {
+      // The worker sampled the LEDs and left the unused pixels out.
+      return (null, colors);
     }
     if (frame.pixelsOrOps.lengthInBytes !=
         SimpleCanvasRaster.width * SimpleCanvasRaster.height * 4) {
@@ -144,7 +159,7 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
 
   @override
   void dispose() {
-    _connection.close();
+    _connection.release();
     _raster.dispose();
   }
 }
@@ -185,10 +200,12 @@ class HtmlEffectRuntime implements EffectRuntime {
   Future<EffectFrame> renderFrame(double nowMs) async =>
       (await renderSampled(nowMs)).$1;
 
+  /// Always returns the frame: the pixels are already on this isolate.
   @override
   Future<(EffectFrame, Map<LightDeviceId, List<Rgb>>?)> renderSampled(
-    double nowMs,
-  ) async {
+    double nowMs, {
+    bool needFrame = true,
+  }) async {
     final encoded = _js.renderOps(nowMs);
     final frame = await _raster.draw(encoded);
     lastOpCount = _raster.lastOpCount;
@@ -229,11 +246,15 @@ class HtmlEffectRuntime implements EffectRuntime {
 
 /// Port implementation used by the UI (wired in `lighting_module.dart`).
 class HtmlEffectRuntimeFactory implements EffectRuntimeFactory {
-  const HtmlEffectRuntimeFactory();
+  HtmlEffectRuntimeFactory({SharedEffectWorker? worker})
+    : _worker = worker ?? SharedEffectWorker();
+
+  /// Every effect the app loads goes through the same worker.
+  final SharedEffectWorker _worker;
 
   @override
   Future<EffectRuntime> load(
     String html, {
     Map<String, Object?> values = const {},
-  }) => IsolatedHtmlEffectRuntime.load(html, values: values);
+  }) => IsolatedHtmlEffectRuntime.load(html, values: values, worker: _worker);
 }
