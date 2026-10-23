@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
-import '../../domain/effect_param.dart';
-import '../../domain/effect_values.dart';
+import '../../domain/effects/effect_param.dart';
+import '../../domain/effects/effect_values.dart';
 import '../../domain/rgb.dart';
 import '../lighting_labels.dart';
 import '../rgb_color.dart';

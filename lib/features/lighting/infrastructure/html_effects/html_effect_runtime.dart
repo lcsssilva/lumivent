@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import '../../domain/effect_source.dart';
-import '../../domain/effect_runtime.dart';
-import '../../domain/effect_frame.dart';
-import '../../domain/effect_sampling.dart';
+import '../../domain/effects/effect_source.dart';
+import '../../domain/effects/effect_runtime.dart';
+import '../../domain/canvas/effect_frame.dart';
+import '../../domain/canvas/effect_sampling.dart';
 import '../../domain/light_device.dart';
 import '../../domain/rgb.dart';
 import 'effect_rasterizer.dart';

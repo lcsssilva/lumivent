@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:lumivent/features/lighting/domain/light_device.dart';
-import 'package:lumivent/features/lighting/domain/light_outputs.dart';
-import 'package:lumivent/features/lighting/domain/alv2_hardware_config.dart';
-import 'package:lumivent/features/lighting/domain/gpu_hardware_config.dart';
-import 'package:lumivent/features/lighting/domain/board_zone_config.dart';
+import 'package:lumivent/features/lighting/domain/outputs/light_outputs.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/alv2_hardware_config.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/gpu_hardware_config.dart';
+import 'package:lumivent/features/lighting/domain/config/board_zone_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 
 /// Records every call; each family can be made to fail.

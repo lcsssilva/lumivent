@@ -7,7 +7,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import '../../domain/effect_frame.dart';
+import '../../domain/canvas/effect_frame.dart';
 import 'canvas_command_buffer.dart';
 import 'canvas_replayer.dart';
 import 'effect_script_exception.dart' show EffectScriptException;

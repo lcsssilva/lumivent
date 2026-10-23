@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../domain/effect_property_param.dart';
-import '../../domain/installed_effect.dart';
-import '../../domain/lighting_config.dart';
-import '../../domain/effect_values.dart';
+import '../../domain/effects/effect_property_param.dart';
+import '../../domain/effects/installed_effect.dart';
+import '../../domain/config/lighting_config.dart';
+import '../../domain/effects/effect_values.dart';
 import 'panel_row.dart';
 import 'effect_param_control.dart';
 

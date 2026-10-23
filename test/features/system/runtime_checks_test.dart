@@ -4,11 +4,11 @@ import 'package:lumivent/features/fans/fans.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
 import 'package:lumivent/features/system/application/runtime_checks.dart';
 import 'package:lumivent/features/system/application/hub_argb_sync_data.dart';
-import 'package:lumivent/features/system/domain/diagnostics.dart';
-import 'package:lumivent/features/system/domain/udev_rules_data.dart';
-import 'package:lumivent/features/system/domain/board_sensors_data.dart';
-import 'package:lumivent/features/system/domain/nvme_helper_data.dart';
-import 'package:lumivent/features/system/domain/diagnostic_check.dart';
+import 'package:lumivent/features/system/domain/diagnostics/diagnostics.dart';
+import 'package:lumivent/features/system/domain/diagnostics/udev_rules_data.dart';
+import 'package:lumivent/features/system/domain/diagnostics/board_sensors_data.dart';
+import 'package:lumivent/features/system/domain/diagnostics/nvme_helper_data.dart';
+import 'package:lumivent/features/system/domain/diagnostics/diagnostic_check.dart';
 import 'package:lumivent/features/system/presentation/widgets/diagnostics_card.dart';
 
 LightingStatus light(

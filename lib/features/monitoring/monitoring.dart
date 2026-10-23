@@ -6,10 +6,12 @@ export 'application/monitoring_notifier.dart'
     show MonitoringNotifier, monitoringProvider;
 export 'application/monitoring_state.dart' show MonitoringState;
 export 'application/monitoring_engine_module.dart' show MonitoringEngineModule;
-export 'application/request_sensor_history.dart' show RequestSensorHistory;
-export 'application/sensor_history_replay.dart' show SensorHistoryReplay;
-export 'application/sensors_updated.dart' show SensorsUpdated;
-export 'application/ssds_updated.dart' show SsdsUpdated;
+export 'application/messages/request_sensor_history.dart'
+    show RequestSensorHistory;
+export 'application/messages/sensor_history_replay.dart'
+    show SensorHistoryReplay;
+export 'application/messages/sensors_updated.dart' show SensorsUpdated;
+export 'application/messages/ssds_updated.dart' show SsdsUpdated;
 export 'domain/metric_def.dart' show MetricDef;
 export 'domain/metrics.dart' show MetricUnit, Metrics;
 export 'domain/sensor_history.dart' show SensorHistory;

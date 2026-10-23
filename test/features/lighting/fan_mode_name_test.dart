@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/fan_mode_name.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
-import 'package:lumivent/features/lighting/domain/alv2_hardware_config.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/fan_mode_name.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/alv2_hardware_config.dart';
 
 void main() {
   test('fanModeBase strips only a trailing scope suffix', () {

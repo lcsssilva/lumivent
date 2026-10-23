@@ -4,7 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/light_device.dart';
-import '../../domain/lighting_config.dart';
+import '../../domain/config/lighting_config.dart';
 import '../view_models/lighting_ui_state.dart';
 import 'board_hardware_panel.dart';
 import 'effect_panel.dart';
@@ -51,6 +51,7 @@ class LightingModePanel extends StatelessWidget {
                 id: sel,
                 config: config,
                 fanGroupNames: ui.fanGroupNames,
+                modes: ui.fanHardwareModes,
                 onEdit: onEdit,
                 onIdentify: onIdentify,
               )

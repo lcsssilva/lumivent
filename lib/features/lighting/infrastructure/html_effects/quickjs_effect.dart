@@ -11,8 +11,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_js/flutter_js.dart';
 
 import '../../../../core/platform/numeric_locale.dart';
-import '../../domain/effect_meta.dart';
-import '../../domain/effect_source.dart';
+import '../../domain/effects/effect_meta.dart';
+import '../../domain/effects/effect_source.dart';
 import 'quickjs_interrupt.dart';
 import 'effect_script_exception.dart';
 

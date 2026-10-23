@@ -2,17 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
-import 'package:lumivent/features/lighting/application/identify_fan_group.dart';
-import 'package:lumivent/features/lighting/application/light_output_state.dart';
-import 'package:lumivent/features/lighting/application/light_output_status.dart';
-import 'package:lumivent/features/lighting/application/lighting_status.dart';
-import 'package:lumivent/features/lighting/domain/hardware_equivalent.dart';
+import 'package:lumivent/features/lighting/application/messages/identify_fan_group.dart';
+import 'package:lumivent/features/lighting/application/status/light_output_state.dart';
+import 'package:lumivent/features/lighting/application/status/light_output_status.dart';
+import 'package:lumivent/features/lighting/application/messages/lighting_status.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/hardware_equivalent.dart';
 import 'package:lumivent/features/lighting/application/lighting_notifier.dart';
-import 'package:lumivent/features/lighting/application/set_argb_off.dart';
-import 'package:lumivent/features/lighting/application/set_lighting_config.dart';
-import 'package:lumivent/features/lighting/domain/canvas_rect.dart';
+import 'package:lumivent/features/lighting/application/messages/set_argb_off.dart';
+import 'package:lumivent/features/lighting/application/messages/set_lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/canvas/canvas_rect.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/fan_hardware_mode.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/fan_mode_name.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
 import 'package:lumivent/features/lighting/presentation/view_models/lighting_ui_state.dart';
 import 'package:lumivent/features/lighting/presentation/view_models/lighting_view_model.dart';
 
@@ -21,6 +23,10 @@ import '../../support/memory_lighting_repository.dart';
 import '../../support/memory_preferences_repository.dart';
 
 void main() {
+  const modes = [
+    FanHardwareMode(name: 'Wave', hasSpeed: true, colorCount: 1),
+    FanHardwareMode(name: 'Wave_Inner', scope: FanModeSuffix.inner),
+  ];
   late FakeEngine engine;
   late MemoryLightingRepository repo;
   late ProviderContainer container;
@@ -32,6 +38,7 @@ void main() {
       overrides: [
         engineProvider.overrideWithValue(engine),
         lightingRepositoryProvider.overrideWithValue(repo),
+        fanHardwareModesProvider.overrideWithValue(modes),
         preferencesRepositoryProvider.overrideWithValue(
           MemoryPreferencesRepository(),
         ),
@@ -53,6 +60,12 @@ void main() {
 
     viewModel().selectDevice(null);
     expect(ui().selectedDevice, isNull);
+  });
+
+  test('the fan hub modes come from the injected table', () {
+    expect(ui().fanHardwareModes, same(modes));
+    viewModel().selectDevice(LightDeviceId.alv2Group1);
+    expect(ui().fanHardwareModes, same(modes));
   });
 
   test('global settings and the effect go to the engine', () {

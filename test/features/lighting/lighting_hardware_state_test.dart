@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/application/lighting_frame_deduplicator.dart';
-import 'package:lumivent/features/lighting/application/lighting_hardware_state.dart';
+import 'package:lumivent/features/lighting/application/frames/lighting_frame_deduplicator.dart';
+import 'package:lumivent/features/lighting/application/hardware/lighting_hardware_state.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 
 LightingFrameDeduplicator dedup = LightingFrameDeduplicator(

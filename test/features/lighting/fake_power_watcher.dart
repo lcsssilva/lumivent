@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/power_watcher.dart';
+import 'package:lumivent/features/lighting/domain/outputs/power_watcher.dart';
 
 class FakePowerWatcher implements PowerWatcher {
   Future<void> Function()? beforeSleep, beforeShutdown;

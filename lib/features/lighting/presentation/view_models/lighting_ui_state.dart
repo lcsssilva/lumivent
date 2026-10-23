@@ -1,13 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/effect_frame_feed.dart';
-import '../../application/html_effect_status.dart';
-import '../../application/light_output_status.dart';
-import '../../application/lighting_status.dart';
-import '../../domain/hardware_equivalent.dart';
-import '../../domain/installed_effect.dart';
+import '../../application/effects/effect_frame_feed.dart';
+import '../../application/effects/html_effect_status.dart';
+import '../../application/status/light_output_status.dart';
+import '../../application/messages/lighting_status.dart';
+import '../../domain/hardware_mode/fan_hardware_mode.dart';
+import '../../domain/hardware_mode/hardware_equivalent.dart';
+import '../../domain/effects/installed_effect.dart';
 import '../../domain/light_device.dart';
-import '../../domain/lighting_config.dart';
+import '../../domain/config/lighting_config.dart';
 
 /// Everything the lighting view and its panels render: the configuration,
 /// the installed effects, the live device and effect status, and the
@@ -20,6 +21,7 @@ class LightingUiState {
     required this.frames,
     this.status,
     this.fanGroupNames = const [],
+    this.fanHardwareModes = const [],
     this.selectedDevice,
   });
 
@@ -40,6 +42,9 @@ class LightingUiState {
   /// Names of the hub groups 0–3, empty when the user named none.
   final List<String> fanGroupNames;
 
+  /// Firmware modes the AL V2 fan hub offers.
+  final List<FanHardwareMode> fanHardwareModes;
+
   /// Device whose controls are shown; `null` shows the global effect.
   final LightDeviceId? selectedDevice;
 
@@ -50,6 +55,7 @@ class LightingUiState {
     frames: frames,
     status: status,
     fanGroupNames: fanGroupNames,
+    fanHardwareModes: fanHardwareModes,
     selectedDevice: device,
   );
 

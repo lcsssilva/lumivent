@@ -6,16 +6,17 @@ import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/ui/theme.dart';
 import 'package:lumivent/core/ui/we_colors.dart';
 import 'package:lumivent/features/lighting/application/lighting_notifier.dart';
-import 'package:lumivent/features/lighting/application/light_output_state.dart';
-import 'package:lumivent/features/lighting/application/set_argb_off.dart';
-import 'package:lumivent/features/lighting/application/set_lighting_config.dart';
-import 'package:lumivent/features/lighting/application/identify_fan_group.dart';
-import 'package:lumivent/features/lighting/application/light_output_status.dart';
-import 'package:lumivent/features/lighting/application/lighting_status.dart';
-import 'package:lumivent/features/lighting/domain/led_layout.dart';
+import 'package:lumivent/features/lighting/application/status/light_output_state.dart';
+import 'package:lumivent/features/lighting/application/messages/set_argb_off.dart';
+import 'package:lumivent/features/lighting/application/messages/set_lighting_config.dart';
+import 'package:lumivent/features/lighting/application/messages/identify_fan_group.dart';
+import 'package:lumivent/features/lighting/application/status/light_output_status.dart';
+import 'package:lumivent/features/lighting/application/messages/lighting_status.dart';
+import 'package:lumivent/features/lighting/domain/canvas/led_layout.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
+import 'package:lumivent/features/lighting/infrastructure/alv2_fan_hardware_modes.dart';
 import 'package:lumivent/features/lighting/presentation/widgets/argb_toggle.dart';
 import 'package:lumivent/features/lighting/presentation/widgets/led_canvas.dart';
 import 'package:lumivent/features/lighting/presentation/views/lighting_view.dart';
@@ -45,6 +46,7 @@ void main() {
       overrides: [
         engineProvider.overrideWithValue(engine),
         lightingRepositoryProvider.overrideWithValue(repo),
+        fanHardwareModesProvider.overrideWithValue(alv2FanHardwareModes),
         preferencesRepositoryProvider.overrideWithValue(
           MemoryPreferencesRepository(),
         ),
@@ -466,6 +468,7 @@ void main() {
       overrides: [
         engineProvider.overrideWithValue(engine),
         lightingRepositoryProvider.overrideWithValue(repo),
+        fanHardwareModesProvider.overrideWithValue(alv2FanHardwareModes),
         preferencesRepositoryProvider.overrideWithValue(
           MemoryPreferencesRepository(),
         ),

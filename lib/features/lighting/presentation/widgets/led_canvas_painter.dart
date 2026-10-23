@@ -2,11 +2,11 @@ import 'package:flutter/foundation.dart' show Listenable, ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../../../core/ui/we_colors.dart';
-import '../../domain/led_layout.dart';
+import '../../domain/canvas/led_layout.dart';
 import '../../domain/light_device.dart';
-import '../../domain/effect_frame.dart';
-import '../../domain/lighting_config.dart';
-import '../../domain/native_effects.dart';
+import '../../domain/canvas/effect_frame.dart';
+import '../../domain/config/lighting_config.dart';
+import '../../domain/native_effects/native_effects.dart';
 import '../../domain/rgb.dart';
 import '../on_canvas.dart';
 

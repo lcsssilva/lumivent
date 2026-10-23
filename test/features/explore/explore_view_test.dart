@@ -4,10 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/ui/theme.dart';
 import 'package:lumivent/features/explore/presentation/views/explore_view.dart';
-import 'package:lumivent/features/lighting/application/installed_effects_notifier.dart';
+import 'package:lumivent/features/lighting/application/effects/installed_effects_notifier.dart';
 import 'package:lumivent/features/lighting/application/lighting_notifier.dart';
-import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
-import 'package:lumivent/features/lighting/domain/installed_effect.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_compatibility.dart';
+import 'package:lumivent/features/lighting/domain/effects/installed_effect.dart';
 
 import '../../fake_engine.dart';
 

@@ -1,6 +1,6 @@
-import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
-import 'package:lumivent/features/lighting/domain/effect_source.dart';
-import 'package:lumivent/features/lighting/domain/installed_effect.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_compatibility.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_source.dart';
+import 'package:lumivent/features/lighting/domain/effects/installed_effect.dart';
 
 EffectSource _source() =>
     EffectSource(title: 'Teste', properties: [], script: 'var a = 1;');

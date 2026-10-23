@@ -8,8 +8,8 @@ export 'application/fans_status_notifier.dart'
     show FansStatusNotifier, fansStatusProvider;
 export 'application/fans_engine_module.dart' show FansEngineModule;
 export 'application/fan_group_status.dart' show FanGroupStatus;
-export 'application/fans_status.dart' show FansStatus;
-export 'application/set_fans_config.dart' show SetFansConfig;
+export 'application/messages/fans_status.dart' show FansStatus;
+export 'application/messages/set_fans_config.dart' show SetFansConfig;
 export 'domain/fan_curve.dart';
 export 'domain/fan_point.dart';
 export 'domain/fan_presets.dart';

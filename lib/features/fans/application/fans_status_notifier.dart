@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/engine/isolate_engine.dart';
-import 'fans_status.dart';
+import 'messages/fans_status.dart';
 
 /// Last fan loop cycle in the engine (`null` until the first cycle).
 class FansStatusNotifier extends Notifier<FansStatus?> {

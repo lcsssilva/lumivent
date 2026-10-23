@@ -4,12 +4,12 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
-import 'package:lumivent/features/lighting/domain/effect_library.dart';
-import 'package:lumivent/features/lighting/domain/installed_effect.dart';
-import 'package:lumivent/features/lighting/domain/effect_metadata.dart';
-import 'package:lumivent/features/lighting/infrastructure/file_effect_importer.dart';
-import 'package:lumivent/features/lighting/infrastructure/file_effect_library.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_compatibility.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_library.dart';
+import 'package:lumivent/features/lighting/domain/effects/installed_effect.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_metadata.dart';
+import 'package:lumivent/features/lighting/infrastructure/effect_import/file_effect_importer.dart';
+import 'package:lumivent/features/lighting/infrastructure/effect_import/file_effect_library.dart';
 
 String effectHtml(
   String title, {

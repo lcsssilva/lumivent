@@ -1,6 +1,6 @@
-import '../domain/led_layout.dart';
+import '../domain/canvas/led_layout.dart';
 import '../domain/light_device.dart';
-import '../domain/lighting_config.dart';
+import '../domain/config/lighting_config.dart';
 
 /// Devices that appear on the canvas.
 ///

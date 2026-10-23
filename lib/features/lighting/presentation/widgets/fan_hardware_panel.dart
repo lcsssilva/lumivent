@@ -6,27 +6,17 @@ import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_card.dart';
-import '../../../devices/devices.dart';
-import '../../domain/fan_mode_name.dart';
-import '../../domain/led_layout.dart';
+import '../../domain/hardware_mode/fan_hardware_mode.dart';
+import '../../domain/hardware_mode/fan_mode_name.dart';
+import '../../domain/canvas/led_layout.dart';
 import '../../domain/light_device.dart';
-import '../../domain/lighting_config.dart';
-import '../../domain/alv2_hardware_config.dart';
+import '../../domain/config/lighting_config.dart';
+import '../../domain/hardware_mode/alv2_hardware_config.dart';
 import '../lighting_labels.dart';
 import 'panel_slider.dart';
 import 'panel_row.dart';
 import 'panel_dropdown.dart';
 import 'color_swatch_button.dart';
-
-List<String> _modeNames(Alv2LightScope scope) => [
-  for (final m in Alv2LightMode.values)
-    if (m.scope == scope) m.firmwareName,
-];
-
-/// Base names (`Runway`) of the merge modes, as stored in the config.
-List<String> _mergeBases() => [
-  for (final n in _modeNames(Alv2LightScope.merge)) mergeModeBase(n),
-];
 
 class FanHardwarePanel extends StatelessWidget {
   const FanHardwarePanel({
@@ -34,6 +24,7 @@ class FanHardwarePanel extends StatelessWidget {
     required this.id,
     required this.config,
     required this.fanGroupNames,
+    required this.modes,
     required this.onEdit,
     required this.onIdentify,
   });
@@ -43,6 +34,9 @@ class FanHardwarePanel extends StatelessWidget {
 
   /// Names of the hub groups 0–3.
   final List<String> fanGroupNames;
+
+  /// Firmware modes the hub offers.
+  final List<FanHardwareMode> modes;
   final ValueChanged<LightingConfigEdit> onEdit;
 
   /// Pings a hub group (1–3).
@@ -54,7 +48,7 @@ class FanHardwarePanel extends StatelessWidget {
     final cfg = config;
     final hw = cfg.alv2Hardware[group];
     final qty = cfg.fanQuantity[group];
-    final mode = Alv2LightMode.byName(hw.mode);
+    final mode = modes.byName(hw.mode);
     final groupNames = fanGroupNames;
     final order = cfg.alv2MergeOrder;
     final strings = context.strings;
@@ -65,19 +59,16 @@ class FanHardwarePanel extends StatelessWidget {
 
     // The merge effect lives in slot 0 (the hub has no fans there). The config
     // stores the base name (`Runway`); the `_Merge` variant is only mapped here.
-    final mergeBases = _mergeBases();
+    final mergeBases = modes.mergeBases;
     final mergeBase = normalizeMergeBase(cfg.alv2MergeMode, mergeBases);
-    final mergeMode = Alv2LightMode.byName(
-      fanModeName(mergeBase, FanModeSuffix.merge),
-    );
+    final mergeMode = modes.byName(fanModeName(mergeBase, FanModeSuffix.merge));
     final merge = cfg.alv2Hardware[0];
     void setMerge(Alv2HardwareConfig Function(Alv2HardwareConfig) f) =>
         onEdit((c) => c.withAlv2Hardware(0, f));
 
-    final scope = hw.scope == Alv2Scope.whole
-        ? Alv2LightScope.whole
-        : Alv2LightScope.inner;
-    final names = _modeNames(scope);
+    final names = modes.namesOf(
+      hw.scope == Alv2Scope.whole ? null : FanModeSuffix.inner,
+    );
     return WeCard(
       flat: true,
       title: l.hardwareTitle(deviceLabel(strings, id, groupNames)),
@@ -109,7 +100,7 @@ class FanHardwarePanel extends StatelessWidget {
                 mode: convertFanModeScope(
                   h.mode,
                   s.first,
-                  isKnown: (n) => Alv2LightMode.byName(n) != null,
+                  isKnown: (n) => modes.byName(n) != null,
                 ),
               ),
             ),
@@ -241,7 +232,7 @@ class FanHardwarePanel extends StatelessWidget {
   /// namespaces the widget keys (group panel vs merge).
   List<Widget> _effectControls(
     AppStrings strings,
-    Alv2LightMode? mode,
+    FanHardwareMode? mode,
     Alv2HardwareConfig hw,
     void Function(Alv2HardwareConfig Function(Alv2HardwareConfig)) setHw,
     String prefix,

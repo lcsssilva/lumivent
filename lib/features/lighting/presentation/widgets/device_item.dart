@@ -4,11 +4,11 @@ import '../../../../core/i18n/app_strings.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/status_dot.dart';
 import '../../../../core/ui/we_colors.dart';
-import '../../application/light_output_state.dart';
-import '../../application/light_output_status.dart';
+import '../../application/status/light_output_state.dart';
+import '../../application/status/light_output_status.dart';
 import '../../domain/light_device.dart';
-import '../../domain/device_light_config.dart';
-import '../../domain/lighting_config.dart';
+import '../../domain/config/device_light_config.dart';
+import '../../domain/config/lighting_config.dart';
 import '../lighting_labels.dart';
 import 'panel_dropdown.dart';
 

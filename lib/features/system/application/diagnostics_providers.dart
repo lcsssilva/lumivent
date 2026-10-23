@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../devices/devices.dart' show devicesProvider;
-import '../domain/diagnostic_check.dart';
-import '../domain/environment_diagnostics.dart';
+import '../domain/diagnostics/diagnostic_check.dart';
+import '../domain/diagnostics/environment_diagnostics.dart';
 
 final environmentDiagnosticsProvider = Provider<EnvironmentDiagnostics>(
   (ref) => throw UnimplementedError('environmentDiagnosticsProvider'),

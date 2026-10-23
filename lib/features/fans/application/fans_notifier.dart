@@ -5,7 +5,7 @@ import '../../../core/engine/isolate_engine.dart';
 import '../domain/fan_group_config.dart';
 import '../domain/fans_config.dart';
 import '../domain/fans_repository.dart';
-import 'set_fans_config.dart';
+import 'messages/set_fans_config.dart';
 
 final fansRepositoryProvider = Provider<FansRepository>(
   (ref) => throw UnimplementedError('fansRepositoryProvider'),

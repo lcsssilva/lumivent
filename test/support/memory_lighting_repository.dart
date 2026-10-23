@@ -1,5 +1,5 @@
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config_repository.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config_repository.dart';
 
 /// Keeps the lighting configuration in memory and counts the saves.
 class MemoryLightingRepository implements LightingConfigRepository {

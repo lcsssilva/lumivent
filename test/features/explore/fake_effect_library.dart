@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:lumivent/features/lighting/domain/effect_library.dart';
-import 'package:lumivent/features/lighting/domain/installed_effect.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_library.dart';
+import 'package:lumivent/features/lighting/domain/effects/installed_effect.dart';
 
 class FakeEffectLibrary implements EffectLibrary {
   FakeEffectLibrary(this.effects);

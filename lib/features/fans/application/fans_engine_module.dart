@@ -11,9 +11,9 @@ import '../domain/fan_driver.dart';
 import '../domain/fan_temperatures.dart';
 import '../domain/fan_step.dart';
 import '../domain/fan_smoother.dart';
-import 'set_fans_config.dart';
+import 'messages/set_fans_config.dart';
 import 'fan_group_status.dart';
-import 'fans_status.dart';
+import 'messages/fans_status.dart';
 
 /// Fans module part that runs in the engine: every [period] it reads each
 /// group's temperature source, smooths it using the group response

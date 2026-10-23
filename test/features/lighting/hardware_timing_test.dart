@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/hardware_timing.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/hardware_timing.dart';
 
 void main() {
   test('effect speed maps to the five firmware levels', () {

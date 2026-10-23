@@ -4,8 +4,8 @@ import '../../../core/engine/engine_command.dart';
 import '../../../core/engine/engine_event.dart';
 import '../../../core/engine/engine_module.dart';
 import '../domain/device_detector.dart';
-import 'rescan_devices.dart';
-import 'devices_changed.dart';
+import 'messages/rescan_devices.dart';
+import 'messages/devices_changed.dart';
 
 /// Devices module part that runs in the engine: initial scan, connection
 /// polling every [poll], and on-demand scans.

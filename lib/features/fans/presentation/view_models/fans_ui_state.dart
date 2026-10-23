@@ -2,7 +2,7 @@ import '../../../monitoring/monitoring.dart';
 import '../../../preferences/preferences.dart';
 import '../../application/fan_group_status.dart';
 import '../../application/fan_temp_metric.dart';
-import '../../application/fans_status.dart';
+import '../../application/messages/fans_status.dart';
 import '../../domain/fan_group.dart';
 import '../../domain/fan_group_config.dart';
 import '../../domain/fans_config.dart';

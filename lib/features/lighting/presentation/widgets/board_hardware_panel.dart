@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_card.dart';
-import '../../domain/lighting_config.dart';
-import '../../domain/board_zone_config.dart';
+import '../../domain/config/lighting_config.dart';
+import '../../domain/config/board_zone_config.dart';
 import '../lighting_labels.dart';
 import 'panel_slider.dart';
 import 'panel_row.dart';

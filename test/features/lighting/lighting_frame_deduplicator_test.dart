@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/application/lighting_frame_deduplicator.dart';
+import 'package:lumivent/features/lighting/application/frames/lighting_frame_deduplicator.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 

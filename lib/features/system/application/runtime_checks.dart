@@ -8,10 +8,10 @@ import '../../lighting/lighting.dart'
         LightingStatus,
         OutputFamily,
         lightingStatusProvider;
-import '../domain/diagnostics.dart';
-import '../domain/loop_sample.dart';
-import '../domain/lighting_loop_data.dart';
-import '../domain/diagnostic_check.dart';
+import '../domain/diagnostics/diagnostics.dart';
+import '../domain/diagnostics/loop_sample.dart';
+import '../domain/diagnostics/lighting_loop_data.dart';
+import '../domain/diagnostics/diagnostic_check.dart';
 import 'hub_argb_sync_data.dart';
 
 /// Checks of what the running engine did to the hardware (plan §4.2, items

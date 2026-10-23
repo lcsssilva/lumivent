@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../domain/autostart_state.dart';
-import '../domain/autostart_service.dart';
+import '../domain/autostart/autostart_state.dart';
+import '../domain/autostart/autostart_service.dart';
 
 final autostartServiceProvider = Provider<AutostartService>(
   (ref) => throw UnimplementedError('autostartServiceProvider'),

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_card.dart';
 import '../../domain/light_device.dart';
-import '../../domain/lighting_config.dart';
+import '../../domain/config/lighting_config.dart';
 import '../view_models/lighting_ui_state.dart';
 import 'device_item.dart';
 

@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/effect_source.dart';
-import 'package:lumivent/features/lighting/domain/effect_runtime.dart';
-import 'package:lumivent/features/lighting/domain/effect_frame.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_source.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_runtime.dart';
+import 'package:lumivent/features/lighting/domain/canvas/effect_frame.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 

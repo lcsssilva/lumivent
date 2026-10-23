@@ -12,11 +12,11 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/material.dart';
 
-import '../../domain/led_layout.dart';
-import '../../domain/canvas_rect.dart';
+import '../../domain/canvas/led_layout.dart';
+import '../../domain/canvas/canvas_rect.dart';
 import '../../domain/light_device.dart';
-import '../../domain/effect_frame.dart';
-import '../../domain/lighting_config.dart';
+import '../../domain/canvas/effect_frame.dart';
+import '../../domain/config/lighting_config.dart';
 import '../on_canvas.dart';
 import 'led_canvas_painter.dart';
 

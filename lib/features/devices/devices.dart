@@ -4,8 +4,8 @@ library;
 export 'application/devices_notifier.dart'
     show DevicesNotifier, devicesProvider;
 export 'application/devices_engine_module.dart' show DevicesEngineModule;
-export 'application/devices_changed.dart' show DevicesChanged;
-export 'application/rescan_devices.dart' show RescanDevices;
+export 'application/messages/devices_changed.dart' show DevicesChanged;
+export 'application/messages/rescan_devices.dart' show RescanDevices;
 export 'domain/device.dart';
 export 'domain/device_info.dart';
 export 'domain/device_snapshot.dart';

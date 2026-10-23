@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/html_effect_runner.dart';
-import '../../application/installed_effects_notifier.dart';
+import '../../application/effects/html_effect_runner.dart';
+import '../../application/effects/installed_effects_notifier.dart';
 import '../../application/lighting_notifier.dart';
-import '../../application/lighting_status_notifier.dart';
-import '../../domain/canvas_rect.dart';
+import '../../application/status/lighting_status_notifier.dart';
+import '../../domain/canvas/canvas_rect.dart';
 import '../../domain/light_device.dart';
-import '../../domain/lighting_config.dart';
+import '../../domain/config/lighting_config.dart';
 import 'lighting_ui_state.dart';
 
 /// Presentation state of the lighting view: the selected device and the
@@ -25,6 +25,7 @@ class LightingViewModel extends Notifier<LightingUiState> {
     frames: ref.watch(htmlEffectFramesProvider),
     status: ref.watch(lightingStatusProvider),
     fanGroupNames: ref.watch(fanGroupNamesProvider),
+    fanHardwareModes: ref.watch(fanHardwareModesProvider),
     selectedDevice: _selectedDevice,
   );
 

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config_repository.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config_repository.dart';
 
 class RunnerLightingRepository implements LightingConfigRepository {
   LightingConfig config = LightingConfig(effectId: 'html:test');

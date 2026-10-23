@@ -8,15 +8,15 @@ import '../../../../core/ui/we_card.dart';
 import '../../../lighting/lighting.dart'
     show LightOutputStatus, outputIssueLabel;
 import '../../application/hub_argb_sync_data.dart';
-import '../../domain/diagnostics.dart';
-import '../../domain/udev_rules_data.dart';
-import '../../domain/board_sensors_data.dart';
-import '../../domain/memory_smbus_data.dart';
-import '../../domain/memory_temperature_data.dart';
-import '../../domain/nvme_helper_data.dart';
-import '../../domain/loop_sample.dart';
-import '../../domain/lighting_loop_data.dart';
-import '../../domain/diagnostic_check.dart';
+import '../../domain/diagnostics/diagnostics.dart';
+import '../../domain/diagnostics/udev_rules_data.dart';
+import '../../domain/diagnostics/board_sensors_data.dart';
+import '../../domain/diagnostics/memory_smbus_data.dart';
+import '../../domain/diagnostics/memory_temperature_data.dart';
+import '../../domain/diagnostics/nvme_helper_data.dart';
+import '../../domain/diagnostics/loop_sample.dart';
+import '../../domain/diagnostics/lighting_loop_data.dart';
+import '../../domain/diagnostics/diagnostic_check.dart';
 
 class DiagnosticsCard extends StatelessWidget {
   const DiagnosticsCard({super.key, required this.checks});

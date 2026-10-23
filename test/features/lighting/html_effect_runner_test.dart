@@ -1,16 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
-import 'package:lumivent/features/lighting/application/installed_effects_notifier.dart';
+import 'package:lumivent/features/lighting/application/effects/installed_effects_notifier.dart';
 import 'package:lumivent/features/lighting/application/lighting_notifier.dart';
-import 'package:lumivent/features/lighting/application/set_html_effect_frame.dart';
-import 'package:lumivent/features/lighting/application/html_effect_runner.dart';
-import 'package:lumivent/features/lighting/application/html_effect_status.dart';
-import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
-import 'package:lumivent/features/lighting/domain/effect_source.dart';
-import 'package:lumivent/features/lighting/domain/installed_effect.dart';
+import 'package:lumivent/features/lighting/application/messages/set_html_effect_frame.dart';
+import 'package:lumivent/features/lighting/application/effects/html_effect_runner.dart';
+import 'package:lumivent/features/lighting/application/effects/html_effect_status.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_compatibility.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_source.dart';
+import 'package:lumivent/features/lighting/domain/effects/installed_effect.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
 

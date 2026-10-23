@@ -1,5 +1,5 @@
 import '../../lighting/lighting.dart' show LightOutputStatus;
-import '../domain/diagnostic_data.dart';
+import '../domain/diagnostics/diagnostic_data.dart';
 
 /// Why the hub ARGB sync check failed: the state of the first AL V2 group
 /// ([status] is null when the engine reported nothing for it).

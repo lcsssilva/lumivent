@@ -1,6 +1,6 @@
 import '../../../core/persistence/config_store.dart';
-import '../domain/lighting_config.dart';
-import '../domain/lighting_config_repository.dart';
+import '../domain/config/lighting_config.dart';
+import '../domain/config/lighting_config_repository.dart';
 import 'lighting_codec.dart';
 
 /// Stores configuration in the `lighting` section of config.json. Also reads the

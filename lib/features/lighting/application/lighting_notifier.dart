@@ -4,11 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/engine/isolate_engine.dart';
-import '../domain/lighting_config.dart';
-import '../domain/lighting_config_repository.dart';
-import 'set_argb_off.dart';
-import 'set_lighting_config.dart';
-import 'identify_fan_group.dart';
+import '../domain/hardware_mode/fan_hardware_mode.dart';
+import '../domain/config/lighting_config.dart';
+import '../domain/config/lighting_config_repository.dart';
+import 'messages/set_argb_off.dart';
+import 'messages/set_lighting_config.dart';
+import 'messages/identify_fan_group.dart';
 
 final lightingRepositoryProvider = Provider<LightingConfigRepository>(
   (ref) => throw UnimplementedError('lightingRepositoryProvider'),
@@ -18,6 +19,12 @@ final lightingRepositoryProvider = Provider<LightingConfigRepository>(
 /// The app wires it to the names set on the fans page; an empty name falls
 /// back to the catalog's default group name.
 final fanGroupNamesProvider = Provider<List<String>>((ref) => const []);
+
+/// Firmware modes of the AL V2 fan hub, wired by the lighting module from the
+/// devices driver.
+final fanHardwareModesProvider = Provider<List<FanHardwareMode>>(
+  (ref) => throw UnimplementedError('fanHardwareModesProvider'),
+);
 
 /// Lighting configuration: every change goes to the engine immediately; the
 /// save is debounced, because the canvas editor and the sliders change the

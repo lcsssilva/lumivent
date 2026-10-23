@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/led_layout.dart';
-import 'package:lumivent/features/lighting/domain/canvas_rect.dart';
+import 'package:lumivent/features/lighting/domain/canvas/led_layout.dart';
+import 'package:lumivent/features/lighting/domain/canvas/canvas_rect.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
 import 'package:lumivent/features/lighting/presentation/widgets/led_canvas.dart';
 import 'package:lumivent/features/lighting/presentation/on_canvas.dart';
 

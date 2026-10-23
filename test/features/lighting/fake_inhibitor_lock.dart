@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/infrastructure/inhibitor_lock.dart';
+import 'package:lumivent/features/lighting/infrastructure/power/inhibitor_lock.dart';
 
 class FakeInhibitorLock implements InhibitorLock {
   bool released = false;

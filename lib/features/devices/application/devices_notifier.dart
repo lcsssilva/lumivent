@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/engine/isolate_engine.dart';
 import '../domain/device_snapshot.dart';
-import 'rescan_devices.dart';
-import 'devices_changed.dart';
+import 'messages/rescan_devices.dart';
+import 'messages/devices_changed.dart';
 
 /// Last scan received from the engine (`null` until the first scan).
 class DevicesNotifier extends Notifier<DeviceSnapshot?> {

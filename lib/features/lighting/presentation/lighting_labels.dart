@@ -2,11 +2,11 @@
 // file only maps domain values to the matching catalog entry.
 
 import '../../../core/i18n/app_strings.dart';
-import '../application/light_output_state.dart' show LightOutputIssue;
-import '../domain/effect_compatibility.dart' show EffectIssue;
-import '../domain/fan_mode_name.dart';
+import '../application/status/light_output_state.dart' show LightOutputIssue;
+import '../domain/effects/effect_compatibility.dart' show EffectIssue;
+import '../domain/hardware_mode/fan_mode_name.dart';
 import '../domain/light_device.dart';
-import '../domain/lighting_config.dart';
+import '../domain/config/lighting_config.dart';
 
 /// [fanNames]: names of the hub groups 0–3 (`fanGroupNamesProvider`).
 String deviceLabel(

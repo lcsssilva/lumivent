@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import 'package:lumivent/features/lighting/infrastructure/inhibitor_lock.dart';
-import 'package:lumivent/features/lighting/infrastructure/logind_bus.dart';
+import 'package:lumivent/features/lighting/infrastructure/power/inhibitor_lock.dart';
+import 'package:lumivent/features/lighting/infrastructure/power/logind_bus.dart';
 
 import 'fake_inhibitor_lock.dart';
 

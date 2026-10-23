@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/engine/isolate_engine.dart';
 import '../domain/sensor_history.dart';
-import 'request_sensor_history.dart';
-import 'sensors_updated.dart';
-import 'sensor_history_replay.dart';
-import 'ssds_updated.dart';
+import 'messages/request_sensor_history.dart';
+import 'messages/sensors_updated.dart';
+import 'messages/sensor_history_replay.dart';
+import 'messages/ssds_updated.dart';
 import 'monitoring_state.dart';
 
 /// Live sensors and history received from the engine.

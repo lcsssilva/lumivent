@@ -9,9 +9,9 @@ import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.d
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_controller.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_controller.dart';
-import 'package:lumivent/features/lighting/infrastructure/device_light_outputs.dart';
-import 'package:lumivent/features/lighting/infrastructure/light_io_core.dart';
-import 'package:lumivent/features/lighting/infrastructure/local_light_io.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io/device_light_outputs.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io/light_io_core.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io/local_light_io.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
 
 import '../../fake_engine.dart';

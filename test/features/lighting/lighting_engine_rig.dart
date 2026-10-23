@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/engine_command.dart';
 import 'package:lumivent/core/engine/engine_event.dart';
 import 'package:lumivent/features/lighting/application/lighting_engine_module.dart';
-import 'package:lumivent/features/lighting/application/set_lighting_config.dart';
-import 'package:lumivent/features/lighting/application/argb_state_changed.dart';
-import 'package:lumivent/features/lighting/application/lighting_status.dart';
-import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/application/messages/set_lighting_config.dart';
+import 'package:lumivent/features/lighting/application/messages/argb_state_changed.dart';
+import 'package:lumivent/features/lighting/application/messages/lighting_status.dart';
+import 'package:lumivent/features/lighting/domain/config/lighting_config.dart';
 
 import 'lighting_engine_test.dart';
 import 'fake_outputs.dart';

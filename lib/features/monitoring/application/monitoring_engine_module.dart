@@ -8,10 +8,10 @@ import '../domain/sensor_sample.dart';
 import '../domain/sensor_history.dart';
 import '../domain/sensor_source.dart';
 import '../domain/ssd_reader.dart';
-import 'request_sensor_history.dart';
-import 'sensors_updated.dart';
-import 'sensor_history_replay.dart';
-import 'ssds_updated.dart';
+import 'messages/request_sensor_history.dart';
+import 'messages/sensors_updated.dart';
+import 'messages/sensor_history_replay.dart';
+import 'messages/ssds_updated.dart';
 
 /// Monitoring module part that runs in the engine: reads sensors every [period]
 /// and stores 5 minutes of history (so the chart is populated when opened),

@@ -6,8 +6,8 @@ import '../../../../core/ui/async_action.dart';
 import '../../../../core/ui/we_colors.dart';
 import '../../../../core/ui/we_card.dart';
 import '../../../../core/ui/setting_row.dart';
-import '../../domain/autostart_exception.dart';
-import '../../domain/autostart_state.dart';
+import '../../domain/autostart/autostart_exception.dart';
+import '../../domain/autostart/autostart_state.dart';
 
 part 'startup_card_state.dart';
 

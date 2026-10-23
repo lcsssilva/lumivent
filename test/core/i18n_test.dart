@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/core/i18n/app_strings_scope.dart';
 import 'package:lumivent/core/i18n/ui_language.dart';
-import 'package:lumivent/features/lighting/domain/native_effects.dart';
+import 'package:lumivent/features/lighting/domain/native_effects/native_effects.dart';
 import 'package:lumivent/features/preferences/domain/preferences.dart';
 import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
 

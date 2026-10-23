@@ -4,7 +4,7 @@ import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/features/explore/application/effect_filter.dart';
 import 'package:lumivent/features/explore/presentation/view_models/explore_ui_state.dart';
 import 'package:lumivent/features/explore/presentation/view_models/explore_view_model.dart';
-import 'package:lumivent/features/lighting/domain/effect_importer.dart';
+import 'package:lumivent/features/lighting/domain/effect_import/effect_importer.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
 
 import '../../fake_engine.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/application/device_health_monitor.dart';
-import 'package:lumivent/features/lighting/application/light_output_state.dart';
+import 'package:lumivent/features/lighting/application/hardware/device_health_monitor.dart';
+import 'package:lumivent/features/lighting/application/status/light_output_state.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 
 void main() {

@@ -19,8 +19,8 @@
 // runners use an isolate. Both paths enforce the evaluation deadlines, while
 // the process boundary can also kill a native call stuck past its limit.
 
-import '../../domain/effect_runtime.dart';
-import '../../domain/effect_runtime_factory.dart';
+import '../../domain/effects/effect_runtime.dart';
+import '../../domain/effects/effect_runtime_factory.dart';
 import 'shared_effect_worker.dart';
 import 'isolated_html_effect_runtime.dart';
 

@@ -3,12 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/ui/theme.dart';
-import 'package:lumivent/features/lighting/application/installed_effects_notifier.dart';
+import 'package:lumivent/features/lighting/application/effects/installed_effects_notifier.dart';
 import 'package:lumivent/features/lighting/application/lighting_notifier.dart';
-import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
-import 'package:lumivent/features/lighting/domain/effect_property.dart';
-import 'package:lumivent/features/lighting/domain/effect_source.dart';
-import 'package:lumivent/features/lighting/domain/installed_effect.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_compatibility.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_property.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_source.dart';
+import 'package:lumivent/features/lighting/domain/effects/installed_effect.dart';
 import 'package:lumivent/features/lighting/presentation/view_models/lighting_view_model.dart';
 import 'package:lumivent/features/lighting/presentation/widgets/effect_panel.dart';
 import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
@@ -83,6 +83,7 @@ void main() {
         overrides: [
           engineProvider.overrideWithValue(FakeEngine()),
           lightingRepositoryProvider.overrideWithValue(repo),
+          fanHardwareModesProvider.overrideWithValue(const []),
           preferencesRepositoryProvider.overrideWithValue(
             MemoryPreferencesRepository(),
           ),

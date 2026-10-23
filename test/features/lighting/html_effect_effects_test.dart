@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/css_color.dart';
-import 'package:lumivent/features/lighting/domain/effect_meta.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_meta.dart';
 
 void main() {
   group('parseCssColor', () {

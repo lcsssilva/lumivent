@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/i18n/app_strings_scope.dart';
 import '../../../../core/ui/we_colors.dart';
-import '../../domain/effect_compatibility.dart';
-import '../../domain/installed_effect.dart';
+import '../../domain/effects/effect_compatibility.dart';
+import '../../domain/effects/installed_effect.dart';
 import '../lighting_labels.dart';
 
 class EffectSupportLine extends StatelessWidget {

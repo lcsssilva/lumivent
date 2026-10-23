@@ -1,5 +1,5 @@
-import 'package:lumivent/features/lighting/domain/effect_importer.dart';
-import 'package:lumivent/features/lighting/domain/import_report.dart';
+import 'package:lumivent/features/lighting/domain/effect_import/effect_importer.dart';
+import 'package:lumivent/features/lighting/domain/effect_import/import_report.dart';
 
 class NoEffectImporter implements EffectImporter {
   @override

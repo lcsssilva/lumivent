@@ -18,7 +18,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import '../../domain/effect_sampling.dart' show sampleCanvasPixels;
+import '../../domain/canvas/effect_sampling.dart' show sampleCanvasPixels;
 import '../../domain/light_device.dart';
 import 'effect_worker_protocol.dart';
 import 'effect_worker_request.dart';

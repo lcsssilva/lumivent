@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/hardware_timing.dart';
-import 'package:lumivent/features/lighting/domain/native_effects.dart';
-import 'package:lumivent/features/lighting/domain/effect_param.dart';
-import 'package:lumivent/features/lighting/domain/effect_values.dart';
+import 'package:lumivent/features/lighting/domain/hardware_mode/hardware_timing.dart';
+import 'package:lumivent/features/lighting/domain/native_effects/native_effects.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_param.dart';
+import 'package:lumivent/features/lighting/domain/effects/effect_values.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 
 void main() {
