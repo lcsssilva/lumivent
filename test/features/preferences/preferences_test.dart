@@ -5,6 +5,8 @@ import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/preferences/domain/preferences.dart';
 import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
 import 'package:lumivent/features/preferences/infrastructure/json_preferences_repository.dart';
+import 'package:lumivent/features/preferences/preferences.dart'
+    show PreferencesModule;
 
 void main() {
   test('JSON round trip', () {
@@ -39,4 +41,17 @@ void main() {
       const Preferences(effectsFps: 15),
     );
   });
+
+  test(
+    'the module repository reads the saved FPS without a container',
+    () async {
+      final tmp = Directory.systemTemp.createTempSync('lumivent-prefs-');
+      addTearDown(() => tmp.deleteSync(recursive: true));
+      final store = await ConfigStore.open(tmp);
+      expect(PreferencesModule.repository(store).load().effectsFps, 30);
+      await PreferencesModule.repository(store)
+          .save(const Preferences(effectsFps: 15));
+      expect(PreferencesModule.repository(store).load().effectsFps, 15);
+    },
+  );
 }

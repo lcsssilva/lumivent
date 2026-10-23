@@ -1,12 +1,16 @@
 // The desktop controller touches window and tray plugins, so tests here focus
 // on the shutdown step that is platform free: reporting a pending persistence
-// failure without stopping the rest of the shutdown.
+// failure without stopping the rest of the shutdown. `release` is covered
+// through a mocked window_manager channel (the tray is native and stays null).
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/desktop/desktop_controller.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
+import 'package:window_manager/window_manager.dart';
 
 void main() {
   late Directory tmp;
@@ -65,5 +69,31 @@ void main() {
 
     await flushPendingWrites(store);
     expect(logged, isEmpty);
+  });
+
+  test('release detaches the window listener and allows closing', () async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const channel = MethodChannel('window_manager');
+    final calls = <MethodCall>[];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    final desktop = DesktopController(container);
+    windowManager.addListener(desktop);
+    expect(windowManager.listeners, contains(desktop));
+
+    await desktop.release();
+
+    expect(windowManager.listeners, isNot(contains(desktop)));
+    expect(desktop.trayAvailable, isFalse);
+    expect(calls.map((c) => c.method), ['setPreventClose']);
+    expect(calls.single.arguments, {'isPreventClose': false});
   });
 }

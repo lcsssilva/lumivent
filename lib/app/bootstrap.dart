@@ -28,7 +28,8 @@ Future<void> bootstrap(List<String> args) async {
   final store = await ConfigStore.open(defaultConfigDir());
   final lighting = LightingModule.repository(store).load();
   final fans = FansModule.repository(store).load();
-  final fps = _initialFps(store);
+  // The LED loop starts at the saved FPS, before the main container exists.
+  final fps = PreferencesModule.repository(store).load().effectsFps;
   final engine = await IsolateEngine.spawn(
     buildEngineModules,
     EngineInit(lighting: lighting, lightingFps: fps, fans: fans),
@@ -88,27 +89,20 @@ Future<void> releaseAfterStartupFailure({
   ProviderContainer? container,
   Future<void> Function()? releaseDesktop,
 }) async {
-  Future<void> step(String what, FutureOr<void> Function() run) async {
+  Future<void> cleanupStep(
+    String stepName,
+    FutureOr<void> Function() run,
+  ) async {
     try {
       await run();
     } on Object catch (error, stack) {
-      stderr.writeln('Lumivent startup cleanup ($what) failed: $error\n$stack');
+      stderr.writeln(
+        'Lumivent startup cleanup ($stepName) failed: $error\n$stack',
+      );
     }
   }
 
-  if (releaseDesktop != null) await step('desktop', releaseDesktop);
-  if (container != null) await step('providers', container.dispose);
-  await step('engine', engine.shutdown);
-}
-
-/// FPS of the effects saved in the preferences (before the main container exists).
-int _initialFps(ConfigStore store) {
-  final container = ProviderContainer(
-    overrides: PreferencesModule.overrides(store),
-  );
-  try {
-    return container.read(preferencesProvider).effectsFps;
-  } finally {
-    container.dispose();
-  }
+  if (releaseDesktop != null) await cleanupStep('desktop', releaseDesktop);
+  if (container != null) await cleanupStep('providers', container.dispose);
+  await cleanupStep('engine', engine.shutdown);
 }
