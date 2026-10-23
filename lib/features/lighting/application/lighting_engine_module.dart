@@ -255,7 +255,7 @@ class LightingEngineModule implements EngineModule {
   bool handle(EngineCommand command) {
     switch (command) {
       case SetArgbOff(:final off):
-        _setConfig(_config.copyWith(argbOff: off));
+        _setConfig(_user.copyWith(argbOff: off));
       case SetLightingConfig(:final config):
         _setConfig(config);
       case SetLightingFps(:final fps):

@@ -762,6 +762,34 @@ void main() {
     rig.module.stop();
   });
 
+  testWidgets('SetArgbOff keeps the user config, not the derived one', (
+    tester,
+  ) async {
+    final rig = Rig(
+      tester,
+      LightingConfig(alv2Merge: true),
+      autoHardware: true,
+    );
+    await rig.advance(const Duration(milliseconds: 300));
+    final startup = rig.out.calls.where((c) => c.startsWith('fan')).toList();
+    expect(rig.out.count('merge'), 0);
+
+    rig.out.clear();
+    rig.send(SetArgbOff(true));
+    await rig.advance(const Duration(milliseconds: 300));
+    rig.out.clear();
+    rig.send(SetArgbOff(false));
+    await rig.advance(const Duration(milliseconds: 300));
+
+    expect(rig.out.count('merge'), 0);
+    // The fans come back in the mode derived from the user config.
+    expect(
+      rig.out.calls.where((c) => c.startsWith('fan')).toSet(),
+      startup.toSet(),
+    );
+    rig.module.stop();
+  });
+
   testWidgets('config with argbOff behaves like SetArgbOff', (tester) async {
     final rig = Rig(tester, LightingConfig());
     await rig.advance(const Duration(milliseconds: 200));
