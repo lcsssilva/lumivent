@@ -104,6 +104,20 @@ class IoClose extends PriorityIoCommand {
   const IoClose();
 }
 
+/// Whether the reply to [command] reports the Fury slot reasons
+/// (`LightIoReply.ramReasons`).
+bool reportsRamReasons(LightIoCommand command) =>
+    command is IoRam || command is IoRamOff || command is IoInvalidate;
+
+/// Whether the reply to [command] reports the GPU state
+/// (`LightIoReply.gpuReason`), even when the GPU is usable (`null`).
+bool reportsGpuReason(LightIoCommand command) =>
+    command is IoInitGpu ||
+    command is IoGpuStatic ||
+    command is IoGpuEffect ||
+    command is IoGpuOff ||
+    command is IoInvalidate;
+
 class LightIoRequest {
   const LightIoRequest(this.id, this.command);
   final int id;
@@ -179,18 +193,10 @@ class LightIoCore {
         id,
         ok,
         watch.elapsedMicroseconds,
-        ramReasons: switch (command) {
-          IoRam() || IoRamOff() || IoInvalidate() => _reasons(),
-          _ => null,
-        },
-        gpuReason: switch (command) {
-          IoInitGpu() ||
-          IoGpuStatic() ||
-          IoGpuEffect() ||
-          IoGpuOff() ||
-          IoInvalidate() => _gpu?.disabledReason ?? gpuReason,
-          _ => null,
-        },
+        ramReasons: reportsRamReasons(command) ? _reasons() : null,
+        gpuReason: reportsGpuReason(command)
+            ? _gpu?.disabledReason ?? gpuReason
+            : null,
       );
     });
     _chain = reply.then((_) {}, onError: (Object _) {});
@@ -288,9 +294,9 @@ class LightIoCore {
           _closeDrivers();
           return true;
       }
-    } on Object catch (e) {
+    } on Object catch (e, st) {
       // Driver exceptions (safety guards, bus errors) become "unavailable".
-      stderr.writeln('lighting io: $e');
+      stderr.writeln('lighting io: $e\n$st');
       return false;
     }
   }
@@ -298,18 +304,18 @@ class LightIoCore {
   void _closeDrivers() {
     try {
       _ite?.dispose();
-    } on Object catch (e) {
-      stderr.writeln('lighting: ITE close: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('lighting: ITE close: $e\n$st');
     }
     try {
       _fury?.close();
-    } on Object catch (e) {
-      stderr.writeln('lighting: Fury close: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('lighting: Fury close: $e\n$st');
     }
     try {
       _gpu?.close();
-    } on Object catch (e) {
-      stderr.writeln('lighting: GPU close: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('lighting: GPU close: $e\n$st');
     }
   }
 
@@ -391,8 +397,8 @@ class IsolateLightIo implements LightIoClient {
         onExit: _rx.sendPort,
       );
       if (_disposed) _isolate?.kill(priority: Isolate.immediate);
-    } on Object catch (e) {
-      stderr.writeln('lighting io: spawn failed: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('lighting io: spawn failed: $e\n$st');
       if (!first.isCompleted) first.complete(null);
     }
     return first.future;
@@ -455,7 +461,8 @@ Future<void> _workerMain((SendPort, LightIoKind) args) async {
 LightIoCore _openGpuCore() {
   try {
     return LightIoCore(gpu: GpuController.open());
-  } on Object catch (e) {
+  } on Object catch (e, st) {
+    stderr.writeln('lighting io: GPU open failed: $e\n$st');
     return LightIoCore(gpuReason: '$e');
   }
 }

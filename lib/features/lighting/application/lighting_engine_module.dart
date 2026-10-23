@@ -19,6 +19,7 @@ import 'lighting_messages.dart';
 import 'lighting_reconciler.dart';
 import 'lighting_status_reporter.dart';
 import 'lighting_trace.dart';
+import 'output_lane.dart';
 import 'output_scheduler.dart';
 
 /// Lighting module part that runs in the engine.
@@ -78,19 +79,16 @@ class LightingEngineModule implements EngineModule {
     _compositor = LightingFrameCompositor(leadOf: _leadSeconds);
     _hardwareApplier = LightingHardwareApplier(
       state: _hardware,
-      onFansDown: _fansDown,
-      onBoardDown: _boardDown,
-      onGpuDown: _gpuDown,
+      onFamilyDown: _familyDown,
       onBreathingStarted: () => _compositor.anchorBreathing(_seconds(now())),
       trace: _traceFans,
       stopped: () => _stopped,
-      now: () => now(),
     );
     _status = LightingStatusReporter(
       emit: (event) => _emit(event),
-      now: () => now(),
+      now: now,
       outputs: () => _outputs,
-      health: () => _health,
+      health: _health,
       lanes: () => _lanes,
       leadOf: _leadSeconds,
     );
@@ -101,10 +99,10 @@ class LightingEngineModule implements EngineModule {
       canSend: (family) =>
           _blocking[family]! == 0 &&
           switch (family) {
-            OutputFamily.fans => _fansReady && !_hardware.fanMerged,
-            OutputFamily.ite => _boardReady,
+            OutputFamily.fans => _health.fansReady && !_hardware.fanMerged,
+            OutputFamily.ite => _health.boardReady,
             OutputFamily.ram => true,
-            OutputFamily.gpu => _gpuReady,
+            OutputFamily.gpu => _health.gpuReady,
           },
       gap: _gap,
       send: (family, at) {
@@ -118,10 +116,7 @@ class LightingEngineModule implements EngineModule {
           OutputFamily.gpu => _sendGpu(out, at, epoch),
         };
       },
-      onStarted: _status.loopStarted,
-      onStopped: _status.loopStopped,
-      onTickStart: _status.tickStarted,
-      onTickEnd: _status.updateFps,
+      status: _status,
       onError: _log,
     );
   }
@@ -226,16 +221,6 @@ class LightingEngineModule implements EngineModule {
 
   final _health = DeviceHealthMonitor();
 
-  bool get _fansReady => _health.fansReady;
-  set _fansReady(bool value) => _health.fansReady = value;
-  bool get _boardReady => _health.boardReady;
-  set _boardReady(bool value) => _health.boardReady = value;
-  bool get _gpuReady => _health.gpuReady;
-  set _gpuReady(bool value) => _health.gpuReady = value;
-  Map<LightDeviceId, DateTime> get _ramRetryAt => _health.ramRetryAt;
-  DateTime get _nextRetry => _health.nextRetry;
-  set _nextRetry(DateTime value) => _health.nextRetry = value;
-
   // ── EngineModule ────────────────────────────────────────────────────────
 
   @override
@@ -285,21 +270,25 @@ class LightingEngineModule implements EngineModule {
       _retryTimer = null;
       _hwResendTimer?.cancel();
       _hwResendTimer = null;
-    } on Object catch (e) {
-      _log('timers: $e');
+    } on Object catch (e, st) {
+      _log('timers: $e', st);
     }
     try {
       final watcher = _watcher;
       if (watcher != null) {
-        unawaited(watcher.stop().catchError((Object e) => _log('watcher: $e')));
+        unawaited(
+          watcher.stop().catchError(
+            (Object e, StackTrace st) => _log('watcher: $e', st),
+          ),
+        );
       }
-    } on Object catch (e) {
-      _log('watcher: $e');
+    } on Object catch (e, st) {
+      _log('watcher: $e', st);
     }
     try {
       await _outputs?.close();
-    } on Object catch (e) {
-      _log('outputs: $e');
+    } on Object catch (e, st) {
+      _log('outputs: $e', st);
     }
   }
 
@@ -310,8 +299,8 @@ class LightingEngineModule implements EngineModule {
       if (_stopped) return;
       try {
         await job();
-      } on Object catch (e) {
-        _log('$e');
+      } on Object catch (e, st) {
+        _log('$e', st);
       }
     });
     return _queue = done;
@@ -361,8 +350,8 @@ class LightingEngineModule implements EngineModule {
         beforeShutdown: _powerDown,
       );
       if (_stopped) await watcher.stop();
-    } on Object catch (e) {
-      _log('power watcher: $e');
+    } on Object catch (e, st) {
+      _log('power watcher: $e', st);
     }
   }
 
@@ -373,8 +362,8 @@ class LightingEngineModule implements EngineModule {
       _powerOff = true;
       _syncTimer();
       await _run(_turnOff);
-    } on Object catch (e) {
-      _log('before sleep: $e');
+    } on Object catch (e, st) {
+      _log('before sleep: $e', st);
     }
   }
 
@@ -436,7 +425,7 @@ class LightingEngineModule implements EngineModule {
   Future<void> _initDevices() async {
     final out = _outputs;
     if (out == null) return;
-    if (!_fansReady) {
+    if (!_health.fansReady) {
       final qty = LightingHardwareState.quantityOf(_config);
       final ok = await _gated([OutputFamily.fans], () => out.initFans(qty));
       if (_stopped) return;
@@ -445,29 +434,31 @@ class LightingEngineModule implements EngineModule {
           ..appliedQuantity = qty
           ..appliedMergeOrder = LightingConfig.defaultMergeOrder
           ..forgetFans();
-        _fansReady = true;
+        _health.setReady(OutputFamily.fans, true);
       } else {
-        _nextRetry = now().add(retryEvery);
+        _health.scheduleRetry(now(), retryEvery);
       }
     }
-    if (!_boardReady) {
+    if (!_health.boardReady) {
       final ok = await _gated([OutputFamily.ite], () => out.initBoard());
       if (_stopped) return;
       if (ok) {
         _hardware.forgetBoard();
-        _boardReady = true;
+        _health.setReady(OutputFamily.ite, true);
       } else {
-        _nextRetry = now().add(retryEvery);
+        _health.scheduleRetry(now(), retryEvery);
       }
     }
     final gpuRetryAt = _health.gpuRetryAt;
-    if (!_gpuReady && (gpuRetryAt == null || !now().isBefore(gpuRetryAt))) {
+    if (!_health.gpuReady &&
+        (gpuRetryAt == null || !now().isBefore(gpuRetryAt))) {
       final ok = await _gated([OutputFamily.gpu], () => out.initGpu());
       if (_stopped) return;
       if (ok) {
         _hardware.forgetGpu();
-        _gpuReady = true;
-        _resetGpuBackoff();
+        _health
+          ..setReady(OutputFamily.gpu, true)
+          ..resetGpuBackoff();
       } else {
         _health.recordGpuInitFailure(
           now(),
@@ -478,8 +469,6 @@ class LightingEngineModule implements EngineModule {
     }
     _status.emitStatus();
   }
-
-  void _resetGpuBackoff() => _health.resetGpuBackoff();
 
   Future<void> _turnOff() async {
     final out = _outputs;
@@ -500,12 +489,11 @@ class LightingEngineModule implements EngineModule {
       final ramOk = await ramOffF;
       final gpuOff = await gpuOffF;
       if (_stopped) return;
-      _fansReady = fansOff;
-      _boardReady = boardOff;
-      _gpuReady = gpuOff;
-      _health.ramDown
-        ..clear()
-        ..addAll(ramOk ? const [] : [LightDeviceId.ram1, LightDeviceId.ram2]);
+      _health
+        ..setReady(OutputFamily.fans, fansOff)
+        ..setReady(OutputFamily.ite, boardOff)
+        ..setReady(OutputFamily.gpu, gpuOff)
+        ..setRamOff(ok: ramOk);
       _hardware.forgetFans();
       _hardware.forgetBoard();
       _hardware.forgetGpu();
@@ -535,13 +523,9 @@ class LightingEngineModule implements EngineModule {
         ..clearBreathing()
         ..invalidate();
       _config = _derive(_user);
-      _fansReady = false;
-      _boardReady = false;
-      _gpuReady = false;
-      _health.ramDown.clear();
-      _ramRetryAt.clear();
-      // Resume/restore may have fixed the bus: identify the GPU right away.
-      _resetGpuBackoff();
+      // Resume/restore may have fixed the bus: the reset also clears the GPU
+      // backoff so it is identified right away.
+      _health.reset();
       // The drivers' caches no longer reflect the hardware (suspend, turn-off).
       out0.invalidate();
       await _initDevices();
@@ -569,7 +553,7 @@ class LightingEngineModule implements EngineModule {
         forgetHardwareModes: _hardware.forgetHardwareModes,
         families: [
           HardwareFamilyJob(
-            ready: () => _fansReady,
+            ready: () => _health.fansReady,
             reconcile: () => _gated(
               [OutputFamily.fans],
               () => _hardwareApplier.reconcileFans(
@@ -580,14 +564,14 @@ class LightingEngineModule implements EngineModule {
             ),
           ),
           HardwareFamilyJob(
-            ready: () => _boardReady,
+            ready: () => _health.boardReady,
             reconcile: () => _gated(
               [OutputFamily.ite],
               () => _hardwareApplier.reconcileBoard(config: _config, out: out!),
             ),
           ),
           HardwareFamilyJob(
-            ready: () => _gpuReady,
+            ready: () => _health.gpuReady,
             reconcile: () => _gated([
               OutputFamily.gpu,
             ], () => _hardwareApplier.reconcileGpu(config: _config, out: out!)),
@@ -611,26 +595,20 @@ class LightingEngineModule implements EngineModule {
     });
   }
 
-  void _fansDown() {
-    _fansReady = false;
-    _hardware.forgetFans();
-    _nextRetry = now().add(retryEvery);
-    _syncRetry();
-    _status.emitStatus();
-  }
-
-  void _boardDown() {
-    _boardReady = false;
-    _hardware.forgetBoard();
-    _nextRetry = now().add(retryEvery);
-    _syncRetry();
-    _status.emitStatus();
-  }
-
-  void _gpuDown() {
-    _gpuReady = false;
-    _hardware.forgetGpu();
-    _nextRetry = now().add(retryEvery);
+  /// A write to [family] failed: it drops, its signatures are forgotten and
+  /// the retry redoes the init.
+  void _familyDown(OutputFamily family) {
+    _health.markDown(family, now(), retryEvery);
+    switch (family) {
+      case OutputFamily.fans:
+        _hardware.forgetFans();
+      case OutputFamily.ite:
+        _hardware.forgetBoard();
+      case OutputFamily.gpu:
+        _hardware.forgetGpu();
+      case OutputFamily.ram:
+        throw ArgumentError.value(family, 'family', 'RAM fails per stick');
+    }
     _syncRetry();
     _status.emitStatus();
   }
@@ -638,7 +616,7 @@ class LightingEngineModule implements EngineModule {
   void _identify(int group) {
     final out = _outputs;
     final id = LightDeviceId.forHubGroup(group);
-    if (out == null || id == null || !_fansReady || _shouldBeOff) return;
+    if (out == null || id == null || !_health.fansReady || _shouldBeOff) return;
     final merge = _hardware.fanMerged;
     unawaited(
       out
@@ -653,7 +631,7 @@ class LightingEngineModule implements EngineModule {
             }
             if (!_stopped && !_shouldBeOff) _scheduleReconcile();
           })
-          .catchError((Object e) => _log('identify: $e')),
+          .catchError((Object e, StackTrace st) => _log('identify: $e', st)),
     );
   }
 
@@ -671,19 +649,13 @@ class LightingEngineModule implements EngineModule {
   /// One-shot timer for the retry of families that are down, independent of
   /// the frame loop (a hardware-only setup must not run at 30–120 Hz for it).
   void _syncRetry() {
-    final need =
-        _outputs != null && !_shouldBeOff && _health.hasUnavailableFamilies;
-    if (!need) {
+    final due = _outputs != null && !_shouldBeOff ? _health.retryDue() : null;
+    if (due == null) {
       _retryTimer?.cancel();
       _retryTimer = null;
       return;
     }
     if (_retryTimer != null) return;
-    // A GPU in backoff waits for its own time; the hub/ITE keep [retryEvery].
-    final due = [
-      if (!_fansReady || !_boardReady) _nextRetry,
-      if (!_gpuReady) _health.gpuRetryAt ?? _nextRetry,
-    ].reduce((a, b) => a.isBefore(b) ? a : b);
     var wait = due.difference(now());
     if (wait < const Duration(milliseconds: 50)) {
       wait = const Duration(milliseconds: 50);
@@ -694,8 +666,8 @@ class LightingEngineModule implements EngineModule {
   void _onRetry() {
     _retryTimer = null;
     if (_stopped || _outputs == null || _shouldBeOff) return;
-    if (_fansReady && _boardReady && _gpuReady) return;
-    _nextRetry = now().add(retryEvery);
+    if (!_health.hasUnavailableFamilies) return;
+    _health.scheduleRetry(now(), retryEvery);
     unawaited(
       _run(() async {
         await _initDevices();
@@ -716,10 +688,6 @@ class LightingEngineModule implements EngineModule {
   double _seconds(DateTime at) =>
       at.difference(_startedAt).inMicroseconds / 1e6;
 
-  /// Delay of the AL V2 firmware between receiving a canvas frame and showing
-  /// it. Measured on hardware (2026-10-19, `tool/hw_test_fase4.dart sync`):
-  /// with the fans streamed first, the case/board/RAM had to be sent ~150 ms
-  /// after the fan send completed for both to change at the same instant.
   /// How far ahead of "now" a family must be composed. Synchronous outputs
   /// (ITE, RAM) show the colors when the send ends, so the lead is the send
   /// time. The fans show a frame only [fanDisplayLatencyMs] after the whole
@@ -788,7 +756,7 @@ class LightingEngineModule implements EngineModule {
         );
       }
     } else {
-      _fansDown();
+      _familyDown(OutputFamily.fans);
     }
     return true;
   }
@@ -814,7 +782,7 @@ class LightingEngineModule implements EngineModule {
           : out.sendBoardColors(leds));
       if (!_alive(epoch)) return true;
       if (!ok) {
-        _boardDown();
+        _familyDown(OutputFamily.ite);
         return true;
       }
       final took = now().difference(at);
@@ -838,7 +806,7 @@ class LightingEngineModule implements EngineModule {
     final lane = _lanes[OutputFamily.ram]!;
     for (final id in const [LightDeviceId.ram1, LightDeviceId.ram2]) {
       final at = now();
-      final retryAt = _ramRetryAt[id];
+      final retryAt = _health.ramRetryAt(id);
       if (retryAt != null && at.isBefore(retryAt)) continue;
       final leds = _compositor.composeDevice(
         _config,
@@ -858,12 +826,10 @@ class LightingEngineModule implements EngineModule {
         lane.record(took);
         wrote = true;
         _deduplicator.recordColors(id, leds, at);
-        _ramRetryAt.remove(id);
-        if (_health.ramDown.remove(id)) _status.emitStatus();
+        if (_health.recordRamSuccess(id)) _status.emitStatus();
       } else {
         _deduplicator.forget(id);
-        _ramRetryAt[id] = at.add(retryEvery);
-        _health.ramDown.add(id);
+        _health.recordRamFailure(id, at.add(retryEvery));
         _status.emitStatus();
       }
     }
@@ -896,7 +862,7 @@ class LightingEngineModule implements EngineModule {
         : await out.sendGpuColor(color, brightness: brightness);
     if (!_alive(epoch)) return true;
     if (!ok) {
-      _gpuDown();
+      _familyDown(OutputFamily.gpu);
       return true;
     }
     final took = now().difference(at);
@@ -919,5 +885,7 @@ class LightingEngineModule implements EngineModule {
   static double _gpuColorScale(double brightness) =>
       brightness >= 0.1 ? 1.0 : brightness * 10;
 
-  void _log(String message) => stderr.writeln('lighting: $message');
+  /// Logs to stderr; the stack trace follows when the cause has one.
+  void _log(String message, [StackTrace? stack]) =>
+      stderr.writeln('lighting: $message${stack == null ? '' : '\n$stack'}');
 }

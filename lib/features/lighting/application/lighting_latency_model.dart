@@ -5,6 +5,11 @@ class LightingLatencyModel {
   static const alpha = 0.25;
   static const minLatencyMs = 0.0;
   static const maxLatencyMs = 150.0;
+
+  /// Delay of the AL V2 firmware between receiving a canvas frame and showing
+  /// it. Measured on hardware (2026-10-19, `tool/hw_test_fase4.dart sync`):
+  /// with the fans streamed first, the case/board/RAM had to be sent ~150 ms
+  /// after the fan send completed for both to change at the same instant.
   static const fanDisplayLatencyMs = 150.0;
 
   final _latencyMs = <OutputFamily, double>{

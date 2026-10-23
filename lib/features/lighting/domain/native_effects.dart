@@ -185,7 +185,7 @@ final nativeEffects = List<NativeEffect>.unmodifiable([
     },
   ),
   NativeEffect(
-    'breathing',
+    breathingEffectId,
     'Breathing',
     const [
       EffectParam.color('color', 'Color', defaultValue: '#00BFFF'),
@@ -241,6 +241,10 @@ final nativeEffects = List<NativeEffect>.unmodifiable([
 ]);
 
 const defaultEffectId = 'rainbowWave';
+
+/// Id of the Breathing effect, whose canvas follows the firmware clock when
+/// the fans run [breathingFirmwareMode] (see `hardware_equivalents.dart`).
+const breathingEffectId = 'breathing';
 
 NativeEffect? nativeEffectById(String id) =>
     nativeEffects.where((e) => e.id == id).firstOrNull;

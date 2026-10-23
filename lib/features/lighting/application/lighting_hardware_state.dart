@@ -2,16 +2,6 @@ import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 import 'lighting_frame_deduplicator.dart';
 
-/// Compares two integer lists by value (config lists are new instances after
-/// every config change).
-bool sameInts(List<int> a, List<int> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
-}
-
 /// What the hardware currently holds: the resolved signatures per device and
 /// per pseudo-slot, plus the fan quantity/merge state.
 ///
@@ -71,7 +61,8 @@ class LightingHardwareState {
   /// last frame color).
   void forgetGpuFrameColors() => _deduplicator.forgetGpu();
 
-  /// Fades the fan groups (and the merge state with them).
+  /// Forgets the fan group signatures and frame colors (and the merge state
+  /// with them), so the next reconcile writes them again.
   void forgetFans() {
     for (final id in LightDeviceId.values.where((d) => d.isFan)) {
       _applied.remove(id);
@@ -83,7 +74,8 @@ class LightingHardwareState {
     fanMerged = false;
   }
 
-  /// Fades the ITE zones and case strip.
+  /// Forgets the ITE zone signatures and the case strip and board frame
+  /// colors.
   void forgetBoard() {
     for (final z in boardZoneIds) {
       _applied.remove(z);
@@ -93,7 +85,7 @@ class LightingHardwareState {
       ..forget(LightDeviceId.chassis);
   }
 
-  /// Fades the GPU mode (and its single-color frame).
+  /// Forgets the GPU mode signature and its single-color frame.
   void forgetGpu() {
     _applied.remove(LightDeviceId.gpu);
     _deduplicator

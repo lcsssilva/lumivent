@@ -1,10 +1,12 @@
+import 'package:flutter/foundation.dart' show mapEquals;
+
 import '../../../core/engine/engine_host.dart';
 import '../domain/light_device.dart';
 import '../domain/light_outputs.dart';
 import 'device_health_monitor.dart';
 import 'lighting_messages.dart';
 import 'lighting_trace.dart';
-import 'output_scheduler.dart';
+import 'output_lane.dart';
 
 /// Emits the lighting status: per-device output state, measured FPS and
 /// per-family loop stats.
@@ -25,7 +27,7 @@ class LightingStatusReporter {
   final void Function(EngineEvent event) emit;
   final DateTime Function() now;
   final LightOutputs? Function() outputs;
-  final DeviceHealthMonitor Function() health;
+  final DeviceHealthMonitor health;
   final Map<OutputFamily, OutputLane> Function() lanes;
 
   /// How far ahead a family is drawn (for the trace line).
@@ -39,7 +41,7 @@ class LightingStatusReporter {
   Map<OutputFamily, LoopStats> _loops = const {};
   DateTime _lastFpsEmit = DateTime.fromMillisecondsSinceEpoch(0);
 
-  /// A new tick window starts ([OutputScheduler.onStarted]).
+  /// A new tick window starts (the frame scheduler became active).
   void loopStarted(DateTime at) {
     _frames = 0;
     _fpsWindowStart = at;
@@ -102,11 +104,11 @@ class LightingStatusReporter {
     final loops = fpsDue ? _loops : (last?.loops ?? const {});
     if (last != null &&
         fps == last.fps &&
-        sameLoops(loops, last.loops) &&
-        sameStatus(last.devices, devices)) {
+        mapEquals(loops, last.loops) &&
+        mapEquals(last.devices, devices)) {
       return;
     }
-    if (fps != (last?.fps ?? 0) || !sameLoops(loops, last?.loops ?? const {})) {
+    if (fps != (last?.fps ?? 0) || !mapEquals(loops, last?.loops ?? const {})) {
       _lastFpsEmit = at;
     }
     emit(_lastStatus = LightingStatus(devices, fps: fps, loops: loops));
@@ -114,7 +116,6 @@ class LightingStatusReporter {
 
   Map<LightDeviceId, LightOutputStatus> _deviceStatus() {
     final out = outputs();
-    final monitor = health();
     LightOutputStatus status(LightDeviceId id) {
       if (!id.isSupported) {
         return const LightOutputStatus(
@@ -126,11 +127,11 @@ class LightingStatusReporter {
         return const LightOutputStatus(LightOutputState.unavailable);
       }
       final (up, reason) = switch (id) {
-        _ when id.isFan => (monitor.fansReady, LightOutputIssue.hub),
+        _ when id.isFan => (health.fansReady, LightOutputIssue.hub),
         LightDeviceId.chassis ||
-        LightDeviceId.motherboard => (monitor.boardReady, LightOutputIssue.ite),
-        LightDeviceId.gpu => (monitor.gpuReady, LightOutputIssue.gpu),
-        _ => (!monitor.ramDown.contains(id), LightOutputIssue.ram),
+        LightDeviceId.motherboard => (health.boardReady, LightOutputIssue.ite),
+        LightDeviceId.gpu => (health.gpuReady, LightOutputIssue.gpu),
+        _ => (!health.isRamDown(id), LightOutputIssue.ram),
       };
       if (up) return const LightOutputStatus(LightOutputState.ok);
       final blocked = out.blockedReason(id);
@@ -153,20 +154,4 @@ class LightingStatusReporter {
 
     return {for (final id in LightDeviceId.values) id: status(id)};
   }
-}
-
-bool sameLoops(
-  Map<OutputFamily, LoopStats> a,
-  Map<OutputFamily, LoopStats> b,
-) => a.length == b.length && a.entries.every((e) => b[e.key] == e.value);
-
-bool sameStatus(
-  Map<LightDeviceId, LightOutputStatus> a,
-  Map<LightDeviceId, LightOutputStatus> b,
-) {
-  if (a.length != b.length) return false;
-  for (final e in a.entries) {
-    if (b[e.key] != e.value) return false;
-  }
-  return true;
 }

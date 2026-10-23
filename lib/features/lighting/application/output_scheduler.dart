@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'lighting_messages.dart';
+import 'lighting_status_reporter.dart';
+import 'output_lane.dart';
 
 /// Paces one in-flight frame per output family and chains the next due send.
 class OutputScheduler {
@@ -11,10 +13,7 @@ class OutputScheduler {
     required this.canSend,
     required this.gap,
     required this.send,
-    required this.onStarted,
-    required this.onStopped,
-    required this.onTickStart,
-    required this.onTickEnd,
+    required this.status,
     required this.onError,
   });
 
@@ -26,11 +25,10 @@ class OutputScheduler {
   final bool Function(OutputFamily family) canSend;
   final Duration Function(OutputFamily family) gap;
   final Future<bool> Function(OutputFamily family, DateTime at) send;
-  final void Function(DateTime at) onStarted;
-  final void Function() onStopped;
-  final void Function() onTickStart;
-  final void Function(DateTime at) onTickEnd;
-  final void Function(String message) onError;
+
+  /// Receives the loop start/stop and tick events for the FPS statistics.
+  final LightingStatusReporter status;
+  final void Function(String message, StackTrace stack) onError;
 
   final lanes = {
     for (final family in OutputFamily.values) family: OutputLane(),
@@ -59,13 +57,13 @@ class OutputScheduler {
       if (_timer != null) {
         _timer!.cancel();
         _timer = null;
-        onStopped();
+        status.loopStopped();
       }
       return;
     }
     if (_timer != null) return;
     final at = now();
-    onStarted(at);
+    status.loopStarted(at);
     _timer = Timer.periodic(
       Duration(microseconds: 1000000 ~/ fps()),
       (_) => _tick(),
@@ -76,7 +74,7 @@ class OutputScheduler {
     if (!isActive()) return;
     final at = now();
     try {
-      onTickStart();
+      status.tickStarted();
       for (final family in const [
         OutputFamily.ite,
         OutputFamily.ram,
@@ -85,10 +83,10 @@ class OutputScheduler {
       ]) {
         _pump(family, fromTick: true);
       }
-    } on Object catch (error) {
-      onError('frame: $error');
+    } on Object catch (error, stack) {
+      onError('frame: $error', stack);
     }
-    onTickEnd(at);
+    status.updateFps(at);
   }
 
   void _pump(OutputFamily family, {bool fromTick = false}) {
@@ -105,8 +103,8 @@ class OutputScheduler {
     var sent = false;
     send(family, at)
         .then((value) => sent = value)
-        .catchError((Object error) {
-          onError('${family.name} frame: $error');
+        .catchError((Object error, StackTrace stack) {
+          onError('${family.name} frame: $error', stack);
           return true;
         })
         .whenComplete(() {
@@ -130,27 +128,10 @@ class OutputScheduler {
       lane.timer = Timer(wait, () {
         try {
           _pump(family);
-        } on Object catch (error) {
-          onError('${family.name} frame: $error');
+        } on Object catch (error, stack) {
+          onError('${family.name} frame: $error', stack);
         }
       });
     }
-  }
-}
-
-/// Frame-in-flight state and counters for one family.
-class OutputLane {
-  bool sending = false;
-  DateTime lastStart = DateTime.fromMillisecondsSinceEpoch(0);
-  Timer? timer;
-  int frames = 0;
-  int sendUs = 0;
-
-  void record(Duration took) => sendUs += took.inMicroseconds;
-  void countFrame() => frames++;
-
-  void resetStats() {
-    frames = 0;
-    sendUs = 0;
   }
 }

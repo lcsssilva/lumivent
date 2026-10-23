@@ -9,6 +9,7 @@ import '../../../core/ui/theme.dart';
 import '../../../core/ui/we_card.dart';
 import '../../devices/devices.dart';
 import '../application/lighting_controller.dart';
+import '../domain/fan_mode_name.dart';
 import '../domain/led_layout.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
@@ -22,26 +23,8 @@ List<String> _modeNames(Alv2LightScope scope) => [
 
 /// Base names (`Runway`) of the merge modes, as stored in the config.
 List<String> _mergeBases() => [
-  for (final n in _modeNames(Alv2LightScope.merge))
-    n.replaceFirst(RegExp(r'_Merge$'), ''),
+  for (final n in _modeNames(Alv2LightScope.merge)) mergeModeBase(n),
 ];
-
-/// Accepts `Runway` and `Runway_Merge`; returns a base name that is always in
-/// the dropdown items (falls back to `Runway`).
-String normalizeMergeMode(String name) {
-  final base = name.replaceFirst(RegExp(r'_Merge$'), '');
-  final bases = _mergeBases();
-  return bases.contains(base) ? base : 'Runway';
-}
-
-/// Keeps the same effect when the scope changes (`Wave` <-> `Wave_Inner`).
-String convertMode(String name, Alv2Scope to) {
-  final base = name.split('_').first;
-  final candidate = to == Alv2Scope.whole ? base : '${base}_Inner';
-  return Alv2LightMode.byName(candidate) != null
-      ? candidate
-      : (to == Alv2Scope.whole ? 'StaticColor' : 'StaticColor_Inner');
-}
 
 class FanHardwarePanel extends ConsumerWidget {
   const FanHardwarePanel({super.key, required this.id});
@@ -70,8 +53,10 @@ class FanHardwarePanel extends ConsumerWidget {
     // The merge effect lives in slot 0 (the hub has no fans there). The config
     // stores the base name (`Runway`); the `_Merge` variant is only mapped here.
     final mergeBases = _mergeBases();
-    final mergeBase = normalizeMergeMode(cfg.alv2MergeMode);
-    final mergeMode = Alv2LightMode.byName('${mergeBase}_Merge');
+    final mergeBase = normalizeMergeBase(cfg.alv2MergeMode, mergeBases);
+    final mergeMode = Alv2LightMode.byName(
+      fanModeName(mergeBase, FanModeSuffix.merge),
+    );
     final merge = cfg.alv2Hardware[0];
     void setMerge(Alv2HardwareConfig Function(Alv2HardwareConfig) f) =>
         controller.update((c) {
@@ -112,7 +97,11 @@ class FanHardwarePanel extends ConsumerWidget {
             onSelectionChanged: (s) => setHw(
               (h) => h.copyWith(
                 scope: s.first,
-                mode: convertMode(h.mode, s.first),
+                mode: convertFanModeScope(
+                  h.mode,
+                  s.first,
+                  isKnown: (n) => Alv2LightMode.byName(n) != null,
+                ),
               ),
             ),
           ),
@@ -248,13 +237,7 @@ class FanHardwarePanel extends ConsumerWidget {
   ) {
     final l = strings.lighting;
     final colorCount = mode?.colorCount ?? 0;
-    final colors = [
-      for (var i = 0; i < colorCount; i++)
-        i < hw.colors.length
-            ? hw.colors[i]
-            : Alv2HardwareConfig.defaultColors[i %
-                  Alv2HardwareConfig.defaultColors.length],
-    ];
+    final colors = [for (var i = 0; i < colorCount; i++) hw.colorAt(i)];
     return [
       if (mode?.hasSpeed ?? false)
         PanelSlider(

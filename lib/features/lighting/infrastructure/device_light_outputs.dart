@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../../devices/devices.dart';
+import '../domain/fan_mode_name.dart';
 import '../domain/led_layout.dart' show ledsPerFan;
 import '../domain/light_device.dart';
 import '../domain/light_outputs.dart';
@@ -139,7 +140,7 @@ class DeviceLightOutputs implements LightOutputs {
   /// Whole-fan mode; an unknown name (or one from another scope) falls back to
   /// StaticColor so the config never leaves the group undefined.
   Alv2LightMode _wholeMode(String name) {
-    final m = Alv2LightMode.byName(_base(name));
+    final m = Alv2LightMode.byName(fanModeBase(name));
     return m != null && m.scope == Alv2LightScope.whole
         ? m
         : Alv2LightMode.staticColor;
@@ -150,9 +151,9 @@ class DeviceLightOutputs implements LightOutputs {
   /// and, as a last resort, StaticColor of that ring.
   Alv2LightMode _ringMode(String name, Alv2LightScope ring) {
     final inner = ring == Alv2LightScope.inner;
-    final suffix = inner ? '_Inner' : '_Outer';
-    final base = _base(name);
-    final m = Alv2LightMode.byName('$base$suffix');
+    final suffix = inner ? FanModeSuffix.inner : FanModeSuffix.outer;
+    final base = fanModeBase(name);
+    final m = Alv2LightMode.byName(fanModeName(base, suffix));
     if (m != null) return m;
     final whole = Alv2LightMode.byName(base);
     return (inner ? whole?.splitInner : whole?.splitOuter) ??
@@ -162,12 +163,11 @@ class DeviceLightOutputs implements LightOutputs {
   }
 
   Alv2LightMode? _mergeMode(String name) {
-    final m = Alv2LightMode.byName('${_base(name)}_Merge');
+    final m = Alv2LightMode.byName(
+      fanModeName(fanModeBase(name), FanModeSuffix.merge),
+    );
     return m != null && m.scope == Alv2LightScope.merge ? m : null;
   }
-
-  static String _base(String name) =>
-      name.replaceFirst(RegExp(r'_(Inner|Outer|Merge)$'), '');
 
   Alv2Effect _effect(Alv2LightMode mode, Alv2HardwareConfig c) => Alv2Effect(
     mode,
@@ -184,10 +184,7 @@ class DeviceLightOutputs implements LightOutputs {
   );
 
   static List<int> _colorAt(Alv2HardwareConfig c, int i) {
-    final rgb = i < c.colors.length
-        ? c.colors[i]
-        : Alv2HardwareConfig.defaultColors[i %
-              Alv2HardwareConfig.defaultColors.length];
+    final rgb = c.colorAt(i);
     return [rgb.r, rgb.g, rgb.b];
   }
 
@@ -292,17 +289,12 @@ class DeviceLightOutputs implements LightOutputs {
       final reasons = reply.ramReasons;
       if (reasons != null) _ramReasons = reasons;
       final gpuReason = reply.gpuReason;
-      if (gpuReason != null ||
-          command is IoInitGpu ||
-          command is IoGpuStatic ||
-          command is IoGpuEffect ||
-          command is IoGpuOff ||
-          command is IoInvalidate) {
+      if (gpuReason != null || reportsGpuReason(command)) {
         _gpuReason = gpuReason;
       }
       return reply.ok;
-    } on Object catch (e) {
-      stderr.writeln('lighting: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('lighting: $e\n$st');
       return false;
     }
   }
@@ -325,8 +317,8 @@ class DeviceLightOutputs implements LightOutputs {
     if (_closed) return false;
     try {
       return await op();
-    } on Object catch (e) {
-      stderr.writeln('lighting: $e');
+    } on Object catch (e, st) {
+      stderr.writeln('lighting: $e\n$st');
       return false;
     }
   }

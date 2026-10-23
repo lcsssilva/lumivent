@@ -2,6 +2,7 @@
 // file only maps domain values to the matching catalog entry.
 
 import '../../../core/i18n/app_strings.dart';
+import '../domain/fan_mode_name.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 
@@ -51,7 +52,7 @@ String gpuEffectLabel(AppStrings strings, GpuEffect effect) =>
 
 /// Readable firmware mode name: `RainbowMorph_Inner` -> `Rainbow Morph`.
 String firmwareModeLabel(String name) {
-  final base = name.split('_').first;
+  final base = fanModeBase(name);
   return base
       .replaceAllMapped(RegExp(r'(?<=[a-z])(?=[A-Z])'), (_) => ' ')
       .trim();

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show listEquals;
+
 import '../domain/light_device.dart';
 import '../domain/rgb.dart';
 
@@ -12,7 +14,7 @@ class LightingFrameDeduplicator {
   bool shouldSendColors(LightDeviceId id, List<Rgb> colors, DateTime at) {
     final last = _sent[id];
     return last == null ||
-        !_sameColors(last.colors, colors) ||
+        !listEquals(last.colors, colors) ||
         at.difference(last.at) >= resendEvery;
   }
 
@@ -55,12 +57,4 @@ class _SentGpu {
   final Rgb color;
   final int brightness;
   final DateTime at;
-}
-
-bool _sameColors(List<Rgb> a, List<Rgb> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }

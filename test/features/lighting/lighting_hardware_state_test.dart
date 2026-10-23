@@ -27,8 +27,6 @@ void main() {
     expect(state.changed(LightDeviceId.gpu, 'off'), isTrue);
     state.apply(LightDeviceId.gpu, 'off');
     expect(state.changed(LightDeviceId.gpu, 'off'), isFalse);
-    expect(sameInts([1, 2, 3], [1, 2, 3]), isTrue);
-    expect(sameInts([1, 2, 3], [1, 2]), isFalse);
   });
 
   test('forgetGpu drops the mode and the single-color frame', () {

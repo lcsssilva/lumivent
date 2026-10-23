@@ -1,8 +1,18 @@
+import 'package:flutter/foundation.dart' show listEquals;
+
+import '../domain/hardware_equivalents.dart';
 import '../domain/light_device.dart';
+import '../domain/native_effects.dart';
 import '../domain/light_outputs.dart';
 import '../domain/lighting_config.dart';
 import '../domain/rgb.dart';
 import 'lighting_hardware_state.dart';
+import 'lighting_messages.dart';
+
+/// What a device slot holds, as recorded in the [LightingHardwareState]
+/// signatures. `frame` slots follow the canvas frames, so nothing is written
+/// for them.
+enum _SlotMode { frame, off, mode, merged }
 
 /// Sends the hardware modes (fan modes, merge, board zones, GPU) comparing the
 /// requested config with what the hardware holds. Idempotent; a `false` from a
@@ -14,22 +24,17 @@ import 'lighting_hardware_state.dart';
 class LightingHardwareApplier {
   LightingHardwareApplier({
     required this.state,
-    required this.onFansDown,
-    required this.onBoardDown,
-    required this.onGpuDown,
+    required this.onFamilyDown,
     required this.onBreathingStarted,
     required this.trace,
     required this.stopped,
-    required this.now,
   });
 
   /// Signatures of everything the hardware holds.
   final LightingHardwareState state;
 
   /// The mode write failed: the family drops and the retry redoes it.
-  final void Function() onFansDown;
-  final void Function() onBoardDown;
-  final void Function() onGpuDown;
+  final void Function(OutputFamily family) onFamilyDown;
 
   /// A firmware `Breathing` was written: the frame clock anchors to it.
   final void Function() onBreathingStarted;
@@ -39,9 +44,6 @@ class LightingHardwareApplier {
 
   /// The engine stopped; mid-sequence writes must bail out.
   final bool Function() stopped;
-
-  /// Engine clock (a failure rewrites the timers with the current instant).
-  final DateTime Function() now;
 
   /// Compare-and-send of the whole fan subtree: quantity, merge, group 0 and
   /// the per-group mode. Returns whether an effect was written.
@@ -54,12 +56,12 @@ class LightingHardwareApplier {
     var sent = false;
     final qty = LightingHardwareState.quantityOf(config);
     final appliedQty = state.appliedQuantity;
-    if (appliedQty == null || !sameInts(appliedQty, qty)) {
+    if (appliedQty == null || !listEquals(appliedQty, qty)) {
       // The service resends every port after a quantity change (AL-V2 §4).
       final ok = await out.setFanQuantity(qty);
       if (stopped()) return sent;
       if (!ok) {
-        onFansDown();
+        onFamilyDown(OutputFamily.fans);
         return sent;
       }
       state
@@ -71,11 +73,11 @@ class LightingHardwareApplier {
     final appliedOrder = state.appliedMergeOrder;
     if (merged &&
         (appliedOrder == null ||
-            !sameInts(appliedOrder, config.alv2MergeOrder))) {
+            !listEquals(appliedOrder, config.alv2MergeOrder))) {
       final ok = await out.setFanMergeOrder(config.alv2MergeOrder);
       if (stopped()) return sent;
       if (!ok) {
-        onFansDown();
+        onFamilyDown(OutputFamily.fans);
         return sent;
       }
       state.appliedMergeOrder = config.alv2MergeOrder;
@@ -83,7 +85,7 @@ class LightingHardwareApplier {
       state.forget(LightingHardwareState.mergeKey);
     }
     final mergeSig = merged
-        ? ('merge', config.alv2MergeMode, config.alv2Hardware[0])
+        ? (_SlotMode.merged, config.alv2MergeMode, config.alv2Hardware[0])
         : null;
     if (state.changed(LightingHardwareState.mergeKey, mergeSig)) {
       // The merge config lives in the unused group-0 slot of the hardware list.
@@ -94,7 +96,7 @@ class LightingHardwareApplier {
         );
         if (stopped()) return sent;
         if (!ok) {
-          onFansDown();
+          onFamilyDown(OutputFamily.fans);
           return sent;
         }
         sent = true;
@@ -110,13 +112,13 @@ class LightingHardwareApplier {
     state.fanMerged = merged;
 
     // Hub group 0 is empty and always off, except port 0 inside a merge.
-    final g0 = merged ? 'merge' : 'off';
+    final g0 = merged ? _SlotMode.merged : _SlotMode.off;
     if (state.changed(LightingHardwareState.group0Key, g0)) {
       if (!merged) {
         final ok = await out.turnFanGroupOff(0);
         if (stopped()) return sent;
         if (!ok) {
-          onFansDown();
+          onFamilyDown(OutputFamily.fans);
           return sent;
         }
         trace('fan group 0 off');
@@ -127,27 +129,27 @@ class LightingHardwareApplier {
     for (final id in LightDeviceId.values.where((d) => d.isFan)) {
       final d = config.device(id);
       final g = id.hubGroup!;
-      final (String, Alv2HardwareConfig?) sig = merged
-          ? ('merged', null)
+      final (_SlotMode, Alv2HardwareConfig?) sig = merged
+          ? (_SlotMode.merged, null)
           : d.mode != LightMode.hardware
-          ? ('frame', null)
+          ? (_SlotMode.frame, null)
           : !d.enabled
-          ? ('off', null)
-          : ('mode', config.alv2Hardware[g]);
+          ? (_SlotMode.off, null)
+          : (_SlotMode.mode, config.alv2Hardware[g]);
       if (!state.changed(id, sig)) continue;
       state.forgetFrameColors(id);
       final ok = switch (sig.$1) {
-        'off' => await out.turnFanGroupOff(g),
-        'mode' => await out.setFanHardware(g, sig.$2!),
-        _ => true,
+        _SlotMode.off => await out.turnFanGroupOff(g),
+        _SlotMode.mode => await out.setFanHardware(g, sig.$2!),
+        _SlotMode.frame || _SlotMode.merged => true,
       };
       if (stopped()) return sent;
       if (!ok) {
-        onFansDown();
+        onFamilyDown(OutputFamily.fans);
         return sent;
       }
-      if (sig.$1 != 'mode') trace('fan group $g ${sig.$1}');
-      if (sig.$1 == 'mode') {
+      if (sig.$1 != _SlotMode.mode) trace('fan group $g ${sig.$1.name}');
+      if (sig.$1 == _SlotMode.mode) {
         sent = true;
         final m = sig.$2!;
         trace(
@@ -156,7 +158,8 @@ class LightingHardwareApplier {
           '${m.colors.take(2).map((c) => c.toHex()).join(',')}',
         );
         // A Breathing mode starts its own clock now: the canvas follows it.
-        if (sig.$2!.mode == 'Breathing' && config.effectId == 'breathing') {
+        if (sig.$2!.mode == breathingFirmwareMode &&
+            config.effectId == breathingEffectId) {
           onBreathingStarted();
         }
       }
@@ -199,24 +202,24 @@ class LightingHardwareApplier {
     final batch = <int, BoardZoneConfig>{};
     final sigs = <int, Object?>{};
     for (final z in boardZoneIds) {
-      final (String, BoardZoneConfig?) sig = d.mode != LightMode.hardware
-          ? ('frame', null)
+      final (_SlotMode, BoardZoneConfig?) sig = d.mode != LightMode.hardware
+          ? (_SlotMode.frame, null)
           : !d.enabled
-          ? ('off', null)
-          : ('mode', config.boardZones[z]);
+          ? (_SlotMode.off, null)
+          : (_SlotMode.mode, config.boardZones[z]);
       if (!state.changed(z, sig)) continue;
       state.forgetFrameColors(LightDeviceId.motherboard);
       switch (sig.$1) {
-        case 'off':
+        case _SlotMode.off:
           batch[z] = const BoardZoneConfig(
             mode: BoardEffectMode.static,
             color: Rgb.black,
           );
           sigs[z] = sig;
-        case 'mode':
+        case _SlotMode.mode:
           batch[z] = sig.$2!;
           sigs[z] = sig;
-        default:
+        case _SlotMode.frame || _SlotMode.merged:
           state.apply(z, sig);
       }
     }
@@ -224,7 +227,7 @@ class LightingHardwareApplier {
     final ok = await out.setBoardZones(batch);
     if (stopped()) return false;
     if (!ok) {
-      onBoardDown();
+      onFamilyDown(OutputFamily.ite);
       return false;
     }
     for (final entry in sigs.entries) {
@@ -241,11 +244,11 @@ class LightingHardwareApplier {
   }) async {
     final state = this.state;
     final d = config.device(LightDeviceId.gpu);
-    final (String, GpuHardwareConfig?) sig = d.mode != LightMode.hardware
-        ? ('frame', null)
+    final (_SlotMode, GpuHardwareConfig?) sig = d.mode != LightMode.hardware
+        ? (_SlotMode.frame, null)
         : !d.enabled
-        ? ('off', null)
-        : ('mode', config.gpuHardware);
+        ? (_SlotMode.off, null)
+        : (_SlotMode.mode, config.gpuHardware);
     if (!state.changed(LightDeviceId.gpu, sig)) return false;
     // Frame mode must resend its color on the next tick; hardware/off must not
     // be considered already applied by the old frame.
@@ -253,17 +256,17 @@ class LightingHardwareApplier {
     var ok = true;
     var hardware = false;
     switch (sig.$1) {
-      case 'off':
+      case _SlotMode.off:
         ok = await out.turnGpuOff();
-      case 'mode':
+      case _SlotMode.mode:
         ok = await out.setGpuHardware(sig.$2!);
         hardware = true;
-      default:
+      case _SlotMode.frame || _SlotMode.merged:
         break;
     }
     if (stopped()) return false;
     if (!ok) {
-      onGpuDown();
+      onFamilyDown(OutputFamily.gpu);
       return false;
     }
     state.apply(LightDeviceId.gpu, sig);
