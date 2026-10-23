@@ -24,13 +24,16 @@ class LightingController extends Notifier<LightingConfig> {
 
   Timer? _saveTimer;
 
+  /// Config waiting for the debounce. Kept here because the dispose callback
+  /// cannot read the notifier state or other providers.
+  LightingConfig? _unsaved;
+  late LightingConfigRepository _repository;
+
   @override
   LightingConfig build() {
-    ref.onDispose(() {
-      if (_saveTimer?.isActive ?? false) _save();
-      _saveTimer?.cancel();
-    });
-    return ref.read(lightingRepositoryProvider).load();
+    _repository = ref.read(lightingRepositoryProvider);
+    ref.onDispose(savePending);
+    return _repository.load();
   }
 
   /// Turns all ARGB off/on: saves right away and notifies the engine.
@@ -38,8 +41,8 @@ class LightingController extends Notifier<LightingConfig> {
     if (state.argbOff == off) return;
     state = state.copyWith(argbOff: off);
     ref.read(engineProvider).send(SetArgbOff(off));
-    _saveTimer?.cancel();
-    _save();
+    _cancelPendingSave();
+    _save(state);
   }
 
   /// Applies [change] to the current config (no-op if nothing changed).
@@ -49,13 +52,14 @@ class LightingController extends Notifier<LightingConfig> {
     state = next;
     ref.read(engineProvider).send(SetLightingConfig(next));
     _saveTimer?.cancel();
-    _saveTimer = Timer(saveDelay, _save);
+    _unsaved = next;
+    _saveTimer = Timer(saveDelay, savePending);
   }
 
   /// Reloads the saved config (after an import) and hands it to the engine.
   /// A pending debounced save is dropped: it would overwrite the import.
   void reload() {
-    _saveTimer?.cancel();
+    _cancelPendingSave();
     state = ref.read(lightingRepositoryProvider).load();
     ref.read(engineProvider).send(SetLightingConfig(state));
   }
@@ -64,9 +68,21 @@ class LightingController extends Notifier<LightingConfig> {
   void identify(int hubGroup) =>
       ref.read(engineProvider).send(IdentifyFanGroup(hubGroup));
 
-  void _save() => ref
-      .read(lightingRepositoryProvider)
-      .save(state)
+  /// Saves a change still waiting for the debounce right away (quit,
+  /// dispose). Does nothing when every change is already saved.
+  void savePending() {
+    final pending = _unsaved;
+    _cancelPendingSave();
+    if (pending != null) _save(pending);
+  }
+
+  void _cancelPendingSave() {
+    _saveTimer?.cancel();
+    _unsaved = null;
+  }
+
+  void _save(LightingConfig config) => _repository
+      .save(config)
       // The store names the section and notifies the user; the cause and
       // stack trace are logged for troubleshooting.
       .catchError((Object e, StackTrace s) => debugPrint('$e\n$s'));

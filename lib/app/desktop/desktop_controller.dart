@@ -177,6 +177,9 @@ class DesktopController with WindowListener implements DesktopActions {
       // and the window are released below.
       debugPrint('engine shutdown failed: $error\n$stackTrace');
     }
+    // A lighting change still inside its save debounce is written first, so
+    // the flush below includes it.
+    _container.read(lightingProvider.notifier).savePending();
     await flushPendingWrites(_container.read(configStoreProvider));
     _tray?.setVisible(false);
     _tray?.dispose();

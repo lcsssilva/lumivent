@@ -549,4 +549,44 @@ void main() {
     await store.flush();
     expect(store.section('lighting')['brightness'], 0.4);
   });
+
+  test('savePending writes a debounced change right away', () async {
+    final container = ProviderContainer(
+      overrides: [
+        engineProvider.overrideWithValue(FakeEngine()),
+        ...LightingModule.overrides(store),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final ctrl = container.read(lightingProvider.notifier);
+    ctrl.update((c) => c.copyWith(brightness: 0.3));
+    ctrl.savePending();
+    await store.flush();
+    expect(store.section('lighting')['brightness'], 0.3);
+
+    // The debounce timer was cancelled: a later save does not overwrite a
+    // change made after savePending.
+    await store.saveSection('lighting', {'brightness': 0.9});
+    await Future<void>.delayed(
+      LightingController.saveDelay + const Duration(milliseconds: 100),
+    );
+    await store.flush();
+    expect(store.section('lighting')['brightness'], 0.9);
+  });
+
+  test('disposing the container saves a change still waiting', () async {
+    final container = ProviderContainer(
+      overrides: [
+        engineProvider.overrideWithValue(FakeEngine()),
+        ...LightingModule.overrides(store),
+      ],
+    );
+    container
+        .read(lightingProvider.notifier)
+        .update((c) => c.copyWith(brightness: 0.2));
+    container.dispose();
+    await store.flush();
+    expect(store.section('lighting')['brightness'], 0.2);
+  });
 }
