@@ -43,33 +43,48 @@ class EffectProperty {
     switch (type) {
       case 'number':
       case 'hue':
-        final n = raw is num
-            ? raw.toDouble()
-            : (raw is String ? double.tryParse(raw) : null);
-        final fallback =
-            num.tryParse(defaultValue ?? '')?.toDouble() ??
-            (min?.toDouble() ?? 0);
-        if (n == null || !n.isFinite) return fallback;
-        final lo = min?.toDouble(), hi = max?.toDouble();
-        return n.clamp(lo ?? n, hi ?? n);
+        return verifyNumberAndHue(raw);
       case 'boolean':
-        if (raw is bool) return raw;
-        if (raw is num) return raw != 0;
-        return initialValue;
+        return verifyBoolean(raw);
       case 'combobox':
-        if (raw is String && (values.isEmpty || values.contains(raw))) {
-          return raw;
-        }
-        return initialValue;
+        return verifyCombobox(raw);
       case 'color':
-        if (raw is String && Rgb.parse(raw) != null) {
-          return Rgb.parse(raw)!.toHex();
-        }
-        final d = defaultValue;
-        if (d != null && Rgb.parse(d) != null) return Rgb.parse(d)!.toHex();
-        return '#FFFFFF';
+        return verifyColor(raw);
       default:
         return raw is String ? raw : initialValue;
     }
+  }
+
+  Object? verifyBoolean(Object? raw) {
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    return initialValue;
+  }
+
+  Object? verifyNumberAndHue(Object? raw) {
+    final n = raw is num
+        ? raw.toDouble()
+        : (raw is String ? double.tryParse(raw) : null);
+    final fallback =
+        num.tryParse(defaultValue ?? '')?.toDouble() ?? (min?.toDouble() ?? 0);
+    if (n == null || !n.isFinite) return fallback;
+    final lo = min?.toDouble(), hi = max?.toDouble();
+    return n.clamp(lo ?? n, hi ?? n);
+  }
+
+  Object? verifyCombobox(Object? raw) {
+    if (raw is String && (values.isEmpty || values.contains(raw))) {
+      return raw;
+    }
+    return initialValue;
+  }
+
+  Object? verifyColor(Object? raw) {
+    if (raw is String && Rgb.parse(raw) != null) {
+      return Rgb.parse(raw)!.toHex();
+    }
+    final d = defaultValue;
+    if (d != null && Rgb.parse(d) != null) return Rgb.parse(d)!.toHex();
+    return '#FFFFFF';
   }
 }
