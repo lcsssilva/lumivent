@@ -108,6 +108,22 @@ abstract final class SimpleCanvasRaster {
     }
     var covered = !mustCover;
     final ops = CanvasCommandBuffer(encoded);
+    // The first pixel-writing rectangle of a [mustCover] frame must cover the
+    // canvas; returns false when it does not, which rejects the frame.
+    bool coverRect() {
+      if (covered) return true;
+      if (!_covers(
+        ops.number(0),
+        ops.number(1),
+        ops.number(2),
+        ops.number(3),
+      )) {
+        return false;
+      }
+      covered = true;
+      return true;
+    }
+
     int? color = state.fill;
     double? alpha = state.alpha;
     bool? srcOver = state.srcOver;
@@ -130,17 +146,7 @@ abstract final class SimpleCanvasRaster {
           srcOver = ops.text(0) == 'source-over';
         case CanvasOp.fillRect:
           if (alpha != 1 || srcOver != true || color == null) return null;
-          if (!covered) {
-            if (!_covers(
-              ops.number(0),
-              ops.number(1),
-              ops.number(2),
-              ops.number(3),
-            )) {
-              return null;
-            }
-            covered = true;
-          }
+          if (!coverRect()) return null;
           if (!_fill(
             pixels,
             ops.number(0),
@@ -155,17 +161,7 @@ abstract final class SimpleCanvasRaster {
           if (alpha != 1 || srcOver != true) return null;
           final packed = ops.color(4);
           if ((packed >>> 24) != 255) return null;
-          if (!covered) {
-            if (!_covers(
-              ops.number(0),
-              ops.number(1),
-              ops.number(2),
-              ops.number(3),
-            )) {
-              return null;
-            }
-            covered = true;
-          }
+          if (!coverRect()) return null;
           if (!_fill(
             pixels,
             ops.number(0),
@@ -178,17 +174,7 @@ abstract final class SimpleCanvasRaster {
           }
         case CanvasOp.fillRect16Hsl:
           if (alpha != 1 || srcOver != true) return null;
-          if (!covered) {
-            if (!_covers(
-              ops.number(0),
-              ops.number(1),
-              ops.number(2),
-              ops.number(3),
-            )) {
-              return null;
-            }
-            covered = true;
-          }
+          if (!coverRect()) return null;
           if (!_fill(
             pixels,
             ops.number(0),
@@ -201,17 +187,7 @@ abstract final class SimpleCanvasRaster {
           }
         case CanvasOp.clearRect:
           // clearRect ignores alpha and composite (canvas spec).
-          if (!covered) {
-            if (!_covers(
-              ops.number(0),
-              ops.number(1),
-              ops.number(2),
-              ops.number(3),
-            )) {
-              return null;
-            }
-            covered = true;
-          }
+          if (!coverRect()) return null;
           _fill(
             pixels,
             ops.number(0),
