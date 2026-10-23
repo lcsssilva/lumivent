@@ -212,8 +212,6 @@ void main() {
             .where((f) => f.path.endsWith('.dart'))) {
       final path = file.path.substring(libRoot.length + 1);
       if (path.startsWith('core/i18n/catalogs/') ||
-          path == 'main_spike.dart' ||
-          path.startsWith('spike/') ||
           path.endsWith('.g.dart') ||
           path.endsWith('.freezed.dart')) {
         continue;
@@ -253,9 +251,7 @@ void main() {
             .whereType<File>()
             .where((f) => f.path.endsWith('.dart'))) {
       final path = file.path.substring(libRoot.length + 1);
-      if (path.startsWith('core/i18n/catalogs/') ||
-          path == 'main_spike.dart' ||
-          path.startsWith('spike/')) {
+      if (path.startsWith('core/i18n/catalogs/')) {
         continue;
       }
       final lines = file.readAsLinesSync();
