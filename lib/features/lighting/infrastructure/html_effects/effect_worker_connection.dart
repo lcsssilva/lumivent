@@ -11,7 +11,9 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 
 import 'effect_worker.dart';
 import 'effect_worker_protocol.dart';
+import 'effect_worker_reply.dart';
 import 'quickjs_effect.dart';
+import 'effect_script_exception.dart';
 
 /// How much later than scheduled the request timer may fire before the main
 /// isolate is considered stalled rather than the worker hung.

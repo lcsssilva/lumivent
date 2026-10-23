@@ -1,10 +1,15 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/platform/hidapi_ffi.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/lighting.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_effect.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/protocol.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_port_write.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_forbidden_packet.dart';
+
+import 'fake_clock.dart';
+import 'fake_alv2_transport.dart';
 
 List<int> hex(String s) => [
   for (final b in s.split(' ')) int.parse(b, radix: 16),
@@ -17,55 +22,9 @@ const red = [255, 0, 0],
 
 List<int> rgb(List<List<int>> cs) => [for (final c in cs) ...c];
 
-/// Fake clock: sleep and delay only advance time.
-class FakeClock {
-  DateTime t = DateTime(2026);
-  DateTime now() => t;
-  void sleep(Duration d) => t = t.add(d);
-  Future<void> delay(Duration d) async {
-    await Future<void>.value();
-    t = t.add(d);
-  }
-}
-
-class Sent {
-  Sent(this.at, this.kind, this.bytes, this.length);
-  final DateTime at;
-  final String kind;
-  final List<int> bytes;
-  final int length;
-}
-
-class FakeTransport implements Alv2Transport {
-  FakeTransport(this.clock);
-  final FakeClock clock;
-  final sent = <Sent>[];
-  bool failNext = false;
-
-  /// Raw input report returned by `getInput` (zeros when null).
-  Uint8List? input;
-
-  void _log(String k, List<int> d, int l) {
-    if (failNext) {
-      failNext = false;
-      throw HidException('falha');
-    }
-    sent.add(Sent(clock.t, k, List.of(d), l));
-  }
-
-  @override
-  void sendFeature(List<int> data, int length) => _log('feature', data, length);
-  @override
-  void write(List<int> data, int length) => _log('output', data, length);
-  @override
-  Uint8List getInput(int reportId, int length) => input ?? Uint8List(length);
-  @override
-  void close() {}
-}
-
-(Alv2Hub, FakeTransport, FakeClock) fakeHub() {
+(Alv2Hub, FakeAlv2Transport, FakeClock) fakeHub() {
   final clock = FakeClock();
-  final tr = FakeTransport(clock);
+  final tr = FakeAlv2Transport(clock);
   final hub = Alv2Hub.withTransport(
     tr,
     now: clock.now,
@@ -542,7 +501,7 @@ void main() {
       'dispose during sendLighting: no packet after it, returns false',
       () async {
         final clock = FakeClock();
-        final tr = FakeTransport(clock);
+        final tr = FakeAlv2Transport(clock);
         late final Alv2Hub hub;
         hub = Alv2Hub.withTransport(
           tr,

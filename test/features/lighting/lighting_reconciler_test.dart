@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/application/lighting_reconciler.dart';
+import 'package:lumivent/features/lighting/application/hardware_family_job.dart';
+import 'package:lumivent/features/lighting/application/lighting_reconcile_job.dart';
 
 void main() {
   test('reconciles families in order and schedules hardware resend', () async {

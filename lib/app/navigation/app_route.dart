@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/i18n/app_strings.dart';
 
@@ -31,14 +30,3 @@ extension AppRouteStrings on AppRoute {
     AppRoute.settings => s.shell.settingsSubtitle,
   };
 }
-
-class RouteNotifier extends Notifier<AppRoute> {
-  @override
-  AppRoute build() => AppRoute.monitoring;
-
-  void go(AppRoute route) => state = route;
-}
-
-final routeProvider = NotifierProvider<RouteNotifier, AppRoute>(
-  RouteNotifier.new,
-);

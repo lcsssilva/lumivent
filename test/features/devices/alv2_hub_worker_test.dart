@@ -1,51 +1,21 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub_worker.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_command.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_core.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/lighting.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/protocol.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_port_write.dart';
 
-class _Clock {
-  DateTime t = DateTime(2026);
-  DateTime now() => t;
-  void sleep(Duration d) => t = t.add(d);
-  Future<void> delay(Duration d) async {
-    await Future<void>.value();
-    t = t.add(d);
-  }
-}
+part 'hub_worker_clock.dart';
+part 'hub_worker_transport.dart';
 
-/// Records packets and the close, in order.
-class _Transport implements Alv2Transport {
-  _Transport(this.clock);
-  final _Clock clock;
-  final log = <String>[];
-  final times = <DateTime>[];
-  Uint8List? input;
-
-  void _add(String s) {
-    log.add(s);
-    times.add(clock.t);
-  }
-
-  String _hex(List<int> d) =>
-      d.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
-
-  @override
-  void sendFeature(List<int> data, int length) => _add('F ${_hex(data)}');
-  @override
-  void write(List<int> data, int length) =>
-      _add('O ${_hex(data).substring(0, 8)}');
-  @override
-  Uint8List getInput(int reportId, int length) => input ?? Uint8List(length);
-  @override
-  void close() => _add('close');
-}
-
-(Alv2HubProxy, _Transport, _Clock) _proxy() {
-  final clock = _Clock();
-  final tr = _Transport(clock);
+(Alv2HubProxy, _HubWorkerTransport, _HubWorkerClock) _proxy() {
+  final clock = _HubWorkerClock();
+  final tr = _HubWorkerTransport(clock);
   final hub = Alv2Hub.withTransport(
     tr,
     now: clock.now,
@@ -58,8 +28,8 @@ class _Transport implements Alv2Transport {
 void main() {
   group('Alv2HubCore (no isolate)', () {
     test('answers every command and never throws', () async {
-      final clock = _Clock();
-      final tr = _Transport(clock);
+      final clock = _HubWorkerClock();
+      final tr = _HubWorkerTransport(clock);
       final core = Alv2HubCore(
         Alv2Hub.withTransport(
           tr,

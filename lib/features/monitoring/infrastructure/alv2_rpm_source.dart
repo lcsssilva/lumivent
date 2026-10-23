@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../../devices/devices.dart' show Alv2HubProxy;
 import '../domain/metrics.dart';
+import '../domain/sensor_source.dart';
 
 /// RPM of the AL V2 hub groups as a sensor source. The protocol belongs to the
 /// devices module.

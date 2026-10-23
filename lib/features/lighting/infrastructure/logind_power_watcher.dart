@@ -3,26 +3,12 @@ import 'dart:io';
 
 import 'package:dbus/dbus.dart';
 
-import '../domain/power_events.dart';
+import '../domain/power_watcher.dart';
+import 'inhibitor_lock.dart';
+import 'logind_bus.dart';
 
-/// Active "delay" inhibitor: releasing it allows suspend/shutdown.
-abstract interface class InhibitorLock {
-  Future<void> release();
-}
-
-/// Thin layer over the logind D-Bus (swapped for a fake in tests).
-abstract interface class LogindBus {
-  /// `PrepareForSleep(bool)`: true = going to suspend, false = resumed.
-  Stream<bool> get prepareForSleep;
-
-  /// `PrepareForShutdown(bool)`: true = going to power off/reboot.
-  Stream<bool> get prepareForShutdown;
-
-  /// `Inhibit("sleep:shutdown", ..., "delay")`; throws if logind is unavailable.
-  Future<InhibitorLock> inhibit();
-
-  Future<void> close();
-}
+part 'fd_lock.dart';
+part 'dbus_logind_bus.dart';
 
 /// Inhibitor/state logic over a [LogindBus]. Signals are handled one at a time
 /// in a queue; repeated signals (true, true) are ignored.
@@ -183,56 +169,4 @@ class LogindPowerWatcher implements PowerWatcher {
   }
 
   static void _log(Object e) => stderr.writeln('[power] $e');
-}
-
-/// Real [LogindBus]: system bus, `org.freedesktop.login1.Manager`.
-class DBusLogindBus implements LogindBus {
-  DBusLogindBus() : _client = DBusClient.system() {
-    _object = DBusRemoteObject(
-      _client,
-      name: 'org.freedesktop.login1',
-      path: DBusObjectPath('/org/freedesktop/login1'),
-    );
-  }
-
-  static const _iface = 'org.freedesktop.login1.Manager';
-  final DBusClient _client;
-  late final DBusRemoteObject _object;
-
-  Stream<bool> _signal(String name) => DBusRemoteObjectSignalStream(
-    object: _object,
-    interface: _iface,
-    name: name,
-    signature: DBusSignature('b'),
-  ).map((s) => s.values[0].asBoolean());
-
-  @override
-  Stream<bool> get prepareForSleep => _signal('PrepareForSleep');
-
-  @override
-  Stream<bool> get prepareForShutdown => _signal('PrepareForShutdown');
-
-  @override
-  Future<InhibitorLock> inhibit() async {
-    final r = await _object.callMethod(_iface, 'Inhibit', [
-      DBusString('sleep:shutdown'),
-      DBusString('Lumivent'),
-      DBusString('Apagar os ARGB'),
-      DBusString('delay'),
-    ], replySignature: DBusSignature('h'));
-    return _FdLock(r.values[0].asUnixFd());
-  }
-
-  @override
-  Future<void> close() => _client.close();
-}
-
-/// Closing the fd returned by `Inhibit` releases the inhibitor in logind.
-class _FdLock implements InhibitorLock {
-  _FdLock(this._fd);
-  final ResourceHandle _fd;
-
-  // ResourceHandle has no close(): wrap the fd in a RandomAccessFile and close it.
-  @override
-  Future<void> release() async => (await _fd.toFile().close());
 }

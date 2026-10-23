@@ -2,74 +2,39 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub_worker.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/controller.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_transport.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_bus.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/board_zone_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/infrastructure/device_light_outputs.dart';
-import 'package:lumivent/features/lighting/infrastructure/light_io_worker.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io_command.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io_reply.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io_core.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io_client.dart';
 
-class _Ite implements IteTransport {
-  final sent = <List<int>>[];
-  bool closed = false;
-  @override
-  void sendFeature(List<int> data, int length) => sent.add(List.of(data));
-  @override
-  Uint8List getFeature(int reportId, int length) => Uint8List(64);
-  @override
-  void close() => closed = true;
-}
-
-class _Bus implements FuryBus {
-  final writes = <(int, int, int)>[];
-  bool closed = false;
-
-  /// Guard value read at [guarded] (every address when null).
-  int dd = 0;
-  int? guarded;
-  static const _id = [0x46, 0x55, 0x52, 0x59];
-  @override
-  int readByte(int addr, int reg) =>
-      reg == 0xDD && (guarded == null || guarded == addr) ? dd : 0;
-  @override
-  int readWord(int addr, int reg) => (_id[reg - 1] << 8) | 0x34;
-  @override
-  void writeByte(int addr, int reg, int value) =>
-      writes.add((addr, reg, value));
-  @override
-  void quick(int addr) {}
-  @override
-  void close() => closed = true;
-}
-
-/// Records the requests; answers `ok` immediately.
-class _RecordingIo implements LightIoClient {
-  final commands = <LightIoCommand>[];
-  bool disposed = false;
-  @override
-  Future<LightIoReply> request(LightIoCommand command) async {
-    commands.add(command);
-    return LightIoReply(commands.length, true, 0);
-  }
-
-  @override
-  void dispose() => disposed = true;
-}
+part 'io_worker_ite_transport.dart';
+part 'io_worker_fury_bus.dart';
+part 'recording_io.dart';
+part 'io_worker_no_hub.dart';
 
 Uint8List rgb(int n, [int v = 7]) => Uint8List.fromList(List.filled(n * 3, v));
 
 void main() {
-  late _Ite ite;
-  late _Bus bus;
+  late _IoWorkerIteTransport ite;
+  late _IoWorkerFuryBus bus;
   late Completer<void> gate;
   late LightIoCore core;
   var next = 0;
 
   setUp(() {
-    ite = _Ite();
-    bus = _Bus();
+    ite = _IoWorkerIteTransport();
+    bus = _IoWorkerFuryBus();
     gate = Completer<void>();
     core = LightIoCore(
       // The zone-effect wait is the only async step: it holds the worker.
@@ -174,7 +139,11 @@ void main() {
       io = _RecordingIo();
       out = DeviceLightOutputs(
         Alv2HubProxy.local(
-          Alv2Hub.withTransport(_NoHub(), delay: (_) async {}, sleeper: (_) {}),
+          Alv2Hub.withTransport(
+            _IoWorkerNoHub(),
+            delay: (_) async {},
+            sleeper: (_) {},
+          ),
         ),
         io: io,
       );
@@ -224,15 +193,4 @@ void main() {
       expect(io.disposed, isTrue);
     });
   });
-}
-
-class _NoHub implements Alv2Transport {
-  @override
-  void sendFeature(List<int> data, int length) {}
-  @override
-  void write(List<int> data, int length) {}
-  @override
-  Uint8List getInput(int reportId, int length) => Uint8List(length);
-  @override
-  void close() {}
 }

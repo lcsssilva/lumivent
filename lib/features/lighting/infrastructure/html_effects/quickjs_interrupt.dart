@@ -24,13 +24,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_js/flutter_js.dart';
 import 'package:flutter_js/quickjs/ffi.dart' show runtimeOpaques;
 
-final class _RLimit extends Struct {
-  @Uint64()
-  external int current;
-
-  @Uint64()
-  external int maximum;
-}
+part 'r_limit.dart';
 
 typedef _GetRLimitNative = Int32 Function(
   Int32 resource,

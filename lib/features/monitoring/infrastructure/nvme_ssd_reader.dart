@@ -7,6 +7,10 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../domain/ssd.dart';
+import '../domain/nvme_smart_log.dart';
+import '../domain/ssd_smart_error.dart';
+import '../domain/ssd_info.dart';
+import '../domain/ssd_reader.dart';
 
 const nvmeHelperName = 'lumivent-nvme-smart';
 

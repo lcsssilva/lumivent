@@ -1,7 +1,7 @@
 // Converts the `<meta property>` declarations of an HTML effect into the
 // control declarations the lighting panel draws (pure Dart).
 
-import 'effect_meta.dart';
+import 'effect_property.dart';
 import 'native_effects.dart';
 
 extension EffectPropertyParam on EffectProperty {

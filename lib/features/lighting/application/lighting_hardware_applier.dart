@@ -1,13 +1,14 @@
 import 'package:flutter/foundation.dart' show listEquals;
 
-import '../domain/hardware_equivalents.dart';
+import '../domain/hardware_equivalent.dart';
 import '../domain/light_device.dart';
 import '../domain/native_effects.dart';
 import '../domain/light_outputs.dart';
 import '../domain/lighting_config.dart';
+import '../domain/board_zone_config.dart';
 import '../domain/rgb.dart';
 import 'lighting_hardware_state.dart';
-import 'lighting_messages.dart';
+import 'light_output_state.dart';
 
 /// What a device slot holds, as recorded in the [LightingHardwareState]
 /// signatures. `frame` slots follow the canvas frames, so nothing is written

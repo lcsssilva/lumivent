@@ -21,10 +21,13 @@ import 'dart:typed_data';
 import '../../domain/effect_sampling.dart' show sampleCanvasPixels;
 import '../../domain/light_device.dart';
 import 'effect_worker_protocol.dart';
+import 'effect_worker_request.dart';
 import 'quickjs_effect.dart';
+import 'effect_script_exception.dart';
 import 'quickjs_interrupt.dart' show limitWorkerAddressSpace;
-import 'runtime.dart';
+import 'html_effect_runtime.dart';
 import 'simple_canvas_raster.dart';
+import 'simple_raster_state.dart';
 
 /// Runs the hidden Flutter entrypoint used by the parent process.
 Future<void> runHtmlEffectWorker() async {

@@ -11,6 +11,9 @@
 
 import 'dart:typed_data';
 
+import 'gpu_rgb.dart';
+import 'gpu_guard_exception.dart';
+
 /// Adapter name exposed by `amdgpu` for the GPU lighting controller. It is the
 /// `ADL` "OEM" line; the display DDC buses must not be used.
 const gpuI2cBusName = 'AMDGPU DM i2c OEM bus';
@@ -89,36 +92,6 @@ enum GpuEffectCode {
   /// Matches the lighting domain enum by name (`staticColor`, `doubleFlash`…).
   static GpuEffectCode? byName(String name) =>
       values.where((e) => e.name == name).firstOrNull;
-}
-
-/// One color in device order.
-class GpuRgb {
-  const GpuRgb(this.r, this.g, this.b)
-    : assert(r >= 0 && r <= 255),
-      assert(g >= 0 && g <= 255),
-      assert(b >= 0 && b <= 255);
-
-  static const black = GpuRgb(0, 0, 0);
-
-  final int r, g, b;
-
-  @override
-  bool operator ==(Object other) =>
-      other is GpuRgb && other.r == r && other.g == g && other.b == b;
-
-  @override
-  int get hashCode => Object.hash(r, g, b);
-
-  @override
-  String toString() => 'GpuRgb($r,$g,$b)';
-}
-
-/// Safety guard failure. The message is an English technical message.
-class GpuGuardException implements Exception {
-  const GpuGuardException(this.message);
-  final String message;
-  @override
-  String toString() => 'GpuGuardException: $message';
 }
 
 bool _isAllowedCommand(int command) =>

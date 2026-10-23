@@ -23,11 +23,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/lighting.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/controller.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/effects.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_effect.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_hardware_effect.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_controller.dart';
 
 const peaksPerLevel = 6;
 

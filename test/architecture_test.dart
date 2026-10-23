@@ -7,6 +7,15 @@
 //     dependencies on application/infrastructure/presentation or core/.
 //  5. application/ does not depend on infrastructure/ or presentation/.
 //  6. presentation/ does not depend on infrastructure/.
+//
+// File organization rules (docs/rules/flutter-architecture.md):
+//
+//  7. A Dart file declares at most one class (generated files excepted).
+//  8. A file with a class is named after it; a *_test.dart file declares none.
+//  9. Presentation code is split into views/, view_models/, and widgets/:
+//     `*View` classes live in views/, `*ViewModel`/`*UiState` in
+//     view_models/, and the presentation/ root holds no classes.
+// 10. `Controller` names only hardware controllers (infrastructure/drivers/).
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -43,6 +52,35 @@ String? _layer(String path) {
   final parts = path.split('/');
   return parts.length > 2 && parts[0] == 'features' ? parts[2] : null;
 }
+
+final _classDeclaration = RegExp(
+  r'^\s*(?:(?:abstract|sealed|final|base|interface|mixin)\s+)*class\s+(\w+)',
+  multiLine: true,
+);
+
+/// Names of the classes declared in [file].
+List<String> _classes(File file) => [
+  for (final m in _classDeclaration.allMatches(file.readAsStringSync()))
+    m.group(1)!,
+];
+
+/// Compares a file name with a class name: `quickjs_effect` matches
+/// `QuickJsEffect`, and a private `_FooState` matches `foo_state`.
+String _normalized(String name) => name.replaceAll('_', '').toLowerCase();
+
+bool _isGenerated(String path) =>
+    path.endsWith('.freezed.dart') || path.endsWith('.g.dart');
+
+/// Hand-written Dart files under [dirs], with paths relative to the root.
+List<(String, File)> _sources(List<String> dirs) => [
+  for (final dir in dirs)
+    if (Directory(dir).existsSync())
+      for (final f in Directory(
+        dir,
+      ).listSync(recursive: true).whereType<File>())
+        if (f.path.endsWith('.dart') && !_isGenerated(f.path))
+          (f.path.replaceAll(r'\', '/'), f),
+];
 
 void main() {
   final libRoot = Directory('lib').absolute.path;
@@ -173,6 +211,7 @@ void main() {
       final path = file.path.substring(libRoot.length + 1);
       if (path.startsWith('core/i18n/catalogs/') ||
           path == 'main_spike.dart' ||
+          path.startsWith('spike/') ||
           path.endsWith('.g.dart') ||
           path.endsWith('.freezed.dart')) {
         continue;
@@ -212,7 +251,9 @@ void main() {
             .whereType<File>()
             .where((f) => f.path.endsWith('.dart'))) {
       final path = file.path.substring(libRoot.length + 1);
-      if (path.startsWith('core/i18n/catalogs/') || path == 'main_spike.dart') {
+      if (path.startsWith('core/i18n/catalogs/') ||
+          path == 'main_spike.dart' ||
+          path.startsWith('spike/')) {
         continue;
       }
       final lines = file.readAsLinesSync();
@@ -224,5 +265,89 @@ void main() {
       }
     }
     expect(leaks, isEmpty, reason: leaks.join('\n'));
+  });
+
+  group('file organization', () {
+    final sources = _sources(['lib', 'test', 'tool']);
+
+    test('each Dart file declares at most one class', () {
+      final violations = [
+        for (final (path, file) in sources)
+          if (_classes(file) case final classes when classes.length > 1)
+            '$path: ${classes.join(', ')}',
+      ];
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('a class file is named after its class', () {
+      final violations = <String>[];
+      for (final (path, file) in sources) {
+        final classes = _classes(file);
+        final name = path.split('/').last.replaceFirst(RegExp(r'\.dart$'), '');
+        if (name.endsWith('_test')) {
+          if (classes.isNotEmpty) {
+            violations.add('$path: move ${classes.join(', ')} to own files');
+          }
+        } else if (classes.length == 1 &&
+            _normalized(classes.single) != _normalized(name)) {
+          violations.add('$path: ${classes.single}');
+        }
+      }
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('presentation keeps views, view models, and widgets apart', () {
+      const layers = {'views', 'view_models', 'widgets'};
+      final violations = <String>[];
+      for (final (path, file) in _sources(['lib'])) {
+        final parts = path.split('/');
+        final dir = parts[parts.length - 2];
+        if (parts.contains('pages') || parts.contains('screens')) {
+          violations.add('$path: screens belong in views/');
+        }
+        final presentation = parts.indexOf('presentation');
+        if (presentation >= 0 && presentation < parts.length - 2) {
+          if (!layers.contains(parts[presentation + 1])) {
+            violations.add('$path: use views/, view_models/, or widgets/');
+          }
+        }
+        for (final name in _classes(file)) {
+          final bare = name.replaceFirst(RegExp(r'^_+'), '');
+          if (presentation == parts.length - 2) {
+            violations.add(
+              '$path: $name; the presentation/ root holds no classes',
+            );
+          }
+          if (bare.endsWith('View') && dir != 'views') {
+            violations.add('$path: $name belongs in views/');
+          }
+          if (bare.endsWith('ViewModel') && dir != 'view_models') {
+            violations.add('$path: $name belongs in view_models/');
+          }
+          if (dir == 'views' &&
+              !bare.endsWith('View') &&
+              !bare.endsWith('ViewState')) {
+            violations.add('$path: $name is not a view; move it to widgets/');
+          }
+          if (dir == 'view_models' &&
+              !bare.endsWith('ViewModel') &&
+              !bare.endsWith('UiState')) {
+            violations.add('$path: $name is not a view model or its state');
+          }
+        }
+      }
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('Controller names only hardware controllers', () {
+      final violations = [
+        for (final (path, file) in _sources(['lib']))
+          for (final name in _classes(file))
+            if (name.endsWith('Controller') &&
+                !path.contains('/infrastructure/drivers/'))
+              '$path: $name (use a ViewModel or a Notifier)',
+      ];
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
   });
 }

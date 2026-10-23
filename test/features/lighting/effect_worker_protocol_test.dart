@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_protocol.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_request.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_reply.dart';
 
 /// Wraps a request in a numbered envelope, as the worker sees it.
 List<Object?> numbered(List<Object?> request) => [7, ...request];

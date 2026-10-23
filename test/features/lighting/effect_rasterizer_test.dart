@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/infrastructure/html_effects/canvas_buffer.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/canvas_op.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_rasterizer.dart';
 
 /// `fillStyle = color; fillRect(x, y, w, h)` in the shim's binary layout.

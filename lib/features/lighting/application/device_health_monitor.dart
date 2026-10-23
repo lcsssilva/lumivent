@@ -1,5 +1,5 @@
 import '../domain/light_device.dart';
-import 'lighting_messages.dart';
+import 'light_output_state.dart';
 
 /// Readiness and retry state for the lighting output families.
 ///

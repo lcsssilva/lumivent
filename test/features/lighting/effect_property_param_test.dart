@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/lighting/domain/effect_meta.dart';
+import 'package:lumivent/features/lighting/domain/effect_property.dart';
 import 'package:lumivent/features/lighting/domain/effect_property_param.dart';
 import 'package:lumivent/features/lighting/domain/native_effects.dart';
 

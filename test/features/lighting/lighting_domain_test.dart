@@ -2,11 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/features/lighting/domain/frame_composer.dart';
 import 'package:lumivent/features/lighting/domain/led_layout.dart';
+import 'package:lumivent/features/lighting/domain/led_point.dart';
+import 'package:lumivent/features/lighting/domain/canvas_rect.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/board_zone_config.dart';
 import 'package:lumivent/features/lighting/infrastructure/lighting_codec.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
-import 'package:lumivent/features/lighting/presentation/labels.dart';
+import 'package:lumivent/features/lighting/presentation/lighting_labels.dart';
 
 void main() {
   group('Rgb', () {
@@ -160,6 +163,28 @@ void main() {
       expect(c.alv2Hardware[1].mode, 'StaticColor');
       expect(c.alv2Hardware[1].colors.first, const Rgb(255, 0, 0));
       expect(c.boardZones.keys, [0x20, 0x22, 0x23]);
+    });
+
+    test('hardware edits change only their target', () {
+      final c = LightingConfig()
+          .withAlv2Hardware(2, (hw) => hw.copyWith(speed: 4))
+          .withFanQuantity(3, 2)
+          .withBoardZone(0x22, (z) => z.copyWith(brightness: 3))
+          .withGpuHardware((g) => g.copyWith(speed: 1));
+      expect([for (final hw in c.alv2Hardware) hw.speed], [2, 2, 4, 2]);
+      expect(c.fanQuantity, [0, 3, 3, 2]);
+      expect(
+        [for (final z in boardZoneIds) c.boardZones[z]!.brightness],
+        [9, 3, 9],
+      );
+      expect(c.gpuHardware.speed, 1);
+      expect(LightingConfig().fanQuantity, [0, 3, 3, 1]);
+    });
+
+    test('the merge order swaps two positions', () {
+      final c = LightingConfig().withMergeOrderSwapped(1, 3);
+      expect(c.alv2MergeOrder, [0, 3, 2, 1]);
+      expect(c.withMergeOrderSwapped(3, 1).alv2MergeOrder, [0, 1, 2, 3]);
     });
 
     test('the GPU defaults to its own ColorShift palette', () {

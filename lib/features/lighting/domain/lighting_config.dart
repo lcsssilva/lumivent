@@ -7,12 +7,17 @@
 
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'led_layout.dart';
 import 'light_device.dart';
 import 'native_effects.dart';
+import 'effect_values.dart';
 import 'rgb.dart';
+import 'board_zone_config.dart';
+import 'device_light_config.dart';
 
 part 'lighting_config.freezed.dart';
+
+part 'alv2_hardware_config.dart';
+part 'gpu_hardware_config.dart';
 
 // Top-level constants are usable from the generated part; static members are
 // not inherited by the generated implementation class.
@@ -56,27 +61,6 @@ const _defaultGpuHardware = GpuHardwareConfig();
 /// Firmware mode scope: whole fan or inner + outer rings.
 enum Alv2Scope { whole, innerOuter }
 
-/// Hardware mode for a hub group. The domain stores only the mode name
-/// (`Rainbow`, `StaticColor_Inner`…); the byte table belongs to devices.
-@freezed
-abstract class Alv2HardwareConfig with _$Alv2HardwareConfig {
-  const factory Alv2HardwareConfig({
-    @Default(Alv2Scope.whole) Alv2Scope scope,
-    @Default('StaticColor') String mode,
-
-    /// Speed level, 0–4 (2 = normal).
-    @Default(2) int speed,
-
-    /// Brightness level, 0–4 (4 = 100%).
-    @Default(4) int brightness,
-    @Default(false) bool directionLeft,
-    @Default(_alv2DefaultColors) List<Rgb> colors,
-  }) = _Alv2HardwareConfig;
-
-  /// Factory default (AL-V2 §4).
-  static const defaultColors = _alv2DefaultColors;
-}
-
 extension Alv2HardwareColors on Alv2HardwareConfig {
   /// Color slot [index] of the mode; slots the config does not hold yet come
   /// from the factory defaults, cycling when the mode has more colors.
@@ -93,20 +77,6 @@ extension Alv2HardwareColors on Alv2HardwareConfig {
 const boardZoneIds = [0x20, 0x22, 0x23];
 
 enum BoardEffectMode { static, pulse, flash, doubleFlash, colorCycle, wave }
-
-@freezed
-abstract class BoardZoneConfig with _$BoardZoneConfig {
-  const factory BoardZoneConfig({
-    @Default(BoardEffectMode.static) BoardEffectMode mode,
-    @Default(Rgb.white) Rgb color,
-
-    /// 0–9.
-    @Default(5) int speed,
-
-    /// 0–9.
-    @Default(9) int brightness,
-  }) = _BoardZoneConfig;
-}
 
 // ── GPU (Gigabyte RX 9060 XT) ──────────────────────────────────────────────
 
@@ -141,45 +111,6 @@ enum GpuEffect {
 
   /// Whether the firmware uses the brightness byte for this effect.
   bool get hasBrightness => this != off;
-}
-
-/// Hardware mode of the GPU: effect, speed/brightness (0–10) and colors.
-@freezed
-abstract class GpuHardwareConfig with _$GpuHardwareConfig {
-  const factory GpuHardwareConfig({
-    @Default(GpuEffect.pulse) GpuEffect effect,
-
-    /// 0–10.
-    @Default(5) int speed,
-
-    /// 0–10.
-    @Default(10) int brightness,
-
-    /// Single color of effects without a palette.
-    @Default(Rgb.white) Rgb color,
-    @Default(_gpuDefaultColors) List<Rgb> colors,
-  }) = _GpuHardwareConfig;
-
-  /// Default palette for `ColorShift`; also the fallback for missing entries.
-  static const defaultColors = _gpuDefaultColors;
-}
-
-// ── Devices ────────────────────────────────────────────────────────────
-
-@freezed
-abstract class DeviceLightConfig with _$DeviceLightConfig {
-  const factory DeviceLightConfig({
-    @Default(true) bool enabled,
-    @Default(LightMode.canvas) LightMode mode,
-    @Default(Rgb.white) Rgb fixedColor,
-    required CanvasRect placement,
-  }) = _DeviceLightConfig;
-
-  /// Default for [id]: enabled in Canvas at the default position.
-  factory DeviceLightConfig.defaults(LightDeviceId id) => DeviceLightConfig(
-    enabled: id.isSupported,
-    placement: CanvasRect.defaultFor(id),
-  );
 }
 
 // ── General config ────────────────────────────────────────────────────────────
@@ -329,10 +260,41 @@ extension LightingConfigX on LightingConfig {
           effect: {...?effectValues[effect], key: value},
         },
       );
-}
 
-/// Persistence port for lighting configuration.
-abstract interface class LightingConfigRepository {
-  LightingConfig load();
-  Future<void> save(LightingConfig config);
+  /// Replaces the hub hardware effect of [slot] (0 is the merge effect).
+  LightingConfig withAlv2Hardware(
+    int slot,
+    Alv2HardwareConfig Function(Alv2HardwareConfig current) change,
+  ) => copyWith(
+    alv2Hardware: [
+      for (final (i, hw) in alv2Hardware.indexed) i == slot ? change(hw) : hw,
+    ],
+  );
+
+  /// Sets how many fans hub [group] has.
+  LightingConfig withFanQuantity(int group, int quantity) => copyWith(
+    fanQuantity: [
+      for (final (i, q) in fanQuantity.indexed) i == group ? quantity : q,
+    ],
+  );
+
+  /// Swaps positions [from] and [to] of the merge order.
+  LightingConfig withMergeOrderSwapped(int from, int to) {
+    final order = [...alv2MergeOrder];
+    final moved = order[from];
+    order[from] = order[to];
+    order[to] = moved;
+    return copyWith(alv2MergeOrder: order);
+  }
+
+  /// Replaces the hardware effect of motherboard zone [zone].
+  LightingConfig withBoardZone(
+    int zone,
+    BoardZoneConfig Function(BoardZoneConfig current) change,
+  ) => copyWith(boardZones: {...boardZones, zone: change(boardZones[zone]!)});
+
+  /// Replaces the GPU hardware effect.
+  LightingConfig withGpuHardware(
+    GpuHardwareConfig Function(GpuHardwareConfig current) change,
+  ) => copyWith(gpuHardware: change(gpuHardware));
 }

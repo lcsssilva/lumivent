@@ -1,10 +1,17 @@
 // Environment checks (phase 0) shown in Settings.
 import 'dart:io';
 
-import '../../../core/platform/smbus_ffi.dart';
+import '../../../core/platform/smbus.dart';
 import '../../devices/devices.dart' show furyBusName;
 import '../../monitoring/monitoring.dart' show findNvmeSmartHelper;
 import '../domain/diagnostics.dart';
+import '../domain/udev_rules_data.dart';
+import '../domain/board_sensors_data.dart';
+import '../domain/memory_smbus_data.dart';
+import '../domain/memory_temperature_data.dart';
+import '../domain/nvme_helper_data.dart';
+import '../domain/diagnostic_check.dart';
+import '../domain/environment_diagnostics.dart';
 
 class LinuxDiagnostics implements EnvironmentDiagnostics {
   const LinuxDiagnostics();

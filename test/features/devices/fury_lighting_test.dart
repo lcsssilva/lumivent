@@ -1,62 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/platform/smbus_ffi.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/controller.dart';
+import 'package:lumivent/core/platform/smbus.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_controller.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/protocol.dart';
 
-class FakeBus implements FuryBus {
-  FakeBus({this.dd = 0x00, this.id = const [0x46, 0x55, 0x52, 0x59]});
-  int dd;
-  List<int> id;
-  bool failNext = false;
-  bool failAlways = false;
-  bool failOnReadWord = false;
-  bool closed = false;
-  final ops = <String>[];
-
-  void _maybeFail() {
-    if (failAlways) throw SmbusException('falha', 5);
-    if (failNext) {
-      failNext = false;
-      throw SmbusException('falha', 5);
-    }
-  }
-
-  @override
-  int readByte(int a, int r) {
-    ops.add('R $a ${r.toRadixString(16)}');
-    _maybeFail();
-    return r == furyGuardRegister ? dd : 0;
-  }
-
-  @override
-  int readWord(int a, int r) {
-    ops.add('RW $a ${r.toRadixString(16)}');
-    _maybeFail();
-    if (failOnReadWord) throw SmbusException('read failed', 5);
-    return (id[r - 1] << 8) | 0x34;
-  }
-
-  @override
-  void writeByte(int a, int r, int v) {
-    ops.add('W $a ${r.toRadixString(16)}=${v.toRadixString(16)}');
-    _maybeFail();
-  }
-
-  @override
-  void quick(int a) {
-    ops.add('Q $a');
-    _maybeFail();
-  }
-
-  @override
-  void close() => closed = true;
-
-  List<String> get writes => ops.where((o) => o.startsWith('W')).toList();
-}
+import 'fake_fury_bus.dart';
 
 void main() {
   final rgb = List<int>.generate(furyColorBytes, (i) => i + 1);
-  late FakeBus bus;
+  late FakeFuryBus bus;
   late DateTime now;
   late int opens;
   FuryController make() => FuryController(
@@ -68,7 +19,7 @@ void main() {
     pause: (_) {},
   );
   setUp(() {
-    bus = FakeBus();
+    bus = FakeFuryBus();
     now = DateTime(2026);
     opens = 0;
   });
@@ -136,7 +87,7 @@ void main() {
 
   test('0x72 and 0x78 guard: no writes, disabled permanently', () {
     for (final dd in [0x72, 0x78]) {
-      bus = FakeBus(dd: dd);
+      bus = FakeFuryBus(dd: dd);
       final c = make();
       expect(c.setColors(0, rgb), isFalse);
       expect(bus.ops, ['Q 97', 'R 97 dd']);
@@ -151,7 +102,7 @@ void main() {
   });
 
   test('non-FURY: only the identity 0x08 is written', () {
-    bus = FakeBus(id: [1, 2, 3, 4]);
+    bus = FakeFuryBus(id: [1, 2, 3, 4]);
     final c = make();
     expect(c.setColors(1, rgb), isFalse);
     expect(bus.writes, ['W 99 8=53', 'W 99 8=44']);
@@ -286,7 +237,7 @@ void main() {
   });
 
   test('invalidate keeps guard-disabled slots disabled', () {
-    bus = FakeBus(dd: 0x72);
+    bus = FakeFuryBus(dd: 0x72);
     final c = make();
     c.setColors(0, rgb);
     c.invalidate();

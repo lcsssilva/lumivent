@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/protocol.dart';
 
 List<int> hex(String s) => [

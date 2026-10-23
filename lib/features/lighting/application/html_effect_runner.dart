@@ -11,51 +11,26 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../../core/engine/engine_host.dart';
+import '../../../core/engine/isolate_engine.dart';
 import '../../monitoring/monitoring.dart';
 import '../../preferences/preferences.dart';
-import '../domain/effect_compat.dart' show EffectIssue;
 import '../domain/effect_runtime.dart';
+import '../domain/effect_frame.dart';
 import '../domain/effect_sampling.dart';
 import '../domain/installed_effect.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 import '../domain/rgb.dart';
-import 'installed_effects_controller.dart';
-import 'lighting_controller.dart';
-import 'lighting_messages.dart';
-
-part 'html_effect_runner.freezed.dart';
+import 'installed_effects_notifier.dart';
+import 'lighting_notifier.dart';
+import 'set_html_effect_frame.dart';
+import 'html_effect_status.dart';
+import 'effect_frame_feed.dart';
 
 /// Why the HTML effect is not running. The presentation maps it to the
 /// catalog (`LightingStrings.effectLoadFailed`/`effectPaused`/...).
 enum HtmlEffectIssue { loadFailed, paused, unsupported }
-
-@freezed
-abstract class HtmlEffectStatus with _$HtmlEffectStatus {
-  const factory HtmlEffectStatus({
-    /// Global effect id (`html:<id>`) currently rendered.
-    String? effectId,
-    @Default(false) bool loading,
-
-    /// Reason the effect is not running; [error] carries technical detail.
-    HtmlEffectIssue? issue,
-
-    /// Duration of the frame that paused the effect, for
-    /// [HtmlEffectIssue.paused].
-    @Default(0) int slowFrameMs,
-
-    /// Host features the effect needs, for [HtmlEffectIssue.unsupported].
-    @Default(<EffectIssue>[]) List<EffectIssue> missingFeatures,
-    String? error,
-
-    /// Measured render FPS and mean frame time of the last second.
-    @Default(0) double fps,
-    @Default(0) double frameMs,
-  }) = _HtmlEffectStatus;
-}
 
 extension HtmlEffectStatusX on HtmlEffectStatus {
   /// Stopped because frames take too long (an effect stuck in a loop).
@@ -66,7 +41,7 @@ extension HtmlEffectStatusX on HtmlEffectStatus {
 
 /// Longest accepted frame. Above this for [maxSlowFrames] in a row the effect
 /// is paused and marked. A script that never returns is killed at the worker
-/// hard limit (`scriptHardLimit`, in html_effects/runtime.dart).
+/// hard limit (`scriptHardLimit`, in html_effects/effect_worker.dart).
 const slowFrameLimit = Duration(milliseconds: 250);
 const maxSlowFrames = 3;
 
@@ -77,14 +52,6 @@ final htmlEffectFramesProvider = Provider<EffectFrameFeed>((ref) {
   ref.onDispose(feed.dispose);
   return feed;
 });
-
-/// The preview frame, and whether anything is showing it: without a
-/// listener the runner asks the runtime for the LED colors only.
-class EffectFrameFeed extends ValueNotifier<EffectFrame?> {
-  EffectFrameFeed() : super(null);
-
-  bool get watched => hasListeners;
-}
 
 class HtmlEffectRunner extends Notifier<HtmlEffectStatus> {
   EffectRuntime? _runtime;

@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/devices/devices.dart' show furyBusName;
 import 'package:lumivent/features/system/domain/diagnostics.dart';
+import 'package:lumivent/features/system/domain/board_sensors_data.dart';
+import 'package:lumivent/features/system/domain/nvme_helper_data.dart';
 import 'package:lumivent/features/system/infrastructure/linux_diagnostics.dart';
 
 void main() {

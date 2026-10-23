@@ -1,10 +1,13 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/platform/hidapi_ffi.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/controller.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/effects.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_hardware_effect.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/protocol.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_forbidden_command.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_color_order.dart';
+
+import 'fake_ite.dart';
 
 List<int> hex(String s) => [
   for (final b in s.split(' ')) int.parse(b, radix: 16),
@@ -21,26 +24,6 @@ Uint8List infoTable() {
     hex('00 01 02 00 02 00 01 00 02 00 01 00 02 00 01 00 00 01 01 57'),
   );
   return t;
-}
-
-class FakeIte implements IteTransport {
-  final sent = <List<int>>[];
-  bool failNext = false;
-
-  @override
-  void sendFeature(List<int> data, int length) {
-    if (failNext) {
-      failNext = false;
-      throw HidException('falha simulada');
-    }
-    sent.add(List.of(data));
-  }
-
-  @override
-  Uint8List getFeature(int reportId, int length) => infoTable();
-
-  @override
-  void close() {}
 }
 
 List<int> head(List<int> p, int n) => p.sublist(0, n);

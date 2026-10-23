@@ -1,6 +1,11 @@
 import '../../../core/persistence/config_store.dart';
 import '../domain/fan_curve.dart';
+import '../domain/fan_point.dart';
+import '../domain/fan_presets.dart';
 import '../domain/fan_group.dart';
+import '../domain/fan_group_config.dart';
+import '../domain/fans_config.dart';
+import '../domain/fans_repository.dart';
 import '../domain/fan_response.dart';
 
 /// Stores fan configuration in the `fans` section of config.json. Reading is

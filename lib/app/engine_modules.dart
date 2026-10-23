@@ -1,24 +1,10 @@
 // Modules that run inside the engine. Executed in the engine isolate.
-import '../core/engine/engine_host.dart';
+import '../core/engine/engine_module.dart';
 import '../features/devices/devices.dart';
 import '../features/fans/fans.dart';
 import '../features/lighting/lighting.dart';
 import '../features/monitoring/monitoring.dart';
-
-/// Initial state the engine needs from the UI.
-class EngineInit {
-  const EngineInit({
-    required this.lighting,
-    required this.lightingFps,
-    required this.fans,
-  });
-  final LightingConfig lighting;
-
-  /// Frame rate of the LED loop (preferences); changes later arrive as a
-  /// `SetLightingFps` command.
-  final int lightingFps;
-  final FansConfig fans;
-}
+import 'engine_init.dart';
 
 List<EngineModule> buildEngineModules(EngineInit init) {
   // Proxy of the AL V2 hub, which runs in its own isolate (every hidraw write

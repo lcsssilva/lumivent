@@ -12,15 +12,9 @@ import 'package:flutter_js/flutter_js.dart';
 
 import '../../../../core/platform/numeric_locale.dart';
 import '../../domain/effect_meta.dart';
+import '../../domain/effect_source.dart';
 import 'quickjs_interrupt.dart';
-
-/// A script (loading, framing, setup) failed or was interrupted.
-class EffectScriptException implements Exception {
-  const EffectScriptException(this.message);
-  final String message;
-  @override
-  String toString() => 'EffectScriptException: $message';
-}
+import 'effect_script_exception.dart';
 
 /// QuickJS interrupts one evaluation after this long. Below the hard limits
 /// below, so the worker answers with the script error before the parent kills

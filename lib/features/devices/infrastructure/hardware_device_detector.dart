@@ -4,12 +4,16 @@
 import 'dart:io';
 
 import '../../../core/platform/dev_access.dart';
-import '../../../core/platform/hidapi_ffi.dart';
-import '../../../core/platform/smbus_ffi.dart';
+import '../../../core/platform/hid_api.dart';
+import '../../../core/platform/hid_exception.dart';
+import '../../../core/platform/smbus.dart';
 import '../domain/device.dart';
+import '../domain/device_info.dart';
+import '../domain/device_snapshot.dart';
 import '../domain/device_detector.dart';
 import 'drivers/alv2/protocol.dart';
-import 'drivers/gpu_gigabyte/controller.dart';
+import 'drivers/gpu_gigabyte/gpu_exception.dart';
+import 'drivers/gpu_gigabyte/gpu_controller.dart';
 import 'drivers/gpu_gigabyte/protocol.dart';
 import 'drivers/ite5702/protocol.dart';
 import 'drivers/kingston_fury/protocol.dart';

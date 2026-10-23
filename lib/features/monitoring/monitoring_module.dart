@@ -2,7 +2,7 @@ import '../devices/devices.dart' show Alv2HubProxy;
 import 'application/monitoring_engine_module.dart';
 import 'infrastructure/alv2_rpm_source.dart';
 import 'infrastructure/nvme_ssd_reader.dart';
-import 'infrastructure/sysfs_sensors.dart';
+import 'infrastructure/sysfs_sensor_source.dart';
 
 /// Module composition: connects ports to implementations.
 abstract final class MonitoringModule {

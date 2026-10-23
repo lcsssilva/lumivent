@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../core/engine/engine_host.dart';
+import '../core/engine/isolate_engine.dart';
+import '../core/engine/engine_api.dart';
 import '../core/persistence/config_store.dart';
 import '../features/fans/fans.dart';
 import '../features/lighting/lighting.dart';
@@ -15,8 +16,9 @@ import '../features/preferences/preferences.dart';
 import '../features/system/system.dart';
 import 'we_app.dart';
 import 'desktop/desktop_actions.dart';
-import 'desktop/desktop_controller.dart';
+import 'desktop/desktop_integration.dart';
 import 'engine_modules.dart';
+import 'engine_init.dart';
 import 'licenses.dart';
 import 'ui_language_binding.dart';
 
@@ -36,7 +38,7 @@ Future<void> bootstrap(List<String> args) async {
   );
 
   ProviderContainer? container;
-  DesktopController? desktop;
+  DesktopIntegration? desktop;
   try {
     container = ProviderContainer(
       overrides: [
@@ -64,7 +66,7 @@ Future<void> bootstrap(List<String> args) async {
     // The HTML effect renderer must keep running while the window is hidden and
     // regardless of the visible page (plan §5.5).
     container.listen(htmlEffectRunnerProvider, (_, _) {});
-    desktop = DesktopController(container);
+    desktop = DesktopIntegration(container);
     await desktop.init(startMinimized: args.contains('--minimized'));
   } on Object {
     // The engine already drives the fans and LEDs: release it before the

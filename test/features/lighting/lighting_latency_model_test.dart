@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/application/lighting_latency_model.dart';
-import 'package:lumivent/features/lighting/application/lighting_messages.dart';
+import 'package:lumivent/features/lighting/application/light_output_state.dart';
 
 void main() {
   test('latency estimates are clamped and converted to composition lead', () {

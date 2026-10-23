@@ -9,9 +9,16 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 
 import '../domain/effect_library.dart';
+import '../domain/import_issue.dart';
+import '../domain/import_report.dart';
+import '../domain/effect_importer.dart';
 import '../domain/effect_meta.dart';
 import '../domain/installed_effect.dart';
+import '../domain/effect_metadata.dart';
 import 'file_effect_library.dart';
+
+part 'too_large.dart';
+part 'catalog_entry.dart';
 
 const _maxHtmlBytes = 4 * 1024 * 1024;
 const _maxZipBytes = 64 * 1024 * 1024;
@@ -423,28 +430,3 @@ class FileEffectImporter implements EffectImporter {
 ImportIssue _issueFor(String path, Object error) => error is _TooLarge
     ? ImportIssue(ImportIssueKind.tooLarge, path: path)
     : ImportIssue(ImportIssueKind.unknown, path: path, detail: '$error');
-
-/// A file read stopped at the import size [limit].
-class _TooLarge implements Exception {
-  const _TooLarge(this.limit);
-
-  final int limit;
-
-  @override
-  String toString() => 'File exceeds the $limit-byte import limit';
-}
-
-class _CatalogEntry {
-  const _CatalogEntry({
-    this.title,
-    this.publisher,
-    this.description,
-    this.tags = const [],
-    this.paid = false,
-  });
-  final String? title, publisher, description;
-  final List<String> tags;
-
-  /// Requires a subscription or a purchase in the original app.
-  final bool paid;
-}

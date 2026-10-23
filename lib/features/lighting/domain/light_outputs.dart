@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'light_device.dart';
 import 'lighting_config.dart';
+import 'board_zone_config.dart';
 import 'rgb.dart';
 
 /// Everything the lighting engine needs from the hardware, in domain terms.

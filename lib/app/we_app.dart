@@ -6,7 +6,7 @@ import '../core/i18n/app_strings.dart';
 import '../core/i18n/app_strings_scope.dart';
 import '../core/i18n/strings_provider.dart';
 import '../core/ui/theme.dart';
-import 'shell/shell.dart';
+import 'shell/views/shell_view.dart';
 
 class WeApp extends ConsumerWidget {
   const WeApp({super.key});
@@ -23,7 +23,7 @@ class WeApp extends ConsumerWidget {
         locale: strings.locale,
         supportedLocales: AppStrings.supportedLocales,
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        home: const Shell(),
+        home: const ShellView(),
       ),
     );
   }

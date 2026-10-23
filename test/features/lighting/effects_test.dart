@@ -2,19 +2,26 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/explore/application/effect_filter.dart';
-import 'package:lumivent/features/lighting/domain/effect_compat.dart';
-import 'package:lumivent/features/lighting/domain/effect_meta.dart';
-import 'package:lumivent/features/lighting/domain/effect_runtime.dart';
+import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
+import 'package:lumivent/features/lighting/domain/effect_property.dart';
+import 'package:lumivent/features/lighting/domain/effect_source.dart';
+import 'package:lumivent/features/lighting/domain/effect_frame.dart';
 import 'package:lumivent/features/lighting/domain/effect_sampling.dart';
 import 'package:lumivent/features/lighting/domain/installed_effect.dart';
 import 'package:lumivent/features/lighting/domain/led_layout.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
+import 'package:lumivent/features/lighting/domain/device_light_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
-import 'package:lumivent/features/lighting/infrastructure/html_effects/canvas_buffer.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/canvas_op.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/canvas_command_buffer.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/css_color.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/hsl_color.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/simple_canvas_raster.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/simple_raster_state.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/simple_raster.dart';
+
+import 'gradient_ref.dart';
 
 EffectSource source({
   String script = 'var a = 1;',
@@ -585,9 +592,4 @@ void main() {
       });
     });
   });
-}
-
-class GradientRef {
-  const GradientRef(this.id);
-  final int id;
 }

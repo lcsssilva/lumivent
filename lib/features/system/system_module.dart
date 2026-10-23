@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 
-import 'application/system_controller.dart';
+import 'application/autostart_notifier.dart';
+import 'application/diagnostics_providers.dart';
 import 'infrastructure/linux_diagnostics.dart';
 import 'infrastructure/systemd_autostart.dart';
 

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
+import 'package:lumivent/core/persistence/config_write_failure.dart';
 
 void main() {
   late Directory tmp;

@@ -3,6 +3,9 @@
 
 import 'dart:math' as math;
 
+import 'fan_point.dart';
+import 'rpm_phase.dart';
+
 /// Fan size: defines os limites de RPM da curva.
 enum FanSize {
   mm120(diameterMm: 120, maxRpm: 2000, minRpm: 250),
@@ -16,24 +19,6 @@ enum FanSize {
   final int diameterMm;
   final int maxRpm;
   final int minRpm;
-}
-
-/// Editable curve point: temperature (°C, 0–100) → speed as a percentage of
-/// the fan size's maximum RPM.
-class FanPoint {
-  const FanPoint(this.temp, this.percent);
-  final double temp;
-  final double percent;
-
-  @override
-  bool operator ==(Object other) =>
-      other is FanPoint && other.temp == temp && other.percent == percent;
-
-  @override
-  int get hashCode => Object.hash(temp, percent);
-
-  @override
-  String toString() => 'FanPoint($temp °C, $percent %)';
 }
 
 /// Curve preset. [custom] is what a factory preset becomes when edited.
@@ -54,74 +39,6 @@ enum FanPreset {
       this == quiet || this == standard || this == high || this == full;
   bool get isUser =>
       this == user1 || this == user2 || this == user3 || this == user4;
-}
-
-abstract final class FanPresets {
-  /// Limit for editable points (not counting automatic endpoints).
-  static const maxPoints = 8;
-
-  static const defaultFixedPercent = 50.0;
-
-  // `Ene6K77FanProfile.defaultPhaseData` (AL-V2 §5).
-  static const quiet = [
-    FanPoint(25, 20),
-    FanPoint(45, 45),
-    FanPoint(65, 52),
-    FanPoint(80, 75),
-    FanPoint(90, 100),
-  ];
-  static const standard = [
-    FanPoint(25, 20),
-    FanPoint(40, 50),
-    FanPoint(55, 62),
-    FanPoint(70, 75),
-    FanPoint(90, 100),
-  ];
-  static const high = [
-    FanPoint(25, 45),
-    FanPoint(35, 55),
-    FanPoint(50, 70),
-    FanPoint(70, 85),
-    FanPoint(85, 100),
-  ];
-  static const full = [
-    FanPoint(25, 100),
-    FanPoint(40, 100),
-    FanPoint(55, 100),
-    FanPoint(70, 100),
-    FanPoint(90, 100),
-  ];
-
-  /// Factory points for a preset. UserDefine 1–4 start equal to Quiet;
-  /// [FanPreset.fixed] and [FanPreset.custom] have no factory points.
-  static List<FanPoint> defaults(FanPreset p) => switch (p) {
-    FanPreset.quiet ||
-    FanPreset.user1 ||
-    FanPreset.user2 ||
-    FanPreset.user3 ||
-    FanPreset.user4 => quiet,
-    FanPreset.standard => standard,
-    FanPreset.high => high,
-    FanPreset.full => full,
-    FanPreset.fixed || FanPreset.custom => standard,
-  };
-}
-
-/// Curve phase already expressed in RPM (`RPMConfig` in the protocol notes).
-class RpmPhase {
-  const RpmPhase(this.temp, this.rpm);
-  final double temp;
-  final int rpm;
-
-  @override
-  bool operator ==(Object other) =>
-      other is RpmPhase && other.temp == temp && other.rpm == rpm;
-
-  @override
-  int get hashCode => Object.hash(temp, rpm);
-
-  @override
-  String toString() => 'RpmPhase($temp °C, $rpm rpm)';
 }
 
 int _rpmOf(double percent, FanSize size) =>

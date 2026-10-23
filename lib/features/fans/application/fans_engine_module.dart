@@ -1,10 +1,19 @@
 import 'dart:async';
 import 'dart:io';
 
-import '../../../core/engine/engine_host.dart';
+import '../../../core/engine/engine_command.dart';
+import '../../../core/engine/engine_event.dart';
+import '../../../core/engine/engine_module.dart';
 import '../domain/fan_group.dart';
-import '../domain/fan_response.dart';
-import 'fans_messages.dart';
+import '../domain/fan_group_config.dart';
+import '../domain/fans_config.dart';
+import '../domain/fan_driver.dart';
+import '../domain/fan_temperatures.dart';
+import '../domain/fan_step.dart';
+import '../domain/fan_smoother.dart';
+import 'set_fans_config.dart';
+import 'fan_group_status.dart';
+import 'fans_status.dart';
 
 /// Fans module part that runs in the engine: every [period] it reads each
 /// group's temperature source, smooths it using the group response

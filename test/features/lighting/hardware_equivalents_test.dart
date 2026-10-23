@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/domain/frame_composer.dart';
-import 'package:lumivent/features/lighting/domain/hardware_equivalents.dart';
+import 'package:lumivent/features/lighting/domain/hardware_equivalent.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/infrastructure/lighting_codec.dart';

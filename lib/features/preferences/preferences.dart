@@ -2,8 +2,8 @@
 /// Public API: other modules import only this file.
 library;
 
-export 'application/preferences_controller.dart'
-    show PreferencesController, preferencesProvider;
+export 'application/preferences_notifier.dart'
+    show PreferencesNotifier, preferencesProvider;
 export 'domain/preferences.dart' show AppLanguage, Preferences, TemperatureUnit;
 export 'preferences_module.dart';
-export 'presentation/preferences_card.dart' show PreferencesCard;
+export 'presentation/widgets/preferences_card.dart' show PreferencesCard;

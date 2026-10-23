@@ -7,7 +7,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:lumivent/core/platform/hidapi_ffi.dart';
+import 'package:lumivent/core/platform/hid_api.dart';
 
 const _alv2Vid = 0x0CF2, _alv2Pid = 0xA104;
 const _iteVid = 0x048D, _itePid = 0x5702;

@@ -1,6 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/fans/domain/fan_curve.dart';
+import 'package:lumivent/features/fans/domain/fan_point.dart';
+import 'package:lumivent/features/fans/domain/fan_presets.dart';
+import 'package:lumivent/features/fans/domain/rpm_phase.dart';
 import 'package:lumivent/features/fans/domain/fan_group.dart';
+import 'package:lumivent/features/fans/domain/fan_group_config.dart';
+import 'package:lumivent/features/fans/domain/fans_config.dart';
 import 'package:lumivent/features/fans/domain/fan_response.dart';
 
 void main() {

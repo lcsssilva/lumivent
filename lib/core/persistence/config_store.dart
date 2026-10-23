@@ -12,6 +12,8 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'config_write_failure.dart';
+
 /// `$XDG_CONFIG_HOME/lumivent`, or `~/.config/lumivent`.
 Directory defaultConfigDir([Map<String, String>? env]) {
   env ??= Platform.environment;
@@ -21,26 +23,6 @@ Directory defaultConfigDir([Map<String, String>? env]) {
 }
 
 typedef JsonMap = Map<String, Object?>;
-
-/// A failure to persist the configuration file.
-class ConfigWriteFailure implements Exception {
-  const ConfigWriteFailure({
-    required this.section,
-    required this.cause,
-    required this.stackTrace,
-  });
-
-  /// JSON section name that was being written; whole-file writes (import) are
-  /// recorded as `configuration`.
-  final String section;
-
-  /// The original write error.
-  final Object cause;
-  final StackTrace stackTrace;
-
-  @override
-  String toString() => 'Failed to save $section: $cause';
-}
 
 class ConfigStore {
   ConfigStore._(this.dir, this._data);

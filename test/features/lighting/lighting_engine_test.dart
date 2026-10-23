@@ -3,273 +3,25 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
-import 'package:lumivent/features/lighting/application/lighting_engine_commands.dart';
+import 'package:lumivent/core/engine/shutdown_engine.dart';
+import 'package:lumivent/features/lighting/application/set_lighting_fps.dart';
 import 'package:lumivent/features/lighting/application/lighting_engine_module.dart';
-import 'package:lumivent/features/lighting/application/lighting_messages.dart';
+import 'package:lumivent/features/lighting/application/light_output_state.dart';
+import 'package:lumivent/features/lighting/application/set_argb_off.dart';
+import 'package:lumivent/features/lighting/application/set_lighting_config.dart';
+import 'package:lumivent/features/lighting/application/set_html_effect_frame.dart';
+import 'package:lumivent/features/lighting/application/identify_fan_group.dart';
 import 'package:lumivent/features/lighting/domain/frame_composer.dart';
-import 'package:lumivent/features/lighting/domain/hardware_equivalents.dart';
+import 'package:lumivent/features/lighting/domain/hardware_equivalent.dart';
 import 'package:lumivent/features/lighting/domain/hardware_timing.dart';
 import 'package:lumivent/features/lighting/domain/light_device.dart';
-import 'package:lumivent/features/lighting/domain/light_outputs.dart';
 import 'package:lumivent/features/lighting/domain/led_layout.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
-import 'package:lumivent/features/lighting/domain/power_events.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 
-/// Records every call; each family can be made to fail.
-class FakeOutputs implements LightOutputs {
-  final calls = <String>[];
-  bool fansOk = true, boardOk = true, ramOk = true;
-  bool fanHwOk = true, mergeOk = true;
-
-  /// The GPU starts unavailable, like a machine whose OEM bus is absent or
-  /// whose identity read fails; GPU tests set [gpuOk] to true.
-  bool gpuOk = false;
-  bool throwFanFrames = false;
-  bool closed = false;
-  int invalidations = 0;
-
-  /// Colors received by the frame sends, in order (latency tests).
-  final fanLog = <Map<int, List<Rgb>>>[];
-  final chassisLog = <List<Rgb>>[];
-  final ramLog = <List<Rgb>>[];
-  final fanHwLog = <(int, Alv2HardwareConfig)>[];
-  final gpuLog = <(Rgb, int)>[];
-  final gpuHwLog = <GpuHardwareConfig>[];
-
-  /// Simulated send time of each family, and a hook run when a send starts.
-  Duration fanDelay = Duration.zero,
-      chassisDelay = Duration.zero,
-      ramDelay = Duration.zero,
-      gpuDelay = Duration.zero;
-  void Function()? onChassisSend, onRamSend, onFanSend;
-  void Function(int group, Alv2HardwareConfig config)? onFanHw;
-
-  /// While set, `sendRam` / `sendChassis` do not finish.
-  Completer<bool>? holdRam, holdChassis;
-
-  /// Order of every call that reached the worker side (priority tests).
-  int maxRamInFlight = 0, maxChassisInFlight = 0;
-  int _ramInFlight = 0, _chassisInFlight = 0;
-
-  /// While set, `sendFanFrames` does not finish (frame overlap test).
-  Completer<bool>? holdFans;
-
-  /// While set, `setFanQuantity` does not finish (lane gate test).
-  Completer<bool>? holdQty;
-
-  /// While set, `initFans` does not finish (stop-during-startup test).
-  Completer<bool>? holdInitFans;
-  bool throwOnClose = false;
-  String? blocked;
-
-  int count(String prefix) => calls.where((c) => c.startsWith(prefix)).length;
-  void clear() => calls.clear();
-
-  @override
-  Future<bool> initFans(List<int> quantity) async {
-    calls.add('initFans:${quantity.join(',')}');
-    final hold = holdInitFans;
-    if (hold != null) return hold.future;
-    return fansOk;
-  }
-
-  @override
-  Future<bool> setFanQuantity(List<int> quantity) async {
-    calls.add('qty:${quantity.join(',')}');
-    final hold = holdQty;
-    if (hold != null) return hold.future;
-    return fansOk;
-  }
-
-  @override
-  Future<bool> sendFanFrames(Map<int, List<Rgb>> frames) async {
-    calls.add('fanFrames:${frames.keys.join(',')}');
-    fanLog.add(frames);
-    onFanSend?.call();
-    if (fanDelay > Duration.zero) await Future<void>.delayed(fanDelay);
-    if (throwFanFrames) throw StateError('fan frame failed');
-    final hold = holdFans;
-    if (hold != null) return hold.future;
-    return fansOk;
-  }
-
-  @override
-  Future<bool> setFanHardware(int group, Alv2HardwareConfig config) async {
-    calls.add('fanHw:$group:${config.mode}:${config.speed}');
-    fanHwLog.add((group, config));
-    onFanHw?.call(group, config);
-    return fanHwOk;
-  }
-
-  @override
-  bool supportsFanMerge(String mode) => const {'Runway', 'Wave'}.contains(mode);
-
-  @override
-  Future<bool> setFanMerge(String mode, Alv2HardwareConfig config) async {
-    calls.add('merge:$mode');
-    return mergeOk;
-  }
-
-  @override
-  Future<bool> setFanMergeOrder(List<int> order) async {
-    calls.add('mergeOrder:${order.join(',')}');
-    return fansOk;
-  }
-
-  @override
-  Future<bool> turnFanGroupOff(int group) async {
-    calls.add('fanOff:$group');
-    return fansOk;
-  }
-
-  @override
-  Future<bool> turnAllFansOff() async {
-    calls.add('allFansOff');
-    return fansOk;
-  }
-
-  @override
-  Future<bool> identifyFanGroup(int group, {bool merge = false}) async {
-    calls.add('identify:$group:$merge');
-    return fansOk;
-  }
-
-  @override
-  Future<bool> initBoard() async {
-    calls.add('initBoard');
-    return boardOk;
-  }
-
-  @override
-  Future<bool> sendChassis(List<Rgb> leds) async {
-    calls.add('chassis');
-    chassisLog.add(leds);
-    onChassisSend?.call();
-    if (++_chassisInFlight > maxChassisInFlight) {
-      maxChassisInFlight = _chassisInFlight;
-    }
-    try {
-      if (chassisDelay > Duration.zero) {
-        await Future<void>.delayed(chassisDelay);
-      }
-      final hold = holdChassis;
-      if (hold != null) return await hold.future;
-      return boardOk;
-    } finally {
-      _chassisInFlight--;
-    }
-  }
-
-  @override
-  Future<bool> sendBoardColors(List<Rgb> zones) async {
-    calls.add('boardColors');
-    return boardOk;
-  }
-
-  @override
-  Future<bool> setBoardZones(Map<int, BoardZoneConfig> zones) async {
-    for (final MapEntry(key: zone, value: config) in zones.entries) {
-      calls.add('zone:$zone:${config.mode.name}:${config.color.toHex()}');
-    }
-    return boardOk;
-  }
-
-  @override
-  void invalidate() => invalidations++;
-
-  @override
-  Future<bool> turnBoardOff() async {
-    calls.add('boardOff');
-    return boardOk;
-  }
-
-  @override
-  Future<bool> sendRam(int slot, List<Rgb> leds) async {
-    calls.add('ram:$slot');
-    ramLog.add(leds);
-    onRamSend?.call();
-    if (++_ramInFlight > maxRamInFlight) maxRamInFlight = _ramInFlight;
-    try {
-      if (ramDelay > Duration.zero) await Future<void>.delayed(ramDelay);
-      final hold = holdRam;
-      if (hold != null) return await hold.future;
-      return ramOk;
-    } finally {
-      _ramInFlight--;
-    }
-  }
-
-  @override
-  Future<bool> turnRamOff() async {
-    calls.add('ramOff');
-    return ramOk;
-  }
-
-  @override
-  Future<bool> initGpu() async {
-    calls.add('initGpu');
-    return gpuOk;
-  }
-
-  @override
-  Future<bool> sendGpuColor(Rgb color, {int brightness = 10}) async {
-    calls.add('gpuStatic:${color.toHex()}:$brightness');
-    gpuLog.add((color, brightness));
-    if (gpuDelay > Duration.zero) await Future<void>.delayed(gpuDelay);
-    return gpuOk;
-  }
-
-  @override
-  Future<bool> setGpuHardware(GpuHardwareConfig config) async {
-    calls.add('gpuHw:${config.effect.name}');
-    gpuHwLog.add(config);
-    return gpuOk;
-  }
-
-  @override
-  Future<bool> turnGpuOff() async {
-    calls.add('gpuOff');
-    return gpuOk;
-  }
-
-  @override
-  String? blockedReason(LightDeviceId id) => switch (id) {
-    LightDeviceId.gpu => gpuOk ? null : 'GPU de teste indisponível',
-    _ when id.isRam => blocked,
-    _ => null,
-  };
-
-  @override
-  void close() {
-    closed = true;
-    if (throwOnClose) throw StateError('close failed');
-  }
-}
-
-class FakePowerWatcher implements PowerWatcher {
-  Future<void> Function()? beforeSleep, beforeShutdown;
-  void Function()? afterResume;
-  bool started = false, stopped = false;
-  bool failOnStart = false;
-
-  @override
-  Future<void> start({
-    required Future<void> Function() beforeSleep,
-    required void Function() afterResume,
-    required Future<void> Function() beforeShutdown,
-  }) async {
-    if (failOnStart) throw StateError('no bus');
-    started = true;
-    this.beforeSleep = beforeSleep;
-    this.afterResume = afterResume;
-    this.beforeShutdown = beforeShutdown;
-  }
-
-  @override
-  Future<void> stop() async => stopped = true;
-}
+import 'fake_outputs.dart';
+import 'fake_power_watcher.dart';
+import 'lighting_engine_rig.dart';
 
 LightingConfig withModes(
   LightingConfig base,
@@ -300,84 +52,11 @@ final hardwareModes = {
 /// so they do not run at the real [alv2SafeStreamGap].
 const legacyFanFrameGap = Duration(milliseconds: 40);
 
-/// Module + fakes + virtual clock driven by `tester.pump`.
-class Rig {
-  Rig(
-    this.tester,
-    LightingConfig config, {
-    int fps = 30,
-    bool startNow = true,
-    bool autoHardware = false,
-    Duration fanFrameGap = legacyFanFrameGap,
-    this.outputs,
-  }) : config = config.copyWith(autoHardware: autoHardware),
-       _auto = autoHardware {
-    outputs ??= FakeOutputs();
-    module = LightingEngineModule(
-      openOutputs: () => outputs!,
-      openWatcher: () => watcher,
-      initial: this.config,
-      fps: fps,
-      fanFrameGap: fanFrameGap,
-      now: () => origin.add(elapsed),
-    );
-    if (startNow) start();
-  }
-
-  final WidgetTester tester;
-  final LightingConfig config;
-
-  /// Legacy tests exercise canvas streaming, so the rig switches the automatic
-  /// hardware mode off in every config unless asked otherwise.
-  final bool _auto;
-  FakeOutputs? outputs;
-  final watcher = FakePowerWatcher();
-  final events = <EngineEvent>[];
-  final origin = DateTime(2026, 10, 19);
-  Duration elapsed = Duration.zero;
-  late final LightingEngineModule module;
-
-  FakeOutputs get out => outputs!;
-
-  Iterable<LightingStatus> get statuses => events.whereType<LightingStatus>();
-  LightingStatus get lastStatus => statuses.last;
-  List<bool> get argbEvents =>
-      events.whereType<ArgbStateChanged>().map((e) => e.off).toList();
-
-  void start() => module.start(events.add);
-
-  /// Advances the virtual clock in 10 ms steps, running timers and futures.
-  Future<void> advance(Duration d) async {
-    const step = Duration(milliseconds: 10);
-    for (var left = d; left > Duration.zero; left -= step) {
-      final s = left < step ? left : step;
-      elapsed += s;
-      await tester.pump(s);
-    }
-    await tester.pump();
-  }
-
-  Future<void> settle() => advance(const Duration(milliseconds: 20));
-
-  /// Runs a watcher callback to completion.
-  Future<void> fire(Future<void> Function()? callback) async {
-    final f = callback!();
-    await settle();
-    await f;
-  }
-
-  void send(EngineCommand c) => module.handle(
-    c is SetLightingConfig && !_auto
-        ? SetLightingConfig(c.config.copyWith(autoHardware: false))
-        : c,
-  );
-}
-
 void main() {
   const second = Duration(seconds: 1);
 
   testWidgets('frames reach the port at the configured fps', (tester) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.settle();
     rig.out.clear();
     await rig.advance(second);
@@ -397,7 +76,7 @@ void main() {
   testWidgets('nothing is resent while the color does not change', (
     tester,
   ) async {
-    final rig = Rig(tester, fixedConfig());
+    final rig = LightingEngineRig(tester, fixedConfig());
     await rig.advance(const Duration(milliseconds: 500));
     expect(rig.out.count('chassis'), 1);
     expect(rig.out.count('boardColors'), 1);
@@ -417,7 +96,7 @@ void main() {
   });
 
   testWidgets('a color change is sent on the next frame', (tester) async {
-    final rig = Rig(tester, fixedConfig());
+    final rig = LightingEngineRig(tester, fixedConfig());
     await rig.advance(const Duration(milliseconds: 500));
     rig.send(
       SetLightingConfig(
@@ -441,7 +120,7 @@ void main() {
     tester,
   ) async {
     final canvas = LightingConfig();
-    final rig = Rig(tester, canvas);
+    final rig = LightingEngineRig(tester, canvas);
     await rig.advance(const Duration(milliseconds: 300));
     expect(rig.out.count('fanHw'), 0);
 
@@ -473,7 +152,7 @@ void main() {
     tester,
   ) async {
     final base = withModes(LightingConfig(), hardwareModes);
-    final rig = Rig(tester, base);
+    final rig = LightingEngineRig(tester, base);
     await rig.advance(const Duration(milliseconds: 200));
     expect(rig.out.count('fanHw'), 3);
     expect(rig.out.count('zone'), 3);
@@ -518,7 +197,7 @@ void main() {
     for (final id in [LightDeviceId.alv2Group2, LightDeviceId.motherboard]) {
       base = base.withDevice(id, base.device(id).copyWith(enabled: false));
     }
-    final rig = Rig(tester, base);
+    final rig = LightingEngineRig(tester, base);
     await rig.advance(const Duration(milliseconds: 200));
     expect(rig.out.calls, contains('fanOff:2'));
     expect(rig.out.calls, isNot(contains('fanOff:1')));
@@ -539,7 +218,10 @@ void main() {
   testWidgets('startup init: sync off, quantities, group 0 off', (
     tester,
   ) async {
-    final rig = Rig(tester, LightingConfig(fanQuantity: [5, 2, 3, 4]));
+    final rig = LightingEngineRig(
+      tester,
+      LightingConfig(fanQuantity: [5, 2, 3, 4]),
+    );
     await rig.settle();
     expect(rig.out.calls.take(4), [
       'initFans:0,2,3,4',
@@ -562,7 +244,7 @@ void main() {
     final allHw = withModes(LightingConfig(alv2Merge: true), {
       for (final id in fans) id: LightMode.hardware,
     });
-    final rig = Rig(tester, allHw);
+    final rig = LightingEngineRig(tester, allHw);
     await rig.advance(const Duration(milliseconds: 200));
     expect(rig.out.calls, contains('merge:Runway'));
     expect(rig.out.count('fanHw'), 0);
@@ -594,12 +276,12 @@ void main() {
       LightDeviceId.alv2Group2: LightMode.hardware,
       LightDeviceId.alv2Group3: LightMode.hardware,
     };
-    List<String> mergeCalls(Rig rig) =>
+    List<String> mergeCalls(LightingEngineRig rig) =>
         rig.out.calls.where((c) => c.startsWith('merge')).toList();
 
     // The default order is what initFans leaves on the hub: not sent again.
     final plain = withModes(LightingConfig(alv2Merge: true), hw);
-    final rig = Rig(tester, plain);
+    final rig = LightingEngineRig(tester, plain);
     await rig.advance(const Duration(milliseconds: 200));
     expect(mergeCalls(rig), ['merge:Runway']);
 
@@ -634,7 +316,7 @@ void main() {
         LightDeviceId.alv2Group3: LightMode.hardware,
       },
     );
-    final rig = Rig(tester, fans);
+    final rig = LightingEngineRig(tester, fans);
     await rig.advance(const Duration(milliseconds: 200));
     expect(rig.out.count('merge'), 0);
     expect(rig.out.count('fanHw'), 3);
@@ -642,7 +324,7 @@ void main() {
   });
 
   testWidgets('quantity is resent only when it changes', (tester) async {
-    final rig = Rig(tester, fixedConfig());
+    final rig = LightingEngineRig(tester, fixedConfig());
     await rig.advance(const Duration(milliseconds: 300));
     expect(rig.out.count('qty'), 0);
 
@@ -669,7 +351,7 @@ void main() {
     tester,
   ) async {
     final out = FakeOutputs();
-    final rig = Rig(tester, LightingConfig(), outputs: out);
+    final rig = LightingEngineRig(tester, LightingConfig(), outputs: out);
     await rig.settle();
     out.clear();
     // A config write to the hub runs as its own job and gates only the fans
@@ -696,7 +378,7 @@ void main() {
   testWidgets('identify pings the group and reapplies the merge', (
     tester,
   ) async {
-    final rig = Rig(tester, fixedConfig());
+    final rig = LightingEngineRig(tester, fixedConfig());
     await rig.advance(const Duration(milliseconds: 200));
     rig.send(const IdentifyFanGroup(2));
     await rig.advance(const Duration(milliseconds: 100));
@@ -733,7 +415,7 @@ void main() {
     final base = withModes(LightingConfig(), {
       LightDeviceId.alv2Group1: LightMode.hardware,
     });
-    final rig = Rig(tester, base);
+    final rig = LightingEngineRig(tester, base);
     await rig.advance(const Duration(milliseconds: 300));
     rig.out.clear();
 
@@ -765,7 +447,7 @@ void main() {
   testWidgets('SetArgbOff keeps the user config, not the derived one', (
     tester,
   ) async {
-    final rig = Rig(
+    final rig = LightingEngineRig(
       tester,
       LightingConfig(alv2Merge: true),
       autoHardware: true,
@@ -791,7 +473,7 @@ void main() {
   });
 
   testWidgets('config with argbOff behaves like SetArgbOff', (tester) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.advance(const Duration(milliseconds: 200));
     rig.out.clear();
     rig.send(SetLightingConfig(LightingConfig(argbOff: true)));
@@ -804,7 +486,7 @@ void main() {
   testWidgets('starting with ARGB off turns off once and sends no frames', (
     tester,
   ) async {
-    final rig = Rig(tester, LightingConfig(argbOff: true));
+    final rig = LightingEngineRig(tester, LightingConfig(argbOff: true));
     await rig.advance(const Duration(seconds: 2));
     expect(rig.out.calls, ['allFansOff', 'boardOff', 'ramOff', 'gpuOff']);
     expect(rig.argbEvents, [true]);
@@ -812,7 +494,7 @@ void main() {
   });
 
   testWidgets('sleep and resume with offOnSleep on', (tester) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.advance(const Duration(milliseconds: 300));
     rig.out.clear();
 
@@ -832,7 +514,7 @@ void main() {
   });
 
   testWidgets('shutdown turns off and does not restore', (tester) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.advance(const Duration(milliseconds: 300));
     rig.out.clear();
     await rig.fire(rig.watcher.beforeShutdown);
@@ -846,7 +528,7 @@ void main() {
   testWidgets('sleep does nothing but resume re-inits with offOnSleep off', (
     tester,
   ) async {
-    final rig = Rig(tester, LightingConfig(offOnSleep: false));
+    final rig = LightingEngineRig(tester, LightingConfig(offOnSleep: false));
     await rig.advance(const Duration(milliseconds: 300));
     rig.out.clear();
     await rig.fire(rig.watcher.beforeSleep);
@@ -872,7 +554,7 @@ void main() {
   });
 
   testWidgets('resume does not restore while ARGB is off', (tester) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.advance(const Duration(milliseconds: 300));
     rig.send(const SetArgbOff(true));
     await rig.advance(const Duration(milliseconds: 100));
@@ -887,7 +569,7 @@ void main() {
   testWidgets('a failing power watcher does not break the engine', (
     tester,
   ) async {
-    final rig = Rig(tester, LightingConfig(), startNow: false);
+    final rig = LightingEngineRig(tester, LightingConfig(), startNow: false);
     rig.watcher.failOnStart = true;
     rig.start();
     await rig.advance(const Duration(milliseconds: 300));
@@ -906,7 +588,7 @@ void main() {
           .copyWith(mode: LightMode.fixed, fixedColor: const Rgb(10, 20, 30)),
     );
     final out = FakeOutputs()..gpuOk = true;
-    final rig = Rig(tester, cfg, outputs: out);
+    final rig = LightingEngineRig(tester, cfg, outputs: out);
     await rig.advance(const Duration(milliseconds: 300));
     expect(out.gpuLog, [(const Rgb(10, 20, 30), 10)]);
     expect(out.gpuHwLog, isEmpty);
@@ -943,7 +625,7 @@ void main() {
   ) async {
     final cfg = LightingConfig(effectId: 'html');
     final out = FakeOutputs()..gpuOk = true;
-    final rig = Rig(tester, cfg, outputs: out);
+    final rig = LightingEngineRig(tester, cfg, outputs: out);
     await rig.advance(const Duration(milliseconds: 300));
     out.gpuLog.clear();
 
@@ -981,7 +663,7 @@ void main() {
       base.copyWith(brightness: 0),
     ]) {
       final out = FakeOutputs()..gpuOk = true;
-      final rig = Rig(tester, cfg, outputs: out);
+      final rig = LightingEngineRig(tester, cfg, outputs: out);
       await rig.advance(const Duration(milliseconds: 400));
       expect(out.gpuLog, isEmpty);
       expect(out.calls.where((c) => c == 'gpuOff'), hasLength(1));
@@ -1007,7 +689,7 @@ void main() {
           ),
         );
     final out = FakeOutputs()..gpuOk = true;
-    final rig = Rig(tester, cfg, outputs: out);
+    final rig = LightingEngineRig(tester, cfg, outputs: out);
     await rig.advance(const Duration(milliseconds: 400));
     expect(out.gpuHwLog, hasLength(1));
     expect(out.gpuHwLog.single.effect, GpuEffect.pulse);
@@ -1020,7 +702,7 @@ void main() {
 
   testWidgets('GPU frame lane stays at or below 8 sends/s', (tester) async {
     final out = FakeOutputs()..gpuOk = true;
-    final rig = Rig(tester, LightingConfig(), outputs: out);
+    final rig = LightingEngineRig(tester, LightingConfig(), outputs: out);
     await rig.advance(const Duration(milliseconds: 300));
     out.gpuLog.clear();
     await rig.advance(const Duration(seconds: 1));
@@ -1030,7 +712,7 @@ void main() {
 
   testWidgets('GPU retries init and becomes available', (tester) async {
     final out = FakeOutputs();
-    final rig = Rig(tester, LightingConfig(), outputs: out);
+    final rig = LightingEngineRig(tester, LightingConfig(), outputs: out);
     await rig.advance(const Duration(milliseconds: 300));
     expect(
       rig.lastStatus.devices[LightDeviceId.gpu]!.state,
@@ -1051,7 +733,7 @@ void main() {
   testWidgets('status: emitted only on change, fps at most once a second', (
     tester,
   ) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.advance(const Duration(seconds: 6));
     final first = rig.statuses.first;
     expect(
@@ -1099,7 +781,7 @@ void main() {
   testWidgets('status: device down with a reason, back after the retry', (
     tester,
   ) async {
-    final rig = Rig(tester, fixedConfig(), startNow: false);
+    final rig = LightingEngineRig(tester, fixedConfig(), startNow: false);
     rig.out
       ..gpuOk = true
       ..boardOk = false
@@ -1143,7 +825,7 @@ void main() {
   testWidgets('GPU identification backs off and restarts on resume', (
     tester,
   ) async {
-    final rig = Rig(tester, fixedConfig(), startNow: false);
+    final rig = LightingEngineRig(tester, fixedConfig(), startNow: false);
     rig.out.gpuOk = false;
     rig.start();
     await rig.advance(const Duration(seconds: 1));
@@ -1173,7 +855,7 @@ void main() {
   });
 
   testWidgets('fan frames never overlap', (tester) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.settle();
     rig.out
       ..clear()
@@ -1191,7 +873,7 @@ void main() {
   testWidgets('stop halts the loop and leaves the LEDs as they are', (
     tester,
   ) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.advance(const Duration(milliseconds: 300));
     rig.module.stop();
     rig.out.clear();
@@ -1202,7 +884,7 @@ void main() {
   });
 
   testWidgets('unknown commands are not handled', (tester) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     expect(rig.module.handle(const ShutdownEngine()), isFalse);
     await rig.settle();
     rig.module.stop();
@@ -1211,7 +893,7 @@ void main() {
   testWidgets('resume invalidates the driver caches and resends colors', (
     tester,
   ) async {
-    final rig = Rig(tester, fixedConfig());
+    final rig = LightingEngineRig(tester, fixedConfig());
     await rig.advance(const Duration(milliseconds: 500));
     expect(rig.out.count('chassis'), 1);
     expect(rig.out.invalidations, 0);
@@ -1228,7 +910,7 @@ void main() {
   testWidgets('stop during startup: nothing runs after the await', (
     tester,
   ) async {
-    final rig = Rig(tester, LightingConfig(), startNow: false);
+    final rig = LightingEngineRig(tester, LightingConfig(), startNow: false);
     rig.out.holdInitFans = Completer<bool>();
     rig.start();
     await rig.advance(const Duration(milliseconds: 100));
@@ -1243,14 +925,14 @@ void main() {
   testWidgets('stop never throws, even if closing the outputs fails', (
     tester,
   ) async {
-    final rig = Rig(tester, LightingConfig());
+    final rig = LightingEngineRig(tester, LightingConfig());
     await rig.advance(const Duration(milliseconds: 200));
     rig.out.throwOnClose = true;
     expect(rig.module.stop, returnsNormally);
   });
 
   testWidgets('RAM frames are limited to ~15 fps', (tester) async {
-    final rig = Rig(tester, LightingConfig(), fps: 60);
+    final rig = LightingEngineRig(tester, LightingConfig(), fps: 60);
     await rig.settle();
     rig.out.clear();
     await rig.advance(second);
@@ -1262,7 +944,7 @@ void main() {
   testWidgets('a down board is retried by its own timer, once per interval', (
     tester,
   ) async {
-    final rig = Rig(
+    final rig = LightingEngineRig(
       tester,
       withModes(LightingConfig(), hardwareModes),
       startNow: false,
@@ -1284,7 +966,7 @@ void main() {
   testWidgets('a failing hardware mode marks the fans down and retries', (
     tester,
   ) async {
-    final rig = Rig(
+    final rig = LightingEngineRig(
       tester,
       withModes(LightingConfig(), {
         LightDeviceId.alv2Group1: LightMode.hardware,
@@ -1316,7 +998,7 @@ void main() {
   testWidgets('a failing quantity marks the fans down and retries', (
     tester,
   ) async {
-    final rig = Rig(tester, fixedConfig());
+    final rig = LightingEngineRig(tester, fixedConfig());
     await rig.advance(const Duration(milliseconds: 300));
     rig.out
       ..clear()
@@ -1352,7 +1034,7 @@ void main() {
       LightDeviceId.alv2Group2: LightMode.hardware,
       LightDeviceId.alv2Group3: LightMode.hardware,
     });
-    final rig = Rig(tester, merged, startNow: false);
+    final rig = LightingEngineRig(tester, merged, startNow: false);
     rig.out.mergeOk = false;
     rig.start();
     await rig.advance(const Duration(seconds: 1));
@@ -1378,7 +1060,7 @@ void main() {
   testWidgets('a board that fails during a frame is retried and resent', (
     tester,
   ) async {
-    final rig = Rig(tester, fixedConfig());
+    final rig = LightingEngineRig(tester, fixedConfig());
     await rig.advance(const Duration(milliseconds: 500));
     rig.out
       ..clear()
@@ -1414,7 +1096,7 @@ void main() {
   });
 
   testWidgets('a throwing fan frame does not stop the loop', (tester) async {
-    final rig = Rig(tester, LightingConfig(), startNow: false);
+    final rig = LightingEngineRig(tester, LightingConfig(), startNow: false);
     rig.out.throwFanFrames = true;
     rig.start();
     await rig.advance(const Duration(seconds: 1));
@@ -1433,7 +1115,7 @@ void main() {
     testWidgets('a slow RAM send delays neither the fans nor the ITE', (
       tester,
     ) async {
-      final rig = Rig(tester, LightingConfig(), startNow: false);
+      final rig = LightingEngineRig(tester, LightingConfig(), startNow: false);
       rig.out.ramDelay = const Duration(milliseconds: 800);
       rig.start();
       await rig.settle();
@@ -1449,7 +1131,12 @@ void main() {
     });
 
     testWidgets('at most one frame is in flight per family', (tester) async {
-      final rig = Rig(tester, LightingConfig(), fps: 60, startNow: false);
+      final rig = LightingEngineRig(
+        tester,
+        LightingConfig(),
+        fps: 60,
+        startNow: false,
+      );
       rig.out
         ..chassisDelay = const Duration(milliseconds: 100)
         ..ramDelay = const Duration(milliseconds: 150);
@@ -1475,7 +1162,7 @@ void main() {
     testWidgets('the off goes out at once and drops the pending frames', (
       tester,
     ) async {
-      final rig = Rig(tester, LightingConfig());
+      final rig = LightingEngineRig(tester, LightingConfig());
       await rig.advance(const Duration(milliseconds: 300));
       // The RAM frame in flight does not finish (a long SMBus write).
       rig.out.holdRam = Completer<bool>();
@@ -1510,7 +1197,7 @@ void main() {
     testWidgets('stop closes the outputs (and so the worker) once', (
       tester,
     ) async {
-      final rig = Rig(tester, LightingConfig());
+      final rig = LightingEngineRig(tester, LightingConfig());
       await rig.advance(const Duration(milliseconds: 300));
       rig.out.holdChassis = Completer<bool>();
       await rig.advance(const Duration(milliseconds: 100));
@@ -1532,7 +1219,7 @@ void main() {
     testWidgets('fans get colors from the future, the chassis the present', (
       tester,
     ) async {
-      final rig = Rig(tester, config, startNow: false);
+      final rig = LightingEngineRig(tester, config, startNow: false);
       final m = rig.module;
       // (send instant in s, latency estimate used for that send in s)
       final chassis = <(double, double)>[], fans = <(double, double)>[];
@@ -1569,7 +1256,7 @@ void main() {
     testWidgets('RAM is composed latency ahead of the send instant', (
       tester,
     ) async {
-      final rig = Rig(tester, config, startNow: false);
+      final rig = LightingEngineRig(tester, config, startNow: false);
       final ram = <(double, double)>[];
       rig.out.onRamSend = () {
         ram.add((
@@ -1596,7 +1283,7 @@ void main() {
     testWidgets('the EMA converges to the measured duration and is clamped', (
       tester,
     ) async {
-      final rig = Rig(tester, config, startNow: false);
+      final rig = LightingEngineRig(tester, config, startNow: false);
       rig.out.ramDelay = const Duration(milliseconds: 60);
       rig.start();
       expect(rig.module.latencyOf(OutputFamily.ram).inMilliseconds, 10);
@@ -1628,7 +1315,7 @@ void main() {
       'fan frames are chained without overlap, composed at send time',
       (tester) async {
         // Tick every 200 ms, but each send takes 60 ms: chaining sends far more.
-        final rig = Rig(tester, config, fps: 5, startNow: false);
+        final rig = LightingEngineRig(tester, config, fps: 5, startNow: false);
         var inFlight = 0, maxInFlight = 0;
         rig.out
           ..fanDelay = const Duration(milliseconds: 60)
@@ -1655,15 +1342,19 @@ void main() {
   });
 
   group('automatic hardware', () {
-    Iterable<String> hw(Rig rig) =>
+    Iterable<String> hw(LightingEngineRig rig) =>
         rig.out.calls.where((c) => c.startsWith('fanHw'));
-    Iterable<String> zones(Rig rig) =>
+    Iterable<String> zones(LightingEngineRig rig) =>
         rig.out.calls.where((c) => c.startsWith('zone:'));
 
     testWidgets(
       'effect with equivalent: fans and board get hardware, no frames',
       (tester) async {
-        final rig = Rig(tester, LightingConfig(), autoHardware: true);
+        final rig = LightingEngineRig(
+          tester,
+          LightingConfig(),
+          autoHardware: true,
+        );
         await rig.advance(const Duration(milliseconds: 500));
         expect(hw(rig), [
           'fanHw:1:Rainbow:1',
@@ -1683,7 +1374,11 @@ void main() {
 
     testWidgets('effect without equivalent (HTML) streams the fans and '
         'back again', (tester) async {
-      final rig = Rig(tester, LightingConfig(), autoHardware: true);
+      final rig = LightingEngineRig(
+        tester,
+        LightingConfig(),
+        autoHardware: true,
+      );
       await rig.advance(const Duration(milliseconds: 300));
       rig.out.clear();
       rig.send(SetLightingConfig(LightingConfig(effectId: 'html:demo')));
@@ -1707,7 +1402,11 @@ void main() {
     testWidgets('scanner and color wave run the firmware fan modes', (
       tester,
     ) async {
-      final rig = Rig(tester, LightingConfig(), autoHardware: true);
+      final rig = LightingEngineRig(
+        tester,
+        LightingConfig(),
+        autoHardware: true,
+      );
       await rig.advance(const Duration(milliseconds: 300));
 
       rig.out.clear();
@@ -1757,7 +1456,11 @@ void main() {
       tester,
     ) async {
       // Spectrum without autoHardware: the fans stream a changing canvas.
-      final rig = Rig(tester, LightingConfig(), fanFrameGap: alv2SafeStreamGap);
+      final rig = LightingEngineRig(
+        tester,
+        LightingConfig(),
+        fanFrameGap: alv2SafeStreamGap,
+      );
       await rig.settle();
       rig.out.clear();
       await rig.advance(const Duration(seconds: 3));
@@ -1779,7 +1482,11 @@ void main() {
     testWidgets('turning autoHardware off returns to streaming', (
       tester,
     ) async {
-      final rig = Rig(tester, LightingConfig(), autoHardware: true);
+      final rig = LightingEngineRig(
+        tester,
+        LightingConfig(),
+        autoHardware: true,
+      );
       await rig.advance(const Duration(milliseconds: 300));
       rig.out.clear();
       rig.send(SetLightingConfig(LightingConfig(autoHardware: false)));
@@ -1791,7 +1498,11 @@ void main() {
     testWidgets('changing the effect speed resends the hardware', (
       tester,
     ) async {
-      final rig = Rig(tester, LightingConfig(), autoHardware: true);
+      final rig = LightingEngineRig(
+        tester,
+        LightingConfig(),
+        autoHardware: true,
+      );
       await rig.advance(const Duration(milliseconds: 300));
       rig.out.clear();
       rig.send(
@@ -1818,7 +1529,12 @@ void main() {
           'breathing': {'color': '#FF0000', 'speed': 30},
         },
       );
-      final rig = Rig(tester, config, autoHardware: true, startNow: false);
+      final rig = LightingEngineRig(
+        tester,
+        config,
+        autoHardware: true,
+        startNow: false,
+      );
       double secs() => rig.elapsed.inMicroseconds / 1e6;
       // Every Breathing send restarts the firmware clock (the resend ~1 s
       // later included), so the canvas re-anchors on each of them.
@@ -1894,7 +1610,10 @@ void main() {
     testWidgets('hardware modes are sent again ~1 s after a change', (
       tester,
     ) async {
-      final rig = Rig(tester, withModes(LightingConfig(), hardwareModes));
+      final rig = LightingEngineRig(
+        tester,
+        withModes(LightingConfig(), hardwareModes),
+      );
       await rig.advance(const Duration(milliseconds: 200));
       expect(rig.out.count('fanHw'), 3);
       expect(rig.out.count('zone'), 3);
@@ -1920,7 +1639,7 @@ void main() {
         LightDeviceId.alv2Group1: LightMode.hardware,
         LightDeviceId.alv2Group2: LightMode.fixed,
       });
-      final rig = Rig(tester, base, autoHardware: true);
+      final rig = LightingEngineRig(tester, base, autoHardware: true);
       await rig.advance(const Duration(milliseconds: 500));
       // Group 1 keeps its own mode (StaticColor, speed 2); group 3 is auto.
       expect(hw(rig), ['fanHw:1:StaticColor:2', 'fanHw:3:Rainbow:1']);
@@ -1937,7 +1656,7 @@ void main() {
       tester,
     ) async {
       final cfg = LightingConfig(effectId: 'html:rainbow');
-      final rig = Rig(tester, cfg);
+      final rig = LightingEngineRig(tester, cfg);
       await rig.settle();
       rig.out.clear();
 
@@ -1986,7 +1705,7 @@ void main() {
             .device(LightDeviceId.chassis)
             .copyWith(mode: LightMode.fixed, fixedColor: const Rgb(90, 80, 70)),
       );
-      final rig = Rig(tester, cfg);
+      final rig = LightingEngineRig(tester, cfg);
       await rig.settle();
       rig.out.clear();
       rig.send(

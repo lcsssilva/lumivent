@@ -8,8 +8,11 @@ import '../domain/led_layout.dart' show ledsPerFan;
 import '../domain/light_device.dart';
 import '../domain/light_outputs.dart';
 import '../domain/lighting_config.dart';
+import '../domain/board_zone_config.dart';
 import '../domain/rgb.dart';
-import 'light_io_worker.dart';
+import 'isolate_light_io.dart';
+import 'light_io_command.dart';
+import 'light_io_client.dart';
 
 /// [LightOutputs] over the devices module drivers: AL V2 hub (a proxy to its
 /// worker isolate, shared with monitoring and fans, which is who releases it);

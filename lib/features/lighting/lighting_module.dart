@@ -2,16 +2,17 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 
 import '../../core/persistence/config_store.dart';
 import '../devices/devices.dart' show Alv2HubProxy;
-import 'application/installed_effects_controller.dart';
-import 'application/lighting_controller.dart';
+import 'application/installed_effects_notifier.dart';
+import 'application/lighting_notifier.dart';
 import 'application/lighting_engine_module.dart';
 import 'domain/lighting_config.dart';
+import 'domain/lighting_config_repository.dart';
 import 'infrastructure/device_light_outputs.dart';
 import 'infrastructure/file_effect_importer.dart';
 import 'infrastructure/file_effect_library.dart';
 import 'infrastructure/json_lighting_config_repository.dart';
 import 'infrastructure/logind_power_watcher.dart';
-import 'infrastructure/html_effects/runtime.dart';
+import 'infrastructure/html_effects/html_effect_runtime_factory.dart';
 
 /// Module composition: connects ports to implementations.
 abstract final class LightingModule {

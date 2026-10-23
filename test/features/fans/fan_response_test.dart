@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/fans/domain/fan_curve.dart';
-import 'package:lumivent/features/fans/domain/fan_group.dart';
+import 'package:lumivent/features/fans/domain/fan_group_config.dart';
 import 'package:lumivent/features/fans/domain/fan_response.dart';
+import 'package:lumivent/features/fans/domain/fan_smoother.dart';
 
 // Fake clock: each loop step happens `n` seconds after `t0`.
 final t0 = DateTime(2026);

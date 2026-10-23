@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/config_transfer.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/fans/fans.dart';
@@ -13,7 +13,7 @@ import 'package:lumivent/features/lighting/lighting.dart';
 import 'package:lumivent/features/preferences/infrastructure/preferences_codec.dart';
 import 'package:lumivent/features/preferences/preferences.dart';
 
-import '../fakes.dart';
+import '../fake_engine.dart';
 
 void main() {
   late Directory tmp;

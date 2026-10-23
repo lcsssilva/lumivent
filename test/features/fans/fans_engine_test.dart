@@ -1,52 +1,15 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/engine/engine_event.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
 import 'package:lumivent/features/fans/fans.dart';
 import 'package:lumivent/features/fans/infrastructure/metrics_fan_temperatures.dart';
 import 'package:lumivent/features/monitoring/monitoring.dart';
 
-class FakeDriver implements FanDriver {
-  final duties = <(int, int)>[];
-  int syncOffCalls = 0;
-  bool ok = true;
-
-  /// Time the (fake) hub worker takes to answer.
-  Duration latency = Duration.zero;
-
-  @override
-  Future<bool> setDuty(int group, int duty) async {
-    duties.add((group, duty));
-    await Future<void>.delayed(latency);
-    return ok;
-  }
-
-  @override
-  Future<bool> disableMotherboardSync() async {
-    syncOffCalls++;
-    await Future<void>.delayed(latency);
-    return ok;
-  }
-
-  /// Last duty sent to [group].
-  int lastDuty(int group) => duties.lastWhere((e) => e.$1 == group).$2;
-}
-
-class FakeTemps implements FanTemperatures {
-  final values = <FanTempSource, double?>{};
-
-  @override
-  double? read(FanTempSource source) => values[source];
-}
-
-/// Fake clock: time advances only when the test commands it.
-class FakeClock {
-  FakeClock(this.t);
-  DateTime t;
-
-  void advance(Duration d) => t = t.add(d);
-}
+import 'fake_driver.dart';
+import 'fake_temps.dart';
+import 'fake_clock.dart';
 
 const _slow = Duration(hours: 1);
 const _quick = Duration(milliseconds: 10);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import 'theme.dart';
+import 'we_colors.dart';
+import 'we_sizes.dart';
 
 /// Settings row: label and description on the left, control on the right.
 class SettingRow extends StatelessWidget {

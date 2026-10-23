@@ -2,4 +2,4 @@
 /// Public API: other modules import only this file.
 library;
 
-export 'presentation/explore_page.dart' show ExplorePage;
+export 'presentation/views/explore_view.dart' show ExploreView;

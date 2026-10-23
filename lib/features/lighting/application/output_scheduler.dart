@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'lighting_messages.dart';
+import 'light_output_state.dart';
 import 'lighting_status_reporter.dart';
 import 'output_lane.dart';
 

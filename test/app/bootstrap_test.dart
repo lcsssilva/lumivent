@@ -4,15 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/app/bootstrap.dart';
 
-import '../fakes.dart';
+import '../fake_engine.dart';
 
-class _RecordingEngine extends FakeEngine {
-  _RecordingEngine(this.order);
-  final List<String> order;
-
-  @override
-  Future<void> shutdown() async => order.add('engine');
-}
+part 'recording_engine.dart';
 
 void main() {
   test(

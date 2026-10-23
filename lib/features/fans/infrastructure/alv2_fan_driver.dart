@@ -1,5 +1,6 @@
 import '../../devices/devices.dart' show Alv2HubProxy;
 import '../domain/fan_group.dart';
+import '../domain/fan_driver.dart';
 
 /// Fan output through the AL V2 hub (worker isolate). The protocol belongs to
 /// the devices module.

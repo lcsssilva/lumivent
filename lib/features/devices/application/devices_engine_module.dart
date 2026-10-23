@@ -1,8 +1,11 @@
 import 'dart:async';
 
-import '../../../core/engine/engine_host.dart';
+import '../../../core/engine/engine_command.dart';
+import '../../../core/engine/engine_event.dart';
+import '../../../core/engine/engine_module.dart';
 import '../domain/device_detector.dart';
-import 'devices_messages.dart';
+import 'rescan_devices.dart';
+import 'devices_changed.dart';
 
 /// Devices module part that runs in the engine: initial scan, connection
 /// polling every [poll], and on-demand scans.

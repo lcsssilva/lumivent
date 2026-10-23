@@ -1,52 +1,11 @@
 // AL V2 lighting modes (AL-V2 §3 tables, §6 metadata) and the
 // port write assembly (AL-V2 §2, §4). Pure Dart, no I/O.
 import 'protocol.dart';
+import 'alv2_port_write.dart';
+import 'alv2_mode_meta.dart';
+import 'alv2_effect.dart';
 
 enum Alv2LightScope { whole, inner, outer, merge }
-
-/// UI metadata for a mode (AL-V2 §6).
-///
-/// §6 only describes "whole fan" modes. Interpretation: every mode has speed
-/// except StaticColor ("no speed"); only modes with `dir` have direction.
-/// Inner/outer modes and merge **inherit** the metadata of the whole-fan mode of
-/// the same base name (inferred); Lottery, PacMan, and outer-ring
-/// Colorful/Rainbow variants have no pair and use assumed values.
-class Alv2ModeMeta {
-  const Alv2ModeMeta({
-    this.speed = true,
-    this.direction = false,
-    this.colors = 0,
-    this.defaultSpeedLevel = 3,
-    this.defaultDirection = 0,
-    this.whiteDefault = false,
-  });
-
-  /// Has speed control.
-  final bool speed;
-
-  /// Has direction control.
-  final bool direction;
-
-  /// How many colors the UI lets the user pick.
-  final int colors;
-
-  /// Level 0–4 (default 75% = 3).
-  final int defaultSpeedLevel;
-
-  /// 0 = right, 1 = left.
-  final int defaultDirection;
-
-  /// ElectricCurrent: default white colors.
-  final bool whiteDefault;
-
-  /// Default colors (flat R,G,B): §4 factory palette (red, blue, green, yellow,
-  /// orange, cyan), truncated to [colors]. For non-static modes this is inferred
-  /// (`ALV2FanProfile..cctor` is not in the documents).
-  List<int> get defaultColors => [
-    for (var i = 0; i < colors; i++)
-      ...(whiteDefault ? const [255, 255, 255] : alv2FactoryPalette[i % 6]),
-  ];
-}
 
 /// Factory palette (AL-V2 §4). The exact orange is not documented.
 const alv2FactoryPalette = <List<int>>[
@@ -418,23 +377,6 @@ List<int> alv2NormalizeColors(Alv2LightMode mode, List<int> colors) {
 List<int> alv2ScaleByBrightness(List<int> rgb, int brightnessLevel) {
   final pct = brightnessLevel.clamp(0, 4) * 25;
   return [for (final c in rgb) (c * pct) ~/ 100];
-}
-
-/// Effect for a mode with its UI settings (levels 0–4, direction 0/1).
-class Alv2Effect {
-  const Alv2Effect(
-    this.mode, {
-    this.colors = const [],
-    this.speedLevel = 3,
-    this.direction = 0,
-    this.brightnessLevel = 4,
-  });
-
-  final Alv2LightMode mode;
-
-  /// UI colors, flat R,G,B.
-  final List<int> colors;
-  final int speedLevel, direction, brightnessLevel;
 }
 
 Alv2PortWrite _portWrite(int port, Alv2LightMode mode, Alv2Effect e) {

@@ -7,11 +7,12 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import '../../domain/effect_runtime.dart';
-import 'canvas_buffer.dart';
-import 'canvas_replay.dart';
-import 'quickjs_effect.dart' show EffectScriptException;
+import '../../domain/effect_frame.dart';
+import 'canvas_command_buffer.dart';
+import 'canvas_replayer.dart';
+import 'effect_script_exception.dart' show EffectScriptException;
 import 'simple_canvas_raster.dart';
+import 'simple_raster_state.dart';
 
 /// Formats a frame from canvas command buffers (and keeps the last frame for
 /// preview and snapshot).

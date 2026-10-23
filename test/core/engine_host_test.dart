@@ -1,79 +1,20 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/engine/isolate_engine.dart';
+import 'package:lumivent/core/engine/engine_command.dart';
+import 'package:lumivent/core/engine/engine_event.dart';
+import 'package:lumivent/core/engine/engine_stopped.dart';
+import 'package:lumivent/core/engine/engine_module.dart';
+import 'package:lumivent/core/engine/engine_startup_exception.dart';
 
-class Ping extends EngineCommand {
-  const Ping(this.n);
-  final int n;
-}
+import 'ping.dart';
+import 'pong.dart';
+import 'started.dart';
+import 'stopping.dart';
+import 'boom.dart';
 
-class Pong extends EngineEvent {
-  const Pong(this.n);
-  final int n;
-}
-
-class Started extends EngineEvent {
-  const Started(this.base);
-  final int base;
-}
-
-class Stopping extends EngineEvent {
-  const Stopping();
-}
-
-class _EchoModule implements EngineModule {
-  _EchoModule(this.base);
-  final int base;
-  late void Function(EngineEvent) emit;
-
-  @override
-  void start(void Function(EngineEvent) emit) =>
-      (this.emit = emit)(Started(base));
-
-  @override
-  bool handle(EngineCommand command) {
-    if (command is! Ping) return false;
-    emit(Pong(command.n + base));
-    return true;
-  }
-
-  @override
-  void stop() => emit(const Stopping());
-}
-
-class Boom extends EngineCommand {
-  const Boom();
-}
-
-/// Throws on [Boom] in handle, and/or in stop when [throwOnStop] is set.
-class _FaultyModule implements EngineModule {
-  _FaultyModule({this.throwOnStop = false});
-  final bool throwOnStop;
-
-  @override
-  void start(void Function(EngineEvent) emit) {}
-
-  @override
-  bool handle(EngineCommand command) {
-    if (command is! Boom) return false;
-    throw StateError('handle boom');
-  }
-
-  @override
-  void stop() {
-    if (throwOnStop) throw StateError('stop boom');
-  }
-}
-
-class _ThrowingStartModule implements EngineModule {
-  @override
-  void start(void Function(EngineEvent) emit) => throw StateError('start boom');
-
-  @override
-  bool handle(EngineCommand command) => false;
-
-  @override
-  void stop() {}
-}
+part 'echo_module.dart';
+part 'faulty_module.dart';
+part 'throwing_start_module.dart';
 
 // Runs inside the engine isolate.
 List<EngineModule> _modules(int base) => [_EchoModule(base)];

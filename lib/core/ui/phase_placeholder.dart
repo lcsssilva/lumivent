@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../i18n/app_strings_scope.dart';
 import 'status_dot.dart';
 import 'status_pill.dart';
-import 'theme.dart';
+import 'we_colors.dart';
+import 'we_sizes.dart';
 import 'we_card.dart';
 
 /// Placeholder page for an area planned for a future phase.

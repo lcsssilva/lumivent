@@ -5,7 +5,10 @@
 // exiting through the tray returns code 0 and does not restart.
 import 'dart:io';
 
-import '../domain/autostart.dart';
+import '../domain/autostart_error.dart';
+import '../domain/autostart_state.dart';
+import '../domain/autostart_exception.dart';
+import '../domain/autostart_service.dart';
 
 typedef ProcessRunner = Future<ProcessResult> Function(
   String exe,

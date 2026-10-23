@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'theme.dart';
+import 'we_sizes.dart';
 
 /// Card with an optional title and content.
 class WeCard extends StatelessWidget {

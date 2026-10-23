@@ -11,7 +11,7 @@ import 'package:flutter/widgets.dart';
 import 'app/bootstrap.dart';
 import 'app/bootstrap_failure_app.dart';
 import 'core/persistence/config_store.dart';
-import 'features/lighting/infrastructure/html_effects/runtime.dart'
+import 'features/lighting/infrastructure/html_effects/effect_worker.dart'
     show runHtmlEffectWorker;
 
 Future<void> main(List<String> args) async {

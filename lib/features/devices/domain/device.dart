@@ -4,9 +4,7 @@
 // The fan and lighting drivers (phases 3 and 4) build on this model; it only
 // contains each device's identity and access state.
 
-import 'package:freezed_annotation/freezed_annotation.dart';
-
-part 'device.freezed.dart';
+import 'device_info.dart';
 
 enum DeviceStatus {
   /// Found and responding.
@@ -53,46 +51,4 @@ enum DeviceIssue {
   gpuSsid,
   unsafeAddress,
   noResponse,
-}
-
-/// Immutable device snapshot, safe to send between isolates.
-@freezed
-abstract class DeviceInfo with _$DeviceInfo {
-  const factory DeviceInfo({
-    /// Stable between runs (used by configuration in future phases).
-    required String id,
-    required DeviceKind kind,
-    required DeviceLabel label,
-
-    /// Memory slot for [DeviceLabel.memoryModule] (1-based).
-    int? slot,
-    required String model,
-    required DeviceStatus status,
-
-    /// Firmware, node path, or a neutral technical error.
-    String? detail,
-
-    /// Actionable issue and its data (for example the bus that did not
-    /// respond).
-    DeviceIssue? issue,
-    String? issueArg,
-  }) = _DeviceInfo;
-}
-
-/// Result of a full scan.
-class DeviceSnapshot {
-  const DeviceSnapshot({
-    required this.devices,
-    required this.conflicts,
-    required this.scannedAt,
-  });
-
-  final List<DeviceInfo> devices;
-
-  /// Running programs that compete for the same devices (OpenRGB, etc.).
-  final List<String> conflicts;
-  final DateTime scannedAt;
-
-  Iterable<DeviceInfo> ofKind(DeviceKind kind) =>
-      devices.where((d) => d.kind == kind);
 }

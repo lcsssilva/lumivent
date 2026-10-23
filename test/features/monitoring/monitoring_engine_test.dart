@@ -3,54 +3,26 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/engine/isolate_engine.dart';
+import 'package:lumivent/core/engine/engine_event.dart';
+import 'package:lumivent/core/engine/shutdown_engine.dart';
 import 'package:lumivent/features/monitoring/monitoring.dart';
 
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub_worker.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_command.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_reply.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_link.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
 import 'package:lumivent/features/monitoring/infrastructure/alv2_rpm_source.dart';
 
-import '../../fakes.dart';
-import 'smart_fixture.dart';
+import '../../fake_engine.dart';
+import 'fake_source.dart';
+import 'fake_ssds.dart';
 
-class FakeSource implements SensorSource {
-  int reads = 0;
-  bool disposed = false;
-  bool fail = false;
-
-  @override
-  Map<String, double> read() {
-    if (fail) throw StateError('sumiu');
-    return {'x': (++reads).toDouble()};
-  }
-
-  @override
-  void dispose() => disposed = true;
-}
-
-class FakeSsds implements SsdReader {
-  int reads = 0;
-
-  /// The helper "appears" from this read on.
-  int smartFrom = 1;
-
-  @override
-  Future<List<SsdInfo>> read() async {
-    reads++;
-    return [
-      SsdInfo(
-        controller: 'nvme0',
-        model: 'M',
-        serial: 'S',
-        firmware: 'F',
-        smart: reads >= smartFrom ? smartLog() : null,
-        smartError: reads >= smartFrom
-            ? null
-            : const SsdSmartError(SsdErrorKind.helperMissing),
-      ),
-    ];
-  }
-}
+part 'seq_rpm_transport.dart';
+part 'rpm_transport.dart';
+part 'scripted_link.dart';
 
 void main() {
   rpmSourceTests();
@@ -143,57 +115,6 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(c.read(monitoringProvider).ssds, isEmpty);
   });
-}
-
-/// Hub transport whose RPM replies follow [readings] (one per read), for the
-/// alternating readings seen while the lighting streams (2026-10-19).
-class _SeqRpmTransport extends _RpmTransport {
-  _SeqRpmTransport(this.readings);
-  final List<List<int>> readings;
-  int _i = 0;
-
-  @override
-  Uint8List getInput(int reportId, int length) {
-    final r = readings[_i++ % readings.length];
-    return Uint8List(length)..setRange(0, 10, [
-      0xE0,
-      0xF0,
-      for (final v in r) ...[v >> 8, v & 0xFF],
-    ]);
-  }
-}
-
-class _RpmTransport implements Alv2Transport {
-  final log = <String>[];
-  Completer<void>? gate;
-
-  @override
-  void sendFeature(List<int> data, int length) => log.add('feature');
-  @override
-  void write(List<int> data, int length) {}
-  @override
-  Uint8List getInput(int reportId, int length) =>
-      Uint8List(length)
-        ..setRange(0, 10, [0xE0, 0xF0, 0, 0, 0x03, 0xED, 0x04, 0xCE, 4, 0xCE]);
-  @override
-  void close() => log.add('close');
-}
-
-class _ScriptedLink implements Alv2HubLink {
-  _ScriptedLink(this.replies);
-
-  /// Each entry is a reply, or an error to throw.
-  final List<Object> replies;
-
-  @override
-  Future<Alv2HubReply> request(Alv2HubCommand command) async {
-    final next = replies.removeAt(0);
-    if (next is Alv2HubReply) return next;
-    throw next;
-  }
-
-  @override
-  void dispose() {}
 }
 
 void rpmSourceTests() {

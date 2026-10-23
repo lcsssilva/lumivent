@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/core/ui/theme.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
-import 'package:lumivent/features/lighting/presentation/color_picker.dart';
+import 'package:lumivent/features/lighting/presentation/widgets/color_picker.dart';
 
 import '../../support/app_harness.dart';
 

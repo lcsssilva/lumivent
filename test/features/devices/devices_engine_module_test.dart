@@ -1,28 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/engine/engine_event.dart';
 import 'package:lumivent/features/devices/devices.dart';
 
-class FakeDetector implements DeviceDetector {
-  String key = 'a';
-  int scans = 0;
-  bool disposed = false;
-
-  @override
-  String presenceKey() => key;
-
-  @override
-  DeviceSnapshot scan() {
-    scans++;
-    return DeviceSnapshot(
-      devices: const [],
-      conflicts: const [],
-      scannedAt: DateTime(2026),
-    );
-  }
-
-  @override
-  void dispose() => disposed = true;
-}
+import 'fake_detector.dart';
 
 void main() {
   test('scans at startup, on request, and when presence changes', () async {

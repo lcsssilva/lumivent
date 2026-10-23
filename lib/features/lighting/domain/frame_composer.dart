@@ -1,11 +1,13 @@
 // Lighting module domain (pure Dart): composes the LED frame.
 
-import 'hardware_equivalents.dart';
+import 'hardware_equivalent.dart';
 import 'hardware_timing.dart';
 import 'led_layout.dart';
 import 'light_device.dart';
 import 'lighting_config.dart';
 import 'native_effects.dart';
+import 'effect_values.dart';
+import 'native_effect.dart';
 import 'rgb.dart';
 
 /// Stateful composition helpers owned by one lighting engine.

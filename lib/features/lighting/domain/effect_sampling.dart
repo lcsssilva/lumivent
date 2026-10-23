@@ -3,7 +3,7 @@
 
 import 'dart:typed_data';
 
-import 'effect_runtime.dart';
+import 'effect_frame.dart';
 import 'led_layout.dart';
 import 'light_device.dart';
 import 'lighting_config.dart';

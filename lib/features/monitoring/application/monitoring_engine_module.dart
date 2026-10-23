@@ -1,10 +1,17 @@
 import 'dart:async';
 import 'dart:io';
 
-import '../../../core/engine/engine_host.dart';
-import '../domain/metrics.dart';
-import '../domain/ssd.dart';
-import 'monitoring_messages.dart';
+import '../../../core/engine/engine_command.dart';
+import '../../../core/engine/engine_event.dart';
+import '../../../core/engine/engine_module.dart';
+import '../domain/sensor_sample.dart';
+import '../domain/sensor_history.dart';
+import '../domain/sensor_source.dart';
+import '../domain/ssd_reader.dart';
+import 'request_sensor_history.dart';
+import 'sensors_updated.dart';
+import 'sensor_history_replay.dart';
+import 'ssds_updated.dart';
 
 /// Monitoring module part that runs in the engine: reads sensors every [period]
 /// and stores 5 minutes of history (so the chart is populated when opened),

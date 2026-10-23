@@ -6,26 +6,11 @@
 
 import 'dart:typed_data';
 
-import 'effect_meta.dart';
+import 'effect_source.dart';
 import 'effect_sampling.dart';
 import 'light_device.dart';
 import 'rgb.dart';
-
-/// One rendered canvas frame: `width × height` pixels in RGBA order.
-class EffectFrame {
-  const EffectFrame(this.width, this.height, this.rgba);
-
-  final int width, height;
-  final Uint8List rgba;
-
-  /// Pixel [x], [y] (clamped to the frame), as 0–255 channels.
-  (int, int, int) pixelAt(int x, int y) {
-    final ix = x.clamp(0, width - 1);
-    final iy = y.clamp(0, height - 1);
-    final o = (iy * width + ix) * 4;
-    return (rgba[o], rgba[o + 1], rgba[o + 2]);
-  }
-}
+import 'effect_frame.dart';
 
 /// A loaded effect. All methods run on the UI isolate; [dispose] is mandatory.
 abstract interface class EffectRuntime {
@@ -72,13 +57,4 @@ abstract interface class EffectRuntime {
   Set<String> get unknownOps;
 
   void dispose();
-}
-
-/// Creates a runtime from the effect HTML (an isolate-safe port: the
-/// implementation lives in lighting/infrastructure/html_effects).
-abstract interface class EffectRuntimeFactory {
-  Future<EffectRuntime> load(
-    String html, {
-    Map<String, Object?> values = const {},
-  });
 }

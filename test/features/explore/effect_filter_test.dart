@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/explore/application/effect_filter.dart';
-import 'package:lumivent/features/lighting/domain/effect_compat.dart';
-import 'package:lumivent/features/lighting/domain/effect_meta.dart';
+import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
+import 'package:lumivent/features/lighting/domain/effect_source.dart';
 import 'package:lumivent/features/lighting/domain/installed_effect.dart';
 
 EffectSource _source() =>

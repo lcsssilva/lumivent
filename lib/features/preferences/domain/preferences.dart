@@ -28,9 +28,3 @@ abstract class Preferences with _$Preferences {
 
   static const fpsOptions = [15, 30, 60];
 }
-
-/// Persistence port for preferences.
-abstract interface class PreferencesRepository {
-  Preferences load();
-  Future<void> save(Preferences preferences);
-}

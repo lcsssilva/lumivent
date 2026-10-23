@@ -1,3 +1,5 @@
+import 'alv2_forbidden_packet.dart';
+
 // Lian Li UNI FAN AL V2 (hub `0CF2:A104`): packets from `AL-V2-protocolo.md`.
 
 const alv2VendorId = 0x0CF2;
@@ -90,16 +92,6 @@ List<List<int>> alv2MotherboardSyncPackets(List<bool> sync) => [
 
 // --- Lighting (AL-V2 §2, §6) ---
 
-/// Ready packet: [output] says whether it goes via output report (colors) or
-/// feature. With [pad] false an output report is written with its real size
-/// instead of the full 353 bytes (canvas streaming only).
-class Alv2Packet {
-  const Alv2Packet(this.bytes, {this.output = false, this.pad = true});
-  final List<int> bytes;
-  final bool output;
-  final bool pad;
-}
-
 /// Effect for port [port] (0–7): `E0 (10|p) mode speed direction brightness`.
 List<int> alv2EffectPacket(
   int port,
@@ -180,30 +172,6 @@ int alv2SpeedByte(int level) =>
 int alv2BrightnessByte(int level) =>
     const [0x08, 0x03, 0x02, 0x01, 0x00][level.clamp(0, 4)];
 
-/// Full write of one port: colors (output, if any) and then the effect.
-/// [colors] is already normalized (see `lighting.dart`), flat R,G,B.
-class Alv2PortWrite {
-  const Alv2PortWrite({
-    required this.port,
-    required this.mode,
-    this.speed = 0x00,
-    this.direction = 0x00,
-    this.brightness = 0x00,
-    this.colors,
-  });
-
-  final int port;
-  final int mode, speed, direction, brightness;
-  final List<int>? colors;
-
-  /// Colors before the effect (service order, AL-V2 §4).
-  List<Alv2Packet> get packets => [
-    if (colors != null && colors!.isNotEmpty)
-      Alv2Packet(alv2ColorPacket(port, colors!), output: true),
-    Alv2Packet(alv2EffectPacket(port, mode, speed, direction, brightness)),
-  ];
-}
-
 void _checkGroup(int group) {
   if (group < 0 || group >= alv2Groups) {
     throw ArgumentError.value(group, 'group', 'outside 0..3');
@@ -214,14 +182,6 @@ void _checkPort(int port) {
   if (port < 0 || port >= alv2Ports) {
     throw ArgumentError.value(port, 'port', 'outside 0..7');
   }
-}
-
-/// A packet the central guard refused to send.
-class Alv2ForbiddenPacket implements Exception {
-  Alv2ForbiddenPacket(this.reason);
-  final String reason;
-  @override
-  String toString() => 'AL V2 packet blocked: $reason';
 }
 
 /// Throws [Alv2ForbiddenPacket] if [bytes] must not reach the hub. Every send

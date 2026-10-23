@@ -1,11 +1,11 @@
 import '../domain/frame_composer.dart';
-import '../domain/hardware_equivalents.dart';
+import '../domain/hardware_equivalent.dart';
 import '../domain/hardware_timing.dart';
 import '../domain/light_device.dart';
 import '../domain/lighting_config.dart';
 import '../domain/native_effects.dart';
 import '../domain/rgb.dart';
-import 'lighting_messages.dart';
+import 'light_output_state.dart';
 
 /// Owns what the engine composes frames from: the current effect's canvas
 /// pixels and the composition clock (including the firmware-Breathing phase

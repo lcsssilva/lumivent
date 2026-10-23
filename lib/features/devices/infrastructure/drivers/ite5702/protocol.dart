@@ -1,3 +1,8 @@
+import 'ite_forbidden_command.dart';
+import 'ite_color_order.dart';
+import 'ite_calibration.dart';
+import 'ite_info.dart';
+
 // Gigabyte RGB Fusion 2 (MCU ITE IT5702, `048D:5702`): packets from the
 // protocol notes (`docs/hardware.md`).
 
@@ -20,16 +25,6 @@ const iteForbiddenCommands = <int, String>{
   0x48: 'MSDL switch (unsupported)',
   0x59: 'D_LED2 data, which powers the hub ARGB input',
 };
-
-class IteForbiddenCommand implements Exception {
-  IteForbiddenCommand(this.command, [String? reason])
-    : reason = reason ?? iteForbiddenCommands[command] ?? 'forbidden';
-  final int command;
-  final String reason;
-  @override
-  String toString() =>
-      'CC ${command.toRadixString(16).padLeft(2, '0').toUpperCase()} packet blocked: $reason';
-}
 
 /// Throws [IteForbiddenCommand] if [packet] is forbidden, including
 /// `CC 32` with bit1 (D_LED2). Every send to the ITE goes through here.
@@ -59,90 +54,6 @@ const iteDLed1Header = 0x58;
 const iteDirectBitDLed1 = 0x01;
 const iteDirectBitDLed2 = 0x02;
 const iteMaxLedsPerPacket = 19;
-
-/// B, G, and R positions in the packet (each CalStrip provides three bytes, ITE §1.3).
-class IteColorOrder {
-  const IteColorOrder(this.posB, this.posG, this.posR);
-
-  /// From a CalStrip u32 little-endian: bytes `posB posG posR 00`.
-  factory IteColorOrder.fromCalStrip(int v, IteColorOrder fallback) {
-    final b = v & 0xFF, g = (v >> 8) & 0xFF, r = (v >> 16) & 0xFF;
-    final o = IteColorOrder(b, g, r);
-    return {b, g, r}.length == 3 && b < 3 && g < 3 && r < 3 ? o : fallback;
-  }
-
-  /// ARGB strips 5 V: G, R, B.
-  static const grb = IteColorOrder(2, 0, 1);
-
-  /// Board zones: B, G, R.
-  static const bgr = IteColorOrder(0, 1, 2);
-
-  final int posB, posG, posR;
-
-  /// The three color bytes in wire order.
-  List<int> bytes(int r, int g, int b) {
-    final out = List<int>.filled(3, 0);
-    out[posB] = b;
-    out[posG] = g;
-    out[posR] = r;
-    return out;
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      other is IteColorOrder &&
-      other.posB == posB &&
-      other.posG == posG &&
-      other.posR == posR;
-
-  @override
-  int get hashCode => Object.hash(posB, posG, posR);
-
-  @override
-  String toString() => 'IteColorOrder(B@$posB G@$posG R@$posR)';
-}
-
-/// `CC 60` calibration (ITE §1.3): CalStrip3, 0, 1, 2, ChipId, CalStrip4.
-class IteCalibration {
-  const IteCalibration({
-    required this.strip3,
-    required this.strip0,
-    required this.strip1,
-    required this.strip2,
-    required this.chipId,
-    required this.strip4,
-  });
-
-  final int strip3, strip0, strip1, strip2, chipId, strip4;
-}
-
-/// Part of the `CC 60` response (`IT8297_Info`, ITE §1.2).
-class IteInfo {
-  const IteInfo({
-    required this.firmware,
-    required this.description,
-    this.calibration,
-  });
-
-  /// `4.0.23.0`: bytes 4..7.
-  final String firmware;
-
-  /// `IT5701-GIGABYTE V4.0.23.0`: ASCII of bytes 12..39.
-  final String description;
-
-  /// `null` if the response came back too short.
-  final IteCalibration? calibration;
-
-  /// D_LED1 color order (CalStrip0); GRB without calibration.
-  IteColorOrder get stripOrder => calibration == null
-      ? IteColorOrder.grb
-      : IteColorOrder.fromCalStrip(calibration!.strip0, IteColorOrder.grb);
-
-  /// Board zone color order (CalStrip3); BGR without calibration.
-  IteColorOrder get zoneOrder => calibration == null
-      ? IteColorOrder.bgr
-      : IteColorOrder.fromCalStrip(calibration!.strip3, IteColorOrder.bgr);
-}
 
 IteInfo? parseIteInfo(List<int> table) {
   if (table.length < 40 || table[0] != iteReportId) return null;

@@ -1,5 +1,6 @@
 import '../../../core/persistence/config_store.dart';
 import '../domain/preferences.dart';
+import '../domain/preferences_repository.dart';
 import 'preferences_codec.dart';
 
 /// Stores preferences in the `preferences` section of config.json.

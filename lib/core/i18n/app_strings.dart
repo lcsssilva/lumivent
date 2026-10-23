@@ -10,6 +10,8 @@ import 'catalogs/settings_strings.dart';
 import 'catalogs/shell_strings.dart';
 import 'catalogs/system_strings.dart';
 import 'ui_language.dart';
+import 'en_strings.dart';
+import 'pt_strings.dart';
 
 /// Typed, compile-time-checked UI catalog.
 ///
@@ -63,62 +65,4 @@ abstract class AppStrings {
     UiLanguage.en => en,
     UiLanguage.pt => pt,
   };
-}
-
-class EnStrings extends AppStrings {
-  const EnStrings();
-
-  @override
-  UiLanguage get language => UiLanguage.en;
-  @override
-  CommonStrings get common => const CommonStringsEn();
-  @override
-  ShellStrings get shell => const ShellStringsEn();
-  @override
-  SettingsStrings get settings => const SettingsStringsEn();
-  @override
-  DevicesStrings get devices => const DevicesStringsEn();
-  @override
-  MonitoringStrings get monitoring => const MonitoringStringsEn();
-  @override
-  LightingStrings get lighting => const LightingStringsEn();
-  @override
-  FansStrings get fans => const FansStringsEn();
-  @override
-  ExploreStrings get explore => const ExploreStringsEn();
-  @override
-  SystemStrings get system => const SystemStringsEn();
-  @override
-  String get decimalSeparator => '.';
-  @override
-  String get groupingSeparator => ',';
-}
-
-class PtStrings extends AppStrings {
-  const PtStrings();
-
-  @override
-  UiLanguage get language => UiLanguage.pt;
-  @override
-  CommonStrings get common => const CommonStringsPt();
-  @override
-  ShellStrings get shell => const ShellStringsPt();
-  @override
-  SettingsStrings get settings => const SettingsStringsPt();
-  @override
-  DevicesStrings get devices => const DevicesStringsPt();
-  @override
-  MonitoringStrings get monitoring => const MonitoringStringsPt();
-  @override
-  LightingStrings get lighting => const LightingStringsPt();
-  @override
-  FansStrings get fans => const FansStringsPt();
-  @override
-  ExploreStrings get explore => const ExploreStringsPt();
-  @override
-  SystemStrings get system => const SystemStringsPt();
-  @override
-  String get decimalSeparator => ',';
-  @override
-  String get groupingSeparator => '.';
 }

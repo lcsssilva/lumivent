@@ -18,8 +18,10 @@
 // controller (0x13 is blocked): a power cycle restores the factory effect.
 import 'dart:io';
 
-import 'package:lumivent/features/devices/infrastructure/drivers/gpu_gigabyte/controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/gpu_gigabyte/gpu_exception.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/gpu_gigabyte/gpu_controller.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/gpu_gigabyte/protocol.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/gpu_gigabyte/gpu_rgb.dart';
 
 GpuRgb rgb(String s) {
   final v = s.split(',').map(int.parse).toList();

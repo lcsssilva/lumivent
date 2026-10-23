@@ -1,4 +1,4 @@
-import 'device.dart';
+import 'device_snapshot.dart';
 
 /// Detection port. The real implementation reads hardware (infrastructure);
 /// tests use a fake one.

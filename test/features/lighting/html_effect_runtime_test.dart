@@ -9,7 +9,9 @@ import 'package:lumivent/features/lighting/domain/light_device.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
 import 'package:lumivent/features/lighting/domain/rgb.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_connection.dart';
-import 'package:lumivent/features/lighting/infrastructure/html_effects/runtime.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_script_exception.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/isolated_html_effect_runtime.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/html_effect_runtime_factory.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/shared_effect_worker.dart';
 
 /// `flutter test` only has the native QuickJS library when the Linux bundle was

@@ -4,83 +4,26 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
-import 'package:lumivent/core/platform/hidapi_ffi.dart' show HidException;
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/alv2/hub_worker.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/controller.dart';
-import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/controller.dart';
+import 'package:lumivent/core/platform/hid_exception.dart' show HidException;
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_transport.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/alv2/alv2_hub_proxy.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_transport.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_controller.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/fury_bus.dart';
 import 'package:lumivent/features/lighting/infrastructure/device_light_outputs.dart';
-import 'package:lumivent/features/lighting/infrastructure/light_io_worker.dart';
+import 'package:lumivent/features/lighting/infrastructure/light_io_core.dart';
+import 'package:lumivent/features/lighting/infrastructure/local_light_io.dart';
 import 'package:lumivent/features/lighting/lighting.dart';
 
-import '../../fakes.dart';
+import '../../fake_engine.dart';
 
-class _HubTransport implements Alv2Transport {
-  final writes = <List<int>>[];
-
-  /// Report length passed to `write` / `sendFeature`, parallel to [writes].
-  final lengths = <int>[];
-  bool failNext = false;
-  void _log(List<int> data, int length) {
-    if (failNext) {
-      failNext = false;
-      throw HidException('hub failure');
-    }
-    writes.add(List.of(data));
-    lengths.add(length);
-  }
-
-  @override
-  void sendFeature(List<int> data, int length) => _log(data, length);
-  @override
-  void write(List<int> data, int length) => _log(data, length);
-  @override
-  Uint8List getInput(int reportId, int length) => Uint8List(length);
-  @override
-  void close() {}
-}
-
-class _IteTransport implements IteTransport {
-  final sent = <List<int>>[];
-  bool failNext = false;
-  @override
-  void sendFeature(List<int> data, int length) {
-    if (failNext) {
-      failNext = false;
-      throw HidException('ITE failure');
-    }
-    sent.add(List.of(data));
-  }
-
-  @override
-  Uint8List getFeature(int reportId, int length) => Uint8List(64);
-  @override
-  void close() {}
-}
-
-class _FuryBus implements FuryBus {
-  final writes = <(int, int, int)>[];
-  int opens = 0;
-
-  /// Guard value read from [ddAddress] (all addresses when null).
-  int dd = 0;
-  int? ddAddress;
-  static const _id = [0x46, 0x55, 0x52, 0x59];
-  @override
-  int readByte(int addr, int reg) =>
-      reg == 0xDD && (ddAddress == null || ddAddress == addr) ? dd : 0;
-  @override
-  int readWord(int addr, int reg) => (_id[reg - 1] << 8) | 0x34;
-  @override
-  void writeByte(int addr, int reg, int value) =>
-      writes.add((addr, reg, value));
-  @override
-  void quick(int addr) {}
-  @override
-  void close() {}
-}
+part 'lighting_hub_transport.dart';
+part 'lighting_ite_transport.dart';
+part 'lighting_fury_bus.dart';
 
 List<int> hex(String s) => [
   for (final b in s.split(' ')) int.parse(b, radix: 16),
@@ -88,15 +31,15 @@ List<int> hex(String s) => [
 
 void main() {
   group('DeviceLightOutputs over fake drivers', () {
-    late _HubTransport hubTr;
-    late _IteTransport ite;
-    late _FuryBus fury;
+    late _LightingHubTransport hubTr;
+    late _LightingIteTransport ite;
+    late _LightingFuryBus fury;
     late DeviceLightOutputs out;
 
     setUp(() {
-      hubTr = _HubTransport();
-      ite = _IteTransport();
-      fury = _FuryBus();
+      hubTr = _LightingHubTransport();
+      ite = _LightingIteTransport();
+      fury = _LightingFuryBus();
       out = DeviceLightOutputs(
         Alv2HubProxy.local(
           Alv2Hub.withTransport(hubTr, delay: (_) async {}, sleeper: (_) {}),
@@ -421,13 +364,13 @@ void main() {
     });
 
     test('guarded RAM address is reported and never written', () async {
-      final bus = _FuryBus()
+      final bus = _LightingFuryBus()
         ..dd = 0x72
         ..ddAddress = 0x61;
       final guarded = DeviceLightOutputs(
         Alv2HubProxy.local(
           Alv2Hub.withTransport(
-            _HubTransport(),
+            _LightingHubTransport(),
             delay: (_) async {},
             sleeper: (_) {},
           ),
@@ -461,7 +404,7 @@ void main() {
       final failing = DeviceLightOutputs(
         Alv2HubProxy.local(
           Alv2Hub.withTransport(
-            _HubTransport()..failNext = true,
+            _LightingHubTransport()..failNext = true,
             delay: (_) async {},
             sleeper: (_) {},
           ),
@@ -544,7 +487,7 @@ void main() {
     expect(engine.sent.whereType<SetLightingConfig>(), hasLength(1));
     expect(engine.sent.whereType<IdentifyFanGroup>().single.group, 2);
     await Future<void>.delayed(
-      LightingController.saveDelay + const Duration(milliseconds: 100),
+      LightingNotifier.saveDelay + const Duration(milliseconds: 100),
     );
     await store.flush();
     expect(store.section('lighting')['brightness'], 0.4);
@@ -569,7 +512,7 @@ void main() {
     // change made after savePending.
     await store.saveSection('lighting', {'brightness': 0.9});
     await Future<void>.delayed(
-      LightingController.saveDelay + const Duration(milliseconds: 100),
+      LightingNotifier.saveDelay + const Duration(milliseconds: 100),
     );
     await store.flush();
     expect(store.section('lighting')['brightness'], 0.9);

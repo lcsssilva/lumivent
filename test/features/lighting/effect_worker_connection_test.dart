@@ -8,6 +8,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_connection.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_worker_protocol.dart';
 import 'package:lumivent/features/lighting/infrastructure/html_effects/quickjs_effect.dart';
+import 'package:lumivent/features/lighting/infrastructure/html_effects/effect_script_exception.dart';
+
+part 'fake_stopwatch.dart';
 
 /// `flutter test` only has the native QuickJS library when the Linux bundle was
 /// built and `LD_LIBRARY_PATH` points at it (same requirement as the runtime
@@ -264,33 +267,4 @@ ctx.fillStyle = "red";
       expect(await result, hungError);
     });
   });
-}
-
-class _FakeStopwatch implements Stopwatch {
-  @override
-  Duration elapsed = Duration.zero;
-
-  @override
-  void start() {}
-
-  @override
-  void stop() {}
-
-  @override
-  void reset() => elapsed = Duration.zero;
-
-  @override
-  int get elapsedMicroseconds => elapsed.inMicroseconds;
-
-  @override
-  int get elapsedMilliseconds => elapsed.inMilliseconds;
-
-  @override
-  int get elapsedTicks => elapsed.inMicroseconds;
-
-  @override
-  int get frequency => 1000000;
-
-  @override
-  bool get isRunning => true;
 }

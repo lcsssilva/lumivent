@@ -1,4 +1,4 @@
-import 'lighting_messages.dart';
+import 'light_output_state.dart';
 
 /// Estimates each output's send latency and the phase lead used for composing.
 class LightingLatencyModel {

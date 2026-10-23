@@ -1,9 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/platform/smbus_ffi.dart';
+import 'package:lumivent/core/platform/smbus.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/protocol.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/protocol.dart';
+import 'package:lumivent/features/devices/infrastructure/drivers/ite5702/ite_forbidden_command.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/kingston_fury/protocol.dart';
 import 'package:lumivent/features/devices/infrastructure/process_scan.dart';
 

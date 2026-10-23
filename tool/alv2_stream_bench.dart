@@ -21,7 +21,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:lumivent/core/platform/hidapi_ffi.dart';
+import 'package:lumivent/core/platform/hid_api.dart';
 import 'package:lumivent/features/devices/infrastructure/drivers/alv2/protocol.dart';
 
 List<int> hue(double h) {

@@ -9,9 +9,10 @@ import 'package:lumivent/app/we_app.dart';
 import 'package:lumivent/app/bootstrap_failure_app.dart';
 import 'package:lumivent/app/desktop/desktop_actions.dart';
 import 'package:lumivent/app/navigation/app_route.dart';
-import 'package:lumivent/app/shell/top_bar.dart';
+import 'package:lumivent/app/navigation/route_notifier.dart';
+import 'package:lumivent/app/shell/widgets/top_bar.dart';
 import 'package:lumivent/app/ui_language_binding.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/i18n/app_strings.dart';
 import 'package:lumivent/core/i18n/strings_provider.dart';
 import 'package:lumivent/core/persistence/config_store.dart';
@@ -22,37 +23,10 @@ import 'package:lumivent/features/preferences/infrastructure/preferences_codec.d
 import 'package:lumivent/features/preferences/preferences.dart';
 import 'package:lumivent/features/system/system.dart';
 
-import '../fakes.dart';
-
-class FakeDesktop implements DesktopActions {
-  @override
-  bool get trayAvailable => true;
-
-  @override
-  Future<void> quit() async {}
-}
-
-class FakeAutostart implements AutostartService {
-  bool enabled = false;
-
-  @override
-  String get location => '/home/u/.config/systemd/user/lumivent.service';
-
-  @override
-  Future<AutostartState> status() async =>
-      AutostartState(enabled: enabled, stale: false);
-
-  @override
-  Future<void> enable() async => enabled = true;
-
-  @override
-  Future<void> disable() async => enabled = false;
-}
-
-class NoDiagnostics implements EnvironmentDiagnostics {
-  @override
-  List<DiagnosticCheck> run() => const [];
-}
+import '../fake_engine.dart';
+import 'fake_desktop.dart';
+import 'fake_autostart.dart';
+import 'no_diagnostics.dart';
 
 final _snapshot = DeviceSnapshot(
   devices: const [
@@ -150,7 +124,7 @@ void main() {
 
     await tester.tap(find.text('Fans'));
     await tester.pumpAndSettle();
-    expect(find.byType(FansPage), findsOneWidget);
+    expect(find.byType(FansView), findsOneWidget);
 
     await tester.tap(find.text('Configurações').first);
     await tester.pumpAndSettle();

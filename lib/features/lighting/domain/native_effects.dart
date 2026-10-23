@@ -8,123 +8,14 @@ import 'dart:math' as math;
 import 'hardware_timing.dart';
 import 'led_layout.dart';
 import 'rgb.dart';
+import 'effect_values.dart';
+import 'native_effect.dart';
+
+part 'effect_param.dart';
 
 enum EffectParamType { number, color, boolean, combobox, hue }
 
-/// Effect parameter declaration.
-class EffectParam {
-  const EffectParam.number(
-    this.id,
-    this.label, {
-    required double this.min,
-    required double this.max,
-    required double this.defaultValue,
-  }) : type = EffectParamType.number,
-       options = const [];
-
-  const EffectParam.hue(this.id, this.label, {double this.defaultValue = 0})
-    : type = EffectParamType.hue,
-      min = 0,
-      max = 360,
-      options = const [];
-
-  /// [defaultValue] in `#RRGGBB`.
-  const EffectParam.color(
-    this.id,
-    this.label, {
-    required String this.defaultValue,
-  }) : type = EffectParamType.color,
-       min = null,
-       max = null,
-       options = const [];
-
-  const EffectParam.boolean(
-    this.id,
-    this.label, {
-    bool this.defaultValue = false,
-  }) : type = EffectParamType.boolean,
-       min = null,
-       max = null,
-       options = const [];
-
-  const EffectParam.combobox(
-    this.id,
-    this.label, {
-    required this.options,
-    required String this.defaultValue,
-  }) : type = EffectParamType.combobox,
-       min = null,
-       max = null;
-
-  final String id;
-  final String label;
-  final EffectParamType type;
-  final double? min, max;
-
-  /// `double` (number/hue), `String` `#RRGGBB` (color), `bool` or `String`.
-  final Object defaultValue;
-  final List<String> options;
-
-  /// Valid value for [raw]; default if missing, wrongly typed, or (for numbers)
-  /// non-finite. Numbers are clamped to min..max.
-  Object resolve(Object? raw) {
-    switch (type) {
-      case EffectParamType.number:
-      case EffectParamType.hue:
-        final n = raw is num
-            ? raw.toDouble()
-            : (raw is String ? double.tryParse(raw) : null);
-        if (n == null || !n.isFinite) return defaultValue;
-        return n.clamp(min!, max!);
-      case EffectParamType.color:
-        final c = raw is String ? Rgb.parse(raw) : null;
-        return (c ?? Rgb.parse(defaultValue as String)!).toHex();
-      case EffectParamType.boolean:
-        if (raw is bool) return raw;
-        if (raw is num) return raw != 0;
-        return defaultValue;
-      case EffectParamType.combobox:
-        final value = raw is String ? (_legacyOptions[raw] ?? raw) : null;
-        return value != null && options.contains(value) ? value : defaultValue;
-    }
-  }
-}
-
-/// Validated parameter values for an effect.
-class EffectValues {
-  EffectValues(List<EffectParam> params, [Map<String, Object?> raw = const {}])
-    : _v = {
-        for (final p in params)
-          p.id: p.type == EffectParamType.color
-              ? Rgb.parse(p.resolve(raw[p.id]) as String)!
-              : p.resolve(raw[p.id]),
-      };
-
-  final Map<String, Object> _v;
-
-  double number(String id) => _v[id] as double;
-  Rgb color(String id) => _v[id] as Rgb;
-  bool boolean(String id) => _v[id] as bool;
-  String option(String id) => _v[id] as String;
-}
-
 typedef EffectFn = Rgb Function(double x, double y, double t, EffectValues v);
-
-/// Native effect: [colorAt] returns the LED color in (x, y) of the canvas
-/// (0..320 × 0..200) at time [t] (seconds).
-class NativeEffect {
-  const NativeEffect(this.id, this.name, this.params, this._fn);
-
-  final String id;
-  final String name;
-  final List<EffectParam> params;
-  final EffectFn _fn;
-
-  Rgb colorAt(double x, double y, double t, EffectValues v) => _fn(x, y, t, v);
-
-  EffectValues valuesFrom(Map<String, Object?> raw) =>
-      EffectValues(params, raw);
-}
 
 const _directionOptions = ['Left', 'Right', 'Up', 'Down'];
 
@@ -243,7 +134,7 @@ final nativeEffects = List<NativeEffect>.unmodifiable([
 const defaultEffectId = 'rainbowWave';
 
 /// Id of the Breathing effect, whose canvas follows the firmware clock when
-/// the fans run [breathingFirmwareMode] (see `hardware_equivalents.dart`).
+/// the fans run [breathingFirmwareMode] (see `hardware_equivalent.dart`).
 const breathingEffectId = 'breathing';
 
 NativeEffect? nativeEffectById(String id) =>

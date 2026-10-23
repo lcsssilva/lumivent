@@ -7,10 +7,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import '../domain/effect_compat.dart';
+import '../domain/effect_compatibility.dart';
 import '../domain/effect_library.dart';
 import '../domain/effect_meta.dart';
 import '../domain/installed_effect.dart';
+import '../domain/effect_metadata.dart';
 
 /// `$XDG_DATA_HOME/lumivent/effects`, or `~/.local/share/lumivent/effects`.
 Directory defaultEffectsDir([Map<String, String>? env]) {

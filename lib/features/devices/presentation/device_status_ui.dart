@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/i18n/app_strings.dart';
-import '../../../core/ui/theme.dart';
+import '../../../core/ui/we_colors.dart';
 import '../domain/device.dart';
+import '../domain/device_info.dart';
 
 extension DeviceStatusUi on DeviceStatus {
   String label(AppStrings strings) {

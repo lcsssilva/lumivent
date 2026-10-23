@@ -5,11 +5,14 @@ import '../../lighting/lighting.dart'
     show
         LightDeviceId,
         LightOutputState,
-        LightOutputStatus,
         LightingStatus,
         OutputFamily,
         lightingStatusProvider;
 import '../domain/diagnostics.dart';
+import '../domain/loop_sample.dart';
+import '../domain/lighting_loop_data.dart';
+import '../domain/diagnostic_check.dart';
+import 'hub_argb_sync_data.dart';
 
 /// Checks of what the running engine did to the hardware (plan §4.2, items
 /// 3 and 7): the hub state Windows tools may leave behind, and the real frame
@@ -58,13 +61,6 @@ List<DiagnosticCheck> runtimeChecks(FansStatus? fans, LightingStatus? light) {
         ]),
       ),
   ];
-}
-
-/// Why the hub ARGB sync check failed: the state of the first AL V2 group
-/// ([status] is null when the engine reported nothing for it).
-class HubArgbSyncData extends DiagnosticData {
-  const HubArgbSyncData(this.status);
-  final LightOutputStatus? status;
 }
 
 final runtimeChecksProvider = Provider<List<DiagnosticCheck>>(

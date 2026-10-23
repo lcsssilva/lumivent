@@ -3,63 +3,29 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lumivent/core/engine/engine_host.dart';
+import 'package:lumivent/core/engine/isolate_engine.dart';
 import 'package:lumivent/core/ui/theme.dart';
-import 'package:lumivent/features/lighting/application/installed_effects_controller.dart';
-import 'package:lumivent/features/lighting/application/lighting_controller.dart';
-import 'package:lumivent/features/lighting/domain/effect_compat.dart';
+import 'package:lumivent/features/lighting/application/installed_effects_notifier.dart';
+import 'package:lumivent/features/lighting/application/lighting_notifier.dart';
+import 'package:lumivent/features/lighting/domain/effect_compatibility.dart';
 import 'package:lumivent/features/lighting/domain/effect_library.dart';
-import 'package:lumivent/features/lighting/domain/effect_meta.dart';
+import 'package:lumivent/features/lighting/domain/effect_property.dart';
+import 'package:lumivent/features/lighting/domain/effect_source.dart';
 import 'package:lumivent/features/lighting/domain/installed_effect.dart';
 import 'package:lumivent/features/lighting/domain/lighting_config.dart';
-import 'package:lumivent/features/lighting/presentation/effect_panel.dart';
-import 'package:lumivent/features/preferences/application/preferences_controller.dart';
+import 'package:lumivent/features/lighting/domain/lighting_config_repository.dart';
+import 'package:lumivent/features/lighting/presentation/widgets/effect_panel.dart';
+import 'package:lumivent/features/preferences/application/preferences_notifier.dart';
 import 'package:lumivent/features/preferences/domain/preferences.dart';
+import 'package:lumivent/features/preferences/domain/preferences_repository.dart';
 
-import '../../fakes.dart';
+import '../../fake_engine.dart';
 
 import '../../support/app_harness.dart';
 
-class _Library implements EffectLibrary {
-  _Library(this.effect);
-  final InstalledEffect effect;
-
-  @override
-  Future<List<InstalledEffect>> list() async => [effect];
-
-  @override
-  Future<InstalledEffect?> find(String id) async => effect;
-
-  @override
-  Future<String> readHtml(String id) async => '<html></html>';
-
-  @override
-  Future<void> remove(String id) async {}
-
-  @override
-  Future<void> saveThumbnail(String id, Uint8List png) async {}
-
-  @override
-  Future<Uint8List?> thumbnail(String id) async => null;
-}
-
-class _Prefs implements PreferencesRepository {
-  @override
-  Preferences load() => const Preferences();
-
-  @override
-  Future<void> save(Preferences preferences) async {}
-}
-
-class _Repo implements LightingConfigRepository {
-  LightingConfig config = LightingConfig(effectId: 'html:test');
-
-  @override
-  LightingConfig load() => config;
-
-  @override
-  Future<void> save(LightingConfig c) async => config = c;
-}
+part 'panel_effect_library.dart';
+part 'panel_preferences_repository.dart';
+part 'panel_lighting_repository.dart';
 
 void main() {
   testWidgets(
@@ -119,13 +85,15 @@ void main() {
         ),
         compatibility: const EffectCompatibility(EffectSupport.compatible, []),
       );
-      final repo = _Repo();
+      final repo = _PanelLightingRepository();
       final container = ProviderContainer(
         overrides: [
           engineProvider.overrideWithValue(FakeEngine()),
           lightingRepositoryProvider.overrideWithValue(repo),
-          preferencesRepositoryProvider.overrideWithValue(_Prefs()),
-          effectLibraryProvider.overrideWithValue(_Library(effect)),
+          preferencesRepositoryProvider.overrideWithValue(
+            _PanelPreferencesRepository(),
+          ),
+          effectLibraryProvider.overrideWithValue(_PanelEffectLibrary(effect)),
         ],
       );
       addTearDown(container.dispose);
