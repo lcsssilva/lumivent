@@ -9,7 +9,7 @@ import 'package:lumivent/features/monitoring/monitoring.dart';
 import 'smart_fixture.dart';
 
 void main() {
-  test('log 02h → campos do SMART', () {
+  test('log 02h → SMART fields', () {
     final s = parseNvmeSmartLog(smartLogBytes())!;
     expect(s.criticalWarning, 0);
     expect(s.compositeKelvin, 314);
