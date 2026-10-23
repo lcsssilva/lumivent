@@ -92,6 +92,37 @@ void main() {
     await store.flush();
   });
 
+  test('a failed import restores the previous sections in memory', () async {
+    final blocked = File('${tmp.path}/blocked')
+      ..writeAsStringSync('not a directory');
+    final store = await ConfigStore.open(Directory(blocked.path));
+    await expectLater(
+      store.saveSection('lighting', {'argbOff': false}),
+      throwsA(isA<ConfigWriteFailure>()),
+    );
+
+    await expectLater(
+      store.replaceSections({
+        'lighting': {'argbOff': true},
+        'fans': {'curve': 'silent'},
+      }, backupSuffix: 'before-import'),
+      throwsA(isA<ConfigWriteFailure>()),
+    );
+
+    expect(store.section('lighting'), {'argbOff': false});
+    expect(store.section('fans'), isEmpty);
+
+    // The next successful section save does not carry the failed import.
+    blocked.deleteSync();
+    Directory(blocked.path).createSync();
+    await store.saveSection('preferences', {'effectsFps': 30});
+    expect(jsonDecode(store.file.readAsStringSync()), {
+      'version': ConfigStore.schemaVersion,
+      'lighting': {'argbOff': false},
+      'preferences': {'effectsFps': 30},
+    });
+  });
+
   test('consecutive failures are each notified as a new event', () async {
     final blocked = File('${tmp.path}/blocked')
       ..writeAsStringSync('not a directory');

@@ -10,10 +10,9 @@ import 'rgb.dart';
 
 /// Stateful composition helpers owned by one lighting engine.
 ///
-/// The instance caches validated effect parameters and generated fan layouts;
-/// composition results still depend only on the input config and time.
+/// The instance caches validated effect parameters; composition results
+/// still depend only on the input config and time.
 class FrameComposer {
-  final _layouts = LedLayoutCache();
   String? _cachedId;
   Map<String, Object?>? _cachedRaw;
   bool _cachedFixedSpeed = false;
@@ -48,9 +47,6 @@ class FrameComposer {
     pixels: pixels,
     composer: this,
   );
-
-  LedLayout _layoutFor(LightDeviceId id, int fanQuantity) =>
-      _layouts.forDevice(id, fanQuantity: fanQuantity);
 
   EffectValues _valuesOf(LightingConfig config, NativeEffect effect) {
     final raw = config.effectValues[effect.id] ?? const <String, Object?>{};
@@ -104,9 +100,7 @@ Map<LightDeviceId, List<Rgb>> composeFrame(
     final d = c.device(id);
     if (d.mode == LightMode.hardware) continue;
 
-    final layout =
-        composer?._layoutFor(id, c.fansOf(id)) ??
-        ledLayoutFor(id, fanQuantity: c.fansOf(id));
+    final layout = ledLayoutFor(id, fanQuantity: c.fansOf(id));
     if (layout.length == 0) continue;
     final n = layout.length;
     final off = !d.enabled || c.argbOff;

@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../core/i18n/app_strings.dart';
 import '../core/i18n/ui_language.dart';
@@ -11,11 +13,21 @@ AppStrings startupFailureStrings(Locale systemLocale) => AppStrings.of(
   systemLocale.languageCode == 'pt' ? UiLanguage.pt : UiLanguage.en,
 );
 
+/// Shows and focuses the window. Autostart (`--minimized`) keeps the window
+/// hidden and startup cleanup removes the tray icon, so without this the
+/// failure screen would never be seen.
+Future<void> revealStartupFailureWindow() async {
+  await windowManager.ensureInitialized();
+  await windowManager.show();
+  await windowManager.focus();
+}
+
 class BootstrapFailureApp extends StatefulWidget {
   const BootstrapFailureApp({
     required this.error,
     required this.configDir,
     this.strings = AppStrings.en,
+    this.revealWindow,
     super.key,
   });
 
@@ -23,12 +35,36 @@ class BootstrapFailureApp extends StatefulWidget {
   final Directory configDir;
   final AppStrings strings;
 
+  /// Called after the first frame so the failure is visible even when the
+  /// app was started hidden ([revealStartupFailureWindow] in the app).
+  final Future<void> Function()? revealWindow;
+
   @override
   State<BootstrapFailureApp> createState() => _BootstrapFailureAppState();
 }
 
 class _BootstrapFailureAppState extends State<BootstrapFailureApp> {
   String? _openError;
+
+  @override
+  void initState() {
+    super.initState();
+    final reveal = widget.revealWindow;
+    if (reveal != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => unawaited(_reveal(reveal)),
+      );
+    }
+  }
+
+  Future<void> _reveal(Future<void> Function() reveal) async {
+    try {
+      await reveal();
+    } on Object catch (error, stack) {
+      stderr.writeln('Lumivent could not show the failure window: $error');
+      stderr.writeln(stack);
+    }
+  }
 
   Future<void> _openConfigFolder() async {
     String? error;

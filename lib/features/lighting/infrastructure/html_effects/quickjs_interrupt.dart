@@ -15,10 +15,12 @@
 // The runtime pointer comes from flutter_js's `runtimeOpaques` map, which is
 // not a documented API: pubspec pins flutter_js to 0.8.7 because of it.
 
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_js/flutter_js.dart';
 import 'package:flutter_js/quickjs/ffi.dart' show runtimeOpaques;
 
@@ -71,12 +73,9 @@ void limitWorkerAddressSpace() {
   if (!Platform.isLinux) {
     throw UnsupportedError('the effect worker requires Linux');
   }
-  final statm = File('/proc/self/statm').readAsStringSync().trim().split(' ');
-  final pages = int.tryParse(statm.first);
-  if (pages == null) {
-    throw const FormatException('could not read worker address space');
-  }
-  final currentBytes = pages * 4096;
+  final currentBytes = virtualMemoryBytes(
+    File('/proc/self/status').readAsStringSync(),
+  );
   final limit = calloc<_RLimit>();
   try {
     final libc = DynamicLibrary.process();
@@ -105,6 +104,26 @@ void limitWorkerAddressSpace() {
   } finally {
     calloc.free(limit);
   }
+}
+
+/// Current address-space size from the text of `/proc/<pid>/status`.
+///
+/// `VmSize` is reported in kB, so the result does not depend on the kernel
+/// page size (`/proc/self/statm` counts pages, 4, 16 or 64 KiB each).
+@visibleForTesting
+int virtualMemoryBytes(String procStatus) {
+  for (final line in const LineSplitter().convert(procStatus)) {
+    if (!line.startsWith('VmSize:')) continue;
+    final fields = line
+        .substring('VmSize:'.length)
+        .trim()
+        .split(RegExp(r'\s+'));
+    final kilobytes = int.tryParse(fields.first);
+    if (fields.length == 2 && fields.last == 'kB' && kilobytes != null) {
+      return kilobytes * 1024;
+    }
+  }
+  throw const FormatException('could not read worker address space');
 }
 
 int _onInterrupt(Pointer<Void> rt, Pointer<Void> opaque) =>

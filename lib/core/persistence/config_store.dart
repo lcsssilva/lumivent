@@ -110,17 +110,42 @@ class ConfigStore {
   /// Replaces every section in [sections] in a single write (import). With
   /// [backupSuffix], the current file is first copied to
   /// `config.json.<backupSuffix>`.
+  ///
+  /// Unlike [saveSection], a failed write restores the previous sections in
+  /// memory: no module applied the import, so keeping it would let the next
+  /// section save write it to disk unannounced.
   Future<void> replaceSections(JsonMap sections, {String? backupSuffix}) {
+    final previous = {
+      for (final key in sections.keys)
+        if (_data.containsKey(key)) key: _data[key],
+    };
     for (final MapEntry(:key, :value) in sections.entries) {
       _data[key] = value;
     }
     final snapshot = {..._data, 'version': schemaVersion};
     return _enqueue('configuration', () async {
-      if (backupSuffix != null && await file.exists()) {
-        await file.copy('${file.path}.$backupSuffix');
+      try {
+        if (backupSuffix != null && await file.exists()) {
+          await file.copy('${file.path}.$backupSuffix');
+        }
+        await _write(snapshot);
+      } on Object {
+        _restoreSections(sections, previous);
+        rethrow;
       }
-      await _write(snapshot);
     });
+  }
+
+  /// Puts back [previous] for each of [sections] that no later save replaced.
+  void _restoreSections(JsonMap sections, JsonMap previous) {
+    for (final MapEntry(:key, :value) in sections.entries) {
+      if (!identical(_data[key], value)) continue;
+      if (previous.containsKey(key)) {
+        _data[key] = previous[key];
+      } else {
+        _data.remove(key);
+      }
+    }
   }
 
   /// Waits for pending writes (used during shutdown) and reports a failure

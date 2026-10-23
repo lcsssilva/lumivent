@@ -35,6 +35,8 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 - README: the number of fans per group is set in Lighting, not in Fans.
 - The GPU "blocked" hint no longer points to a file outside the repository.
+- A configuration import whose write fails is no longer kept in memory, where
+  the next saved setting would have written it to disk without notice.
 
 ## [1.0.0] — 2026-10-21
 

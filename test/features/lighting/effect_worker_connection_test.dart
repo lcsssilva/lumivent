@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
@@ -87,6 +89,55 @@ requestAnimationFrame(function () { while (true) {} });
     timeout: const Timeout(Duration(seconds: 20)),
   );
 
+  test(
+    'a failed reload leaves no effect instead of the disposed one',
+    () async {
+      final connection = await EffectWorkerConnection.spawn();
+      addTearDown(connection.close);
+      final shim = await loadShim();
+      await connection.request(
+        loadRequest(
+          effect(
+            script: '''
+var ctx = document.getElementById('exCanvas').getContext('2d');
+requestAnimationFrame(function draw() {
+  ctx.fillStyle = "red";
+  ctx.fillRect(0, 0, 320, 200);
+  requestAnimationFrame(draw);
+});
+''',
+          ),
+          shim,
+          const {},
+        ),
+        timeout: scriptLoadLimit,
+      );
+      await expectLater(
+        connection.request(
+          loadRequest(
+            effect(script: 'this is not javascript at all'),
+            shim,
+            {},
+          ),
+          timeout: scriptLoadLimit,
+        ),
+        throwsA(isA<EffectScriptException>()),
+      );
+
+      await expectLater(
+        connection.request(frameRequest(0), timeout: scriptHardLimit),
+        throwsA(
+          isA<EffectScriptException>().having(
+            (e) => e.message,
+            'message',
+            contains('no effect'),
+          ),
+        ),
+      );
+    },
+    skip: _skip,
+  );
+
   test('a load error arrives as a script exception, not a crash', () async {
     final connection = await EffectWorkerConnection.spawn();
     addTearDown(connection.close);
@@ -121,6 +172,33 @@ ctx.fillStyle = "red";
       completes,
     );
   }, skip: _skip);
+
+  test('the process transport sends messages issued back to back', () async {
+    final stdin = StreamController<List<int>>();
+    final lines = <String>[];
+    stdin.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen(lines.add);
+    final connection = EffectWorkerConnection.withStdin(IOSink(stdin));
+    addTearDown(connection.close);
+
+    // A runner tick sends the sample points and the frame in the same
+    // synchronous run.
+    connection.send(pointsRequest(null));
+    final frame = connection.request(
+      frameRequest(0),
+      timeout: const Duration(seconds: 5),
+    );
+    connection.handleMessage([1, true, 'done']);
+
+    expect(await frame, 'done');
+    await pumpEventQueue();
+    expect(lines.map(jsonDecode), [
+      [0, ...pointsRequest(null)],
+      [1, ...frameRequest(0)],
+    ]);
+  });
 
   group('request timeout', () {
     const timeout = Duration(milliseconds: 750);

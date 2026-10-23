@@ -48,9 +48,7 @@ class FileEffectImporter implements EffectImporter {
           report.issues.add(ImportIssue(ImportIssueKind.notFound, path: path));
         }
       } on Object catch (e) {
-        report.issues.add(
-          ImportIssue(ImportIssueKind.unknown, path: path, detail: '$e'),
-        );
+        report.issues.add(_issueFor(path, e));
       }
     }
     library.invalidate();
@@ -107,9 +105,7 @@ class FileEffectImporter implements EffectImporter {
           ),
         );
       } on Object catch (e) {
-        report.issues.add(
-          ImportIssue(ImportIssueKind.unknown, path: id, detail: '$e'),
-        );
+        report.issues.add(_issueFor(id, e));
       }
     }
     if (report.total == 0 && report.paidSkipped == 0 && report.issues.isEmpty) {
@@ -266,9 +262,7 @@ class FileEffectImporter implements EffectImporter {
           ),
         );
       } on Object catch (e) {
-        report.issues.add(
-          ImportIssue(ImportIssueKind.unknown, path: f.path, detail: '$e'),
-        );
+        report.issues.add(_issueFor(f.path, e));
       }
     }
     return report;
@@ -285,7 +279,13 @@ class FileEffectImporter implements EffectImporter {
       bytes = await _readBounded(file, _maxZipBytes);
     } on Object catch (e) {
       report.issues.add(
-        ImportIssue(ImportIssueKind.invalidZip, path: file.path, detail: '$e'),
+        e is _TooLarge
+            ? ImportIssue(ImportIssueKind.tooLarge, path: file.path)
+            : ImportIssue(
+                ImportIssueKind.invalidZip,
+                path: file.path,
+                detail: '$e',
+              ),
       );
       return report;
     }
@@ -320,13 +320,7 @@ class FileEffectImporter implements EffectImporter {
       if (entryType == _unixDirectoryType) continue;
       if (!_regularEntryTypes.contains(entryType)) {
         report.issues.add(
-          ImportIssue(
-            ImportIssueKind.unknown,
-            path: name,
-            detail:
-                'Zip entry type is not supported (reported as a symlink '
-                'or non-regular file)',
-          ),
+          ImportIssue(ImportIssueKind.unsupportedZipEntry, path: name),
         );
         continue;
       }
@@ -336,13 +330,7 @@ class FileEffectImporter implements EffectImporter {
         if (size < 0 ||
             size > _maxHtmlBytes ||
             totalHtmlBytes + size > _maxZipHtmlBytes) {
-          report.issues.add(
-            ImportIssue(
-              ImportIssueKind.unknown,
-              path: name,
-              detail: 'HTML entry exceeds the import size limit',
-            ),
-          );
+          report.issues.add(ImportIssue(ImportIssueKind.tooLarge, path: name));
           continue;
         }
         totalHtmlBytes += size;
@@ -358,13 +346,7 @@ class FileEffectImporter implements EffectImporter {
         // library; the declared size is bounded by the check above.
         final content = zipFile.readBytes();
         if (content.length > _maxHtmlBytes) {
-          report.issues.add(
-            ImportIssue(
-              ImportIssueKind.unknown,
-              path: name,
-              detail: 'HTML entry exceeds the import size limit',
-            ),
-          );
+          report.issues.add(ImportIssue(ImportIssueKind.tooLarge, path: name));
           continue;
         }
         final html = utf8.decode(content, allowMalformed: true);
@@ -376,9 +358,7 @@ class FileEffectImporter implements EffectImporter {
           ),
         );
       } on Object catch (e) {
-        report.issues.add(
-          ImportIssue(ImportIssueKind.unknown, path: name, detail: '$e'),
-        );
+        report.issues.add(_issueFor(name, e));
       }
     }
     if (found == 0) {
@@ -430,12 +410,28 @@ class FileEffectImporter implements EffectImporter {
     await for (final chunk in file.openRead()) {
       length += chunk.length;
       if (length > limit) {
-        throw FormatException('File exceeds the $limit-byte import limit');
+        throw _TooLarge(limit);
       }
       bytes.add(chunk);
     }
     return bytes.takeBytes();
   }
+}
+
+/// Issue for an error caught while importing [path]: the size limit has its
+/// own translated message; anything else keeps the technical detail.
+ImportIssue _issueFor(String path, Object error) => error is _TooLarge
+    ? ImportIssue(ImportIssueKind.tooLarge, path: path)
+    : ImportIssue(ImportIssueKind.unknown, path: path, detail: '$error');
+
+/// A file read stopped at the import size [limit].
+class _TooLarge implements Exception {
+  const _TooLarge(this.limit);
+
+  final int limit;
+
+  @override
+  String toString() => 'File exceeds the $limit-byte import limit';
 }
 
 class _CatalogEntry {

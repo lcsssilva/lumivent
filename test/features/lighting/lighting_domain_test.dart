@@ -72,6 +72,11 @@ void main() {
         ledLayoutFor(LightDeviceId.alv2Group1, fanQuantity: 9).length,
         120,
       );
+      expect(
+        ledLayoutFor(LightDeviceId.alv2Group2, fanQuantity: 3),
+        same(ledLayoutFor(LightDeviceId.alv2Group1, fanQuantity: 3)),
+        reason: 'fan layouts are built once, not on every frame',
+      );
       expect(ledLayoutFor(LightDeviceId.chassis).length, 47);
       expect(ledLayoutFor(LightDeviceId.motherboard).length, 3);
       expect(ledLayoutFor(LightDeviceId.ram1).length, 12);
@@ -155,6 +160,14 @@ void main() {
       expect(c.alv2Hardware[1].mode, 'StaticColor');
       expect(c.alv2Hardware[1].colors.first, const Rgb(255, 0, 0));
       expect(c.boardZones.keys, [0x20, 0x22, 0x23]);
+    });
+
+    test('the GPU defaults to its own ColorShift palette', () {
+      expect(const GpuHardwareConfig().colors, GpuHardwareConfig.defaultColors);
+      expect(
+        decodeGpuHardwareConfig(const <String, Object?>{}).colors,
+        GpuHardwareConfig.defaultColors,
+      );
     });
 
     test('JSON round trip', () {

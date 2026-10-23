@@ -35,6 +35,12 @@ enum ImportIssueKind {
   noEffectHtml,
   invalidZip,
   noHtmlInZip,
+
+  /// A file or ZIP entry over the import size limit.
+  tooLarge,
+
+  /// A ZIP entry that is a symlink or another non-regular file.
+  unsupportedZipEntry,
   unknown,
 }
 

@@ -157,7 +157,7 @@ abstract class GpuHardwareConfig with _$GpuHardwareConfig {
 
     /// Single color of effects without a palette.
     @Default(Rgb.white) Rgb color,
-    @Default(_alv2DefaultColors) List<Rgb> colors,
+    @Default(_gpuDefaultColors) List<Rgb> colors,
   }) = _GpuHardwareConfig;
 
   /// Default palette for `ColorShift`; also the fallback for missing entries.

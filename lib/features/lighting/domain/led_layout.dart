@@ -46,27 +46,13 @@ const _outerRadius = 0.42;
 /// Geometry for [id]. For fans, [fanQuantity] (0–6) is the number of fans in the
 /// group, side by side; ignored for other devices.
 LedLayout ledLayoutFor(LightDeviceId id, {int fanQuantity = 0}) {
-  if (id.isFan) return _fanGroupLayout(fanQuantity.clamp(0, maxFansPerGroup));
+  if (id.isFan) return _fanGroupLayouts[fanQuantity.clamp(0, maxFansPerGroup)];
   return switch (id) {
     LightDeviceId.chassis => _chassis,
     LightDeviceId.motherboard => _motherboard,
     LightDeviceId.ram1 || LightDeviceId.ram2 => _ram,
     _ => const LedLayout([], 1),
   };
-}
-
-/// Per-owner cache for the dynamically generated fan group layouts.
-///
-/// Keeping this cache on the lighting engine avoids mutable domain-level
-/// globals while preserving the frame loop's allocation behavior.
-class LedLayoutCache {
-  final _fanLayouts = <int, LedLayout>{};
-
-  LedLayout forDevice(LightDeviceId id, {int fanQuantity = 0}) {
-    if (!id.isFan) return ledLayoutFor(id, fanQuantity: fanQuantity);
-    final quantity = fanQuantity.clamp(0, maxFansPerGroup);
-    return _fanLayouts.putIfAbsent(quantity, () => _fanGroupLayout(quantity));
-  }
 }
 
 /// Number of LEDs for [id] (fans: [fanQuantity] × 20).
@@ -77,6 +63,13 @@ int ledCountFor(LightDeviceId id, {int fanQuantity = 0}) => switch (id) {
   LightDeviceId.ram1 || LightDeviceId.ram2 => ramLedCount,
   _ => 0,
 };
+
+/// Fan group layouts by quantity (0–[maxFansPerGroup]), built once: the
+/// canvas painter, the effect sampler and the frame loop ask for them every
+/// frame.
+final _fanGroupLayouts = List<LedLayout>.unmodifiable([
+  for (var q = 0; q <= maxFansPerGroup; q++) _fanGroupLayout(q),
+]);
 
 /// Fans side by side; each with the inner ring (8) and then the outer (12),
 /// starting at the left (the cable side) and proceeding counterclockwise, as

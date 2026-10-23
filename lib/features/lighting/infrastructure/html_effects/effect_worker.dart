@@ -57,7 +57,10 @@ Future<void> runHtmlEffectWorker() async {
                 args[2] is! Map) {
               throw const FormatException('invalid load request');
             }
+            // Cleared before loading: a failed load must leave no effect,
+            // not the disposed one.
             runtime?.dispose();
+            runtime = null;
             runtime = await HtmlEffectRuntime.load(
               request.html(),
               shim: request.shim(),
@@ -77,14 +80,14 @@ Future<void> runHtmlEffectWorker() async {
             final (frame, colors) = await current.renderSampled(
               request.frameTime(),
             );
-            reply = [
-              base64Encode(frame.rgba),
-              true,
-              current.lastOpCount,
-              current.drainLog(),
-              current.lastScriptTime.inMicroseconds,
-              encodeSampledColors(colors),
-            ];
+            reply = processFrameReply(
+              pixelsOrOps: frame.rgba,
+              simple: true,
+              opCount: current.lastOpCount,
+              logs: current.drainLog(),
+              scriptTime: current.lastScriptTime,
+              colors: encodeSampledColors(colors),
+            );
           case EffectWorkerOperation.property:
             if (request.arguments.isEmpty || request.arguments[0] is! String) {
               throw const FormatException('invalid property request');
@@ -156,7 +159,10 @@ void runHtmlEffectIsolateWorker(SendPort main) {
       Object? reply;
       switch (request.operation) {
         case EffectWorkerOperation.load:
+          // Cleared before loading: a failed load must leave no effect, not
+          // the disposed one.
           runtime?.dispose();
+          runtime = null;
           runtime = QuickJsEffect.load(
             request.html(),
             request.shim(),

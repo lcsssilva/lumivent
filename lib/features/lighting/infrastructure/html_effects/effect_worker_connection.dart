@@ -29,8 +29,17 @@ class EffectWorkerConnection {
     this._receive,
     this._errors,
     this._process,
+    IOSink? stdin,
     Stopwatch Function()? stopwatch,
-  }) : _newStopwatch = stopwatch ?? Stopwatch.new;
+  }) : _stdin = stdin ?? _process?.stdin,
+       _newStopwatch = stopwatch ?? Stopwatch.new {
+    _stdin?.done.then<void>(
+      (_) {},
+      onError: (Object error) => _fail(
+        EffectScriptException('could not send to effect worker: $error'),
+      ),
+    );
+  }
 
   /// Connection over a bare [SendPort], with no worker behind it. Replies are
   /// fed through [handleMessage]. Used by tests to drive the request timers.
@@ -40,6 +49,11 @@ class EffectWorkerConnection {
     Stopwatch Function()? stopwatch,
   }) : this._(send: send, stopwatch: stopwatch);
 
+  /// Connection that writes the line protocol of the child process to [stdin],
+  /// with no process behind it. Used by tests of the process transport.
+  @visibleForTesting
+  EffectWorkerConnection.withStdin(IOSink stdin) : this._(stdin: stdin);
+
   final Stopwatch Function() _newStopwatch;
 
   final Isolate? _isolate;
@@ -47,6 +61,7 @@ class EffectWorkerConnection {
   final ReceivePort? _receive;
   final ReceivePort? _errors;
   final Process? _process;
+  final IOSink? _stdin;
   StreamSubscription<String>? _stdout;
   StreamSubscription<String>? _stderr;
   Completer<void>? _handshake;
@@ -171,19 +186,20 @@ class EffectWorkerConnection {
   }
 
   void _sendMessage(List<Object?> message) {
-    final process = _process;
-    if (process == null) {
+    final stdin = _stdin;
+    if (stdin == null) {
       _send!.send(message);
       return;
     }
-    unawaited(() async {
-      try {
-        process.stdin.writeln(jsonEncode(message));
-        await process.stdin.flush();
-      } on Object catch (error) {
-        _fail(EffectScriptException('could not send to effect worker: $error'));
-      }
-    }());
+    // No flush per message: a write made while a flush is pending throws
+    // (the sink is bound), and a frame sends several messages back to back.
+    // The sink delivers lines in order; a pipe failure completes `done` with
+    // an error, which fails the connection.
+    try {
+      stdin.writeln(jsonEncode(message));
+    } on Object catch (error) {
+      _fail(EffectScriptException('could not send to effect worker: $error'));
+    }
   }
 
   void _onProcessLine(String line) {

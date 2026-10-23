@@ -785,7 +785,7 @@ return $default(_that.effect,_that.speed,_that.brightness,_that.color,_that.colo
 
 
 class _GpuHardwareConfig implements GpuHardwareConfig {
-  const _GpuHardwareConfig({this.effect = GpuEffect.pulse, this.speed = 5, this.brightness = 10, this.color = Rgb.white,  List<Rgb> colors = _alv2DefaultColors}): _colors = colors;
+  const _GpuHardwareConfig({this.effect = GpuEffect.pulse, this.speed = 5, this.brightness = 10, this.color = Rgb.white,  List<Rgb> colors = _gpuDefaultColors}): _colors = colors;
   
 
 @override@JsonKey() final  GpuEffect effect;

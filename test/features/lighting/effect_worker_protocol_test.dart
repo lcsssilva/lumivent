@@ -132,6 +132,28 @@ void main() {
     expect(parsed.colors, isNull);
   });
 
+  test('frame reply of the process transport survives a JSON line', () {
+    final reply = processFrameReply(
+      pixelsOrOps: Uint8List.fromList(const [1, 2, 3, 4]),
+      simple: true,
+      opCount: 7,
+      logs: const ['first'],
+      scriptTime: const Duration(milliseconds: 2),
+      colors: encodeSampledColors({
+        LightDeviceId.ram1: const [Rgb(1, 2, 3)],
+      }),
+    );
+    final parsed = parseFrameReply(jsonDecode(jsonEncode(reply)) as List);
+    expect(parsed.pixelsOrOps, const [1, 2, 3, 4]);
+    expect(parsed.simple, isTrue);
+    expect(parsed.opCount, 7);
+    expect(parsed.logs, const ['first']);
+    expect(parsed.scriptTime, const Duration(milliseconds: 2));
+    expect(parsed.colors, {
+      LightDeviceId.ram1: const [Rgb(1, 2, 3)],
+    });
+  });
+
   test('frame reply reads typed data, bytes and base64 forms', () {
     Uint8List asType(Uint8List bytes) => bytes;
 

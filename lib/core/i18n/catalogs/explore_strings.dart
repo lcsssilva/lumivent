@@ -70,6 +70,8 @@ abstract class ExploreStrings {
   String importNoEffectHtml(String path);
   String importInvalidZip(String path, String error);
   String get importNoHtmlInZip;
+  String importTooLarge(String path);
+  String importUnsupportedZipEntry(String path);
   String importUnknown(String path, String error);
 }
 
@@ -203,6 +205,11 @@ class ExploreStringsEn extends ExploreStrings {
       '$path: invalid ZIP. Technical details: $error';
   @override
   String get importNoHtmlInZip => 'The ZIP has no HTML files.';
+  @override
+  String importTooLarge(String path) => '$path: exceeds the import size limit.';
+  @override
+  String importUnsupportedZipEntry(String path) =>
+      '$path: skipped, it is a link or another special file.';
   @override
   String importUnknown(String path, String error) =>
       '$path. Technical details: $error';
@@ -341,6 +348,12 @@ class ExploreStringsPt extends ExploreStrings {
       '$path: ZIP inválido. Detalhes técnicos: $error';
   @override
   String get importNoHtmlInZip => 'O ZIP não tem arquivos HTML.';
+  @override
+  String importTooLarge(String path) =>
+      '$path: excede o limite de tamanho de importação.';
+  @override
+  String importUnsupportedZipEntry(String path) =>
+      '$path: ignorado, é um link ou outro arquivo especial.';
   @override
   String importUnknown(String path, String error) =>
       '$path. Detalhes técnicos: $error';

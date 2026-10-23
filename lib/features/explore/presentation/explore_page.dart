@@ -31,6 +31,8 @@ String formatImportIssue(ExploreStrings e, ImportIssue issue) {
     ImportIssueKind.noEffectHtml => e.importNoEffectHtml(path),
     ImportIssueKind.invalidZip => e.importInvalidZip(path, error),
     ImportIssueKind.noHtmlInZip => e.importNoHtmlInZip,
+    ImportIssueKind.tooLarge => e.importTooLarge(path),
+    ImportIssueKind.unsupportedZipEntry => e.importUnsupportedZipEntry(path),
     ImportIssueKind.unknown => e.importUnknown(path, error),
   };
 }

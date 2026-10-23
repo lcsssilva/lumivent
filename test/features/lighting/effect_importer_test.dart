@@ -173,7 +173,8 @@ void main() {
 
     expect(report.imported, 0);
     expect(report.issues, hasLength(1));
-    expect(report.issues.single.detail, contains('import limit'));
+    expect(report.issues.single.kind, ImportIssueKind.tooLarge);
+    expect(report.issues.single.path, file.path);
   });
 
   test('re-importing replaces the effect instead of duplicating it', () async {
@@ -259,7 +260,8 @@ void main() {
 
     expect(report.imported, 0);
     expect(report.issues, hasLength(1));
-    expect(report.issues.single.detail, contains('size limit'));
+    expect(report.issues.single.kind, ImportIssueKind.tooLarge);
+    expect(report.issues.single.path, 'Big/effect.html');
   });
 
   test('rejects symlink entries before reading their payloads', () async {
@@ -283,7 +285,7 @@ void main() {
     expect((await library.list()).single.id, 'good');
     expect(report.issues, hasLength(1));
     expect(report.issues.single.path, 'Bomb/effect.html');
-    expect(report.issues.single.detail, contains('not supported'));
+    expect(report.issues.single.kind, ImportIssueKind.unsupportedZipEntry);
   });
 
   test('never decompresses the payload of a rejected symlink', () async {
@@ -312,8 +314,7 @@ void main() {
     expect(report.issues, hasLength(1));
     expect(report.issues.single.path, 'Bomb/effect.html');
     // The entry was rejected by type, not decoded and refused by size.
-    expect(report.issues.single.detail, contains('not supported'));
-    expect(report.issues.single.detail, isNot(contains('size limit')));
+    expect(report.issues.single.kind, ImportIssueKind.unsupportedZipEntry);
   });
 
   test(

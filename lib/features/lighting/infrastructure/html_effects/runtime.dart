@@ -70,12 +70,10 @@ class IsolatedHtmlEffectRuntime implements EffectRuntime {
     final effect = parseEffect(html);
     final connection = await EffectWorkerConnection.spawn();
     try {
-      await connection.request([
-        EffectWorkerOperation.load.name,
-        html,
-        shim ?? await loadShim(),
-        values,
-      ], timeout: scriptLoadLimit);
+      await connection.request(
+        loadRequest(html, shim ?? await loadShim(), values),
+        timeout: scriptLoadLimit,
+      );
     } on Object {
       connection.close();
       rethrow;

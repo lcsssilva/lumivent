@@ -174,7 +174,7 @@ final class EffectWorkerReply {
 /// ([simple] is true) and the parent only samples them; slow frames transfer
 /// the raw canvas ops ([opCount] is -1) for the parent to replay. The
 /// [TransferableTypedData] form is for the isolate transport; the child
-/// process sends the same shape with the bytes base64 encoded (JSON lines).
+/// process uses [processFrameReply].
 List<Object?> frameReply({
   required TypedData pixelsOrOps,
   required bool simple,
@@ -182,17 +182,45 @@ List<Object?> frameReply({
   required List<String> logs,
   required Duration scriptTime,
   required Object? colors,
-}) => [
+}) => _frameReply(
   TransferableTypedData.fromList([pixelsOrOps]),
-  simple,
-  opCount,
-  logs,
-  scriptTime.inMicroseconds,
-  colors,
-];
+  simple: simple,
+  opCount: opCount,
+  logs: logs,
+  scriptTime: scriptTime,
+  colors: colors,
+);
 
-/// Payload of a frame reply as encoded by [frameReply] or the process worker
-/// (which carries the frame as a base64 String).
+/// [frameReply] for the child-process transport (JSON lines): the bytes are
+/// base64 encoded and [colors] must already be JSON
+/// ([encodeSampledColors]).
+List<Object?> processFrameReply({
+  required List<int> pixelsOrOps,
+  required bool simple,
+  required int opCount,
+  required List<String> logs,
+  required Duration scriptTime,
+  required Object? colors,
+}) => _frameReply(
+  base64Encode(pixelsOrOps),
+  simple: simple,
+  opCount: opCount,
+  logs: logs,
+  scriptTime: scriptTime,
+  colors: colors,
+);
+
+List<Object?> _frameReply(
+  Object data, {
+  required bool simple,
+  required int opCount,
+  required List<String> logs,
+  required Duration scriptTime,
+  required Object? colors,
+}) => [data, simple, opCount, logs, scriptTime.inMicroseconds, colors];
+
+/// Payload of a frame reply as encoded by [frameReply] or
+/// [processFrameReply].
 ({
   Uint8List pixelsOrOps,
   bool simple,

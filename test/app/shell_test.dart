@@ -176,6 +176,22 @@ void main() {
     expect(find.text('Open configuration folder'), findsOneWidget);
   });
 
+  testWidgets('bootstrap failure shows a window started hidden', (
+    tester,
+  ) async {
+    var reveals = 0;
+    await tester.pumpWidget(
+      BootstrapFailureApp(
+        error: StateError('tray unavailable'),
+        configDir: tmp,
+        revealWindow: () async => reveals++,
+      ),
+    );
+    await tester.pump();
+
+    expect(reveals, 1);
+  });
+
   testWidgets('bootstrap failure follows a Portuguese system locale', (
     tester,
   ) async {

@@ -48,6 +48,7 @@ Future<void> main(List<String> args) async {
         error: error,
         configDir: defaultConfigDir(),
         strings: startupFailureStrings(PlatformDispatcher.instance.locale),
+        revealWindow: revealStartupFailureWindow,
       ),
     );
   }
